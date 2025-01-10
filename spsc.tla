@@ -38,6 +38,11 @@ all ==
 unused ==
     all \ (written \cup writing)
 
+\* Confirm all indicies will be used eventually
+Liveness ==                                                                                                                                           
+    \A k \in 0..N-1:                                                                                                                                 
+    <>(buffer[k] # 0)   
+
 end define;
 
 procedure reader(i) 
@@ -62,7 +67,7 @@ w_upd_wptr:         wptr := (wptr + 1) % N;
                     return;
 end procedure; 
 
-process writer_0 = 100
+fair process writer_0 = 100
 begin 
     w_while:
     while TRUE do
@@ -70,7 +75,7 @@ begin
     end while;
 end process; 
 
-process reader_0 = 101
+fair process reader_0 = 101
 begin 
     r_start: 
     while TRUE do
@@ -79,8 +84,8 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "9231ea98" /\ chksum(tla) = "e792b2d0")
-\* Parameter i of procedure reader at line 43 col 18 changed to i_
+\* BEGIN TRANSLATION (chksum(pcal) = "b8193bec" /\ chksum(tla) = "d14a531")
+\* Parameter i of procedure reader at line 48 col 18 changed to i_
 CONSTANT defaultInitValue
 VARIABLES rptr, wptr, buffer, pc, stack
 
@@ -110,6 +115,11 @@ all ==
 
 unused ==
     all \ (written \cup writing)
+
+
+Liveness ==
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
 
 VARIABLES i_, i
 
@@ -143,7 +153,7 @@ r_early_ret(self) == /\ pc[self] = "r_early_ret"
 
 r_read_buf(self) == /\ pc[self] = "r_read_buf"
                     /\ Assert(buffer[rptr] # 0, 
-                              "Failure of assertion at line 49, column 21.")
+                              "Failure of assertion at line 54, column 21.")
                     /\ buffer' = [buffer EXCEPT ![rptr] = 0]
                     /\ pc' = [pc EXCEPT ![self] = "r_upd_rtpr"]
                     /\ UNCHANGED << rptr, wptr, stack, i_, i >>
@@ -172,7 +182,7 @@ w_early_ret(self) == /\ pc[self] = "w_early_ret"
 
 w_write_buf(self) == /\ pc[self] = "w_write_buf"
                      /\ Assert(buffer[wptr] = 0, 
-                               "Failure of assertion at line 59, column 21.")
+                               "Failure of assertion at line 64, column 21.")
                      /\ buffer' = [buffer EXCEPT ![wptr] = wptr + 1000]
                      /\ pc' = [pc EXCEPT ![self] = "w_upd_wptr"]
                      /\ UNCHANGED << rptr, wptr, stack, i_, i >>
@@ -212,7 +222,9 @@ reader_0 == r_start
 Next == writer_0 \/ reader_0
            \/ (\E self \in ProcSet: reader(self) \/ writer(self))
 
-Spec == Init /\ [][Next]_vars
+Spec == /\ Init /\ [][Next]_vars
+        /\ WF_vars(writer_0) /\ WF_vars(writer(100))
+        /\ WF_vars(reader_0) /\ WF_vars(reader(101))
 
 \* END TRANSLATION 
 
