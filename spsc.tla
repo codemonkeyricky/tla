@@ -45,7 +45,7 @@ Liveness ==
 
 Liveness2 ==
     /\ (buffer[0] = 0) ~> buffer[0] = 1000
-    /\ (buffer[0] = 1000) ~> buffer[0] = 1
+    /\ (buffer[0] = 1000) ~> buffer[0] = 0
 
 end define;
 
@@ -88,7 +88,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "79eb60ac" /\ chksum(tla) = "e3804893")
+\* BEGIN TRANSLATION (chksum(pcal) = "76bf17d5" /\ chksum(tla) = "356e6525")
 \* Parameter i of procedure reader at line 52 col 18 changed to i_
 CONSTANT defaultInitValue
 VARIABLES rptr, wptr, buffer, pc, stack
@@ -127,7 +127,7 @@ Liveness ==
 
 Liveness2 ==
     /\ (buffer[0] = 0) ~> buffer[0] = 1000
-    /\ (buffer[0] = 1000) ~> buffer[0] = 1
+    /\ (buffer[0] = 1000) ~> buffer[0] = 0
 
 VARIABLES i_, i
 
