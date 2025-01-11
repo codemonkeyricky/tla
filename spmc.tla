@@ -57,6 +57,11 @@ reader_reading ==
 reader_read == 
     {k \in written : rrsvd[k] = 0} 
 
+\* all index eventually become reserved
+Liveness == 
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
+
 end define;
 
 procedure reader(i) 
@@ -88,7 +93,7 @@ w_inc_wptr:         wptr := (wptr + 1) % N;
                     return;
 end procedure; 
 
-process writer_0 = 100
+fair process writer_0 = 100
 begin 
     w_while:
     while TRUE do
@@ -96,7 +101,7 @@ begin
     end while;
 end process; 
 
-process reader_k \in 0..Reader-1
+fair process reader_k \in 0..Reader-1
 begin 
     r_start: 
     while TRUE do
@@ -105,9 +110,9 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "b447e349" /\ chksum(tla) = "c7b184bb")
-\* Process reader_k at line 99 col 1 changed to reader_k_
-\* Parameter i of procedure reader at line 62 col 18 changed to i_
+\* BEGIN TRANSLATION (chksum(pcal) = "915d7331" /\ chksum(tla) = "f15dc65c")
+\* Process reader_k at line 104 col 6 changed to reader_k_
+\* Parameter i of procedure reader at line 67 col 18 changed to i_
 CONSTANT defaultInitValue
 VARIABLES reader_k, rrsvd, rptr, wptr, rptr_next, buffer, pc, stack
 
@@ -150,6 +155,11 @@ reader_reading ==
 
 reader_read ==
     {k \in written : rrsvd[k] = 0}
+
+
+Liveness ==
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
 
 VARIABLES i_, k, i
 
@@ -286,7 +296,9 @@ Next == writer_0
            \/ (\E self \in ProcSet: reader(self) \/ writer(self))
            \/ (\E self \in 0..Reader-1: reader_k_(self))
 
-Spec == Init /\ [][Next]_vars
+Spec == /\ Init /\ [][Next]_vars
+        /\ WF_vars(writer_0) /\ WF_vars(writer(100))
+        /\ \A self \in 0..Reader-1 : WF_vars(reader_k_(self)) /\ WF_vars(reader(self))
 
 \* END TRANSLATION 
 
