@@ -39,9 +39,13 @@ unused ==
     all \ (written \cup writing)
 
 \* Confirm all indicies will be used eventually
-Liveness ==                                                                                                                                           
-    \A k \in 0..N-1:                                                                                                                                 
-    <>(buffer[k] # 0)   
+Liveness ==
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
+
+Liveness2 ==
+    /\ (buffer[0] = 0) ~> buffer[0] = 1000
+    /\ (buffer[0] = 1000) ~> buffer[0] = 1
 
 end define;
 
@@ -52,7 +56,7 @@ r_chk_empty:        if rptr = wptr then
 r_early_ret:            return;
                     end if;
 r_read_buf:         assert buffer[rptr] # 0;
-                    buffer[rptr] := 0;
+r_cs:               buffer[rptr] := 0;
 r_upd_rtpr:         rptr := (rptr + 1) % N;
                     return;
 end procedure; 
@@ -62,7 +66,7 @@ w_chk_full:         if (wptr + 1) % N = rptr then
 w_early_ret:            return; 
                     end if;
 w_write_buf:        assert buffer[wptr] = 0;
-                    buffer[wptr] := wptr + 1000;
+w_cs:               buffer[wptr] := wptr + 1000;
 w_upd_wptr:         wptr := (wptr + 1) % N;
                     return;
 end procedure; 
@@ -84,8 +88,8 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "b8193bec" /\ chksum(tla) = "d14a531")
-\* Parameter i of procedure reader at line 48 col 18 changed to i_
+\* BEGIN TRANSLATION (chksum(pcal) = "79eb60ac" /\ chksum(tla) = "e3804893")
+\* Parameter i of procedure reader at line 52 col 18 changed to i_
 CONSTANT defaultInitValue
 VARIABLES rptr, wptr, buffer, pc, stack
 
@@ -121,6 +125,10 @@ Liveness ==
     \A k \in 0..N-1:
     <>(buffer[k] # 0)
 
+Liveness2 ==
+    /\ (buffer[0] = 0) ~> buffer[0] = 1000
+    /\ (buffer[0] = 1000) ~> buffer[0] = 1
+
 VARIABLES i_, i
 
 vars == << rptr, wptr, buffer, pc, stack, i_, i >>
@@ -153,10 +161,14 @@ r_early_ret(self) == /\ pc[self] = "r_early_ret"
 
 r_read_buf(self) == /\ pc[self] = "r_read_buf"
                     /\ Assert(buffer[rptr] # 0, 
-                              "Failure of assertion at line 54, column 21.")
-                    /\ buffer' = [buffer EXCEPT ![rptr] = 0]
-                    /\ pc' = [pc EXCEPT ![self] = "r_upd_rtpr"]
-                    /\ UNCHANGED << rptr, wptr, stack, i_, i >>
+                              "Failure of assertion at line 58, column 21.")
+                    /\ pc' = [pc EXCEPT ![self] = "r_cs"]
+                    /\ UNCHANGED << rptr, wptr, buffer, stack, i_, i >>
+
+r_cs(self) == /\ pc[self] = "r_cs"
+              /\ buffer' = [buffer EXCEPT ![rptr] = 0]
+              /\ pc' = [pc EXCEPT ![self] = "r_upd_rtpr"]
+              /\ UNCHANGED << rptr, wptr, stack, i_, i >>
 
 r_upd_rtpr(self) == /\ pc[self] = "r_upd_rtpr"
                     /\ rptr' = (rptr + 1) % N
@@ -166,7 +178,7 @@ r_upd_rtpr(self) == /\ pc[self] = "r_upd_rtpr"
                     /\ UNCHANGED << wptr, buffer, i >>
 
 reader(self) == r_chk_empty(self) \/ r_early_ret(self) \/ r_read_buf(self)
-                   \/ r_upd_rtpr(self)
+                   \/ r_cs(self) \/ r_upd_rtpr(self)
 
 w_chk_full(self) == /\ pc[self] = "w_chk_full"
                     /\ IF (wptr + 1) % N = rptr
@@ -182,10 +194,14 @@ w_early_ret(self) == /\ pc[self] = "w_early_ret"
 
 w_write_buf(self) == /\ pc[self] = "w_write_buf"
                      /\ Assert(buffer[wptr] = 0, 
-                               "Failure of assertion at line 64, column 21.")
-                     /\ buffer' = [buffer EXCEPT ![wptr] = wptr + 1000]
-                     /\ pc' = [pc EXCEPT ![self] = "w_upd_wptr"]
-                     /\ UNCHANGED << rptr, wptr, stack, i_, i >>
+                               "Failure of assertion at line 68, column 21.")
+                     /\ pc' = [pc EXCEPT ![self] = "w_cs"]
+                     /\ UNCHANGED << rptr, wptr, buffer, stack, i_, i >>
+
+w_cs(self) == /\ pc[self] = "w_cs"
+              /\ buffer' = [buffer EXCEPT ![wptr] = wptr + 1000]
+              /\ pc' = [pc EXCEPT ![self] = "w_upd_wptr"]
+              /\ UNCHANGED << rptr, wptr, stack, i_, i >>
 
 w_upd_wptr(self) == /\ pc[self] = "w_upd_wptr"
                     /\ wptr' = (wptr + 1) % N
@@ -195,7 +211,7 @@ w_upd_wptr(self) == /\ pc[self] = "w_upd_wptr"
                     /\ UNCHANGED << rptr, buffer, i_ >>
 
 writer(self) == w_chk_full(self) \/ w_early_ret(self) \/ w_write_buf(self)
-                   \/ w_upd_wptr(self)
+                   \/ w_cs(self) \/ w_upd_wptr(self)
 
 w_while == /\ pc[100] = "w_while"
            /\ /\ i' = [i EXCEPT ![100] = 0]
@@ -228,6 +244,10 @@ Spec == /\ Init /\ [][Next]_vars
 
 \* END TRANSLATION 
 
+\* reader and writer cannot operator on the same index
+MUTEX ==
+    ~ ((pc[100] = "w_cs") /\ (pc[101] = "r_cs") /\ rptr = wptr)
+
 Inv_Basics == 
     /\ ((written \cup writing) \cup unused) = all
     /\ reading \subseteq written                            \* reading is a subset of written
@@ -245,5 +265,6 @@ Inv_Basics ==
     /\ \/ Cardinality(to_be_read) + 1 = Cardinality(reading) 
        \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
        \/ Cardinality(to_be_read)     = Cardinality(reading)
+    /\ MUTEX
 
 ===============================================================================
