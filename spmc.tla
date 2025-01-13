@@ -62,6 +62,13 @@ Liveness ==
     \A k \in 0..N-1:
     <>(buffer[k] # 0)
 
+\* we can get weird interleaving patterns with spmc, a later reserved index done
+\* before an earlier reserved index. Confirms the earlier reserved index eventually 
+\* clear. 
+Liveness2 == 
+    /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[0] = 0)
+    \* /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[2] = 0)
+
 end define;
 
 procedure reader(i) 
@@ -110,9 +117,9 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "915d7331" /\ chksum(tla) = "f15dc65c")
-\* Process reader_k at line 104 col 6 changed to reader_k_
-\* Parameter i of procedure reader at line 67 col 18 changed to i_
+\* BEGIN TRANSLATION (chksum(pcal) = "37a5ac57" /\ chksum(tla) = "4c32b721")
+\* Process reader_k at line 111 col 6 changed to reader_k_
+\* Parameter i of procedure reader at line 74 col 18 changed to i_
 CONSTANT defaultInitValue
 VARIABLES reader_k, rrsvd, rptr, wptr, rptr_next, buffer, pc, stack
 
@@ -160,6 +167,12 @@ reader_read ==
 Liveness ==
     \A k \in 0..N-1:
     <>(buffer[k] # 0)
+
+
+
+
+Liveness2 ==
+    /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[0] = 0)
 
 VARIABLES i_, k, i
 
