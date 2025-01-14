@@ -73,9 +73,9 @@ end define;
 
 \* unused, ready_to_read, ready_to_write
 
-procedure reader(i) 
+procedure reader() 
 variable 
-    k = 100;
+    i = self;
 begin
 r_chk_empty:        if outstanding # 0 then 
                         outstanding := outstanding - 1; 
@@ -119,34 +119,25 @@ begin
     end while;
 end process; 
 
-fair process reader_0 = 0
+fair process reader_k \in 0..Reader-1 
 begin 
     r_start: 
     while TRUE do
-        call reader(0);
+        call reader();
     end while;
 end process; 
-
-fair process reader_1 = 1
-begin 
-    r_start2: 
-    while TRUE do
-        call reader(1);
-    end while;
-end process; 
-
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "af3913" /\ chksum(tla) = "4ea79d42")
-\* Parameter i of procedure reader at line 76 col 18 changed to i_
+\* BEGIN TRANSLATION (chksum(pcal) = "f789d949" /\ chksum(tla) = "d9c77d69")
+\* Process reader_k at line 122 col 6 changed to reader_k_
+\* Procedure variable i of procedure reader at line 78 col 5 changed to i_
 CONSTANT defaultInitValue
-VARIABLES reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack, i_, k, 
-          i
+VARIABLES reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack, i_, i
 
-vars == << reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack, i_, k, 
-           i >>
+vars == << reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack, i_, i
+        >>
 
-ProcSet == {100} \cup {0} \cup {1}
+ProcSet == {100} \cup (0..Reader-1)
 
 Init == (* Global variables *)
         /\ reader_k = 0
@@ -156,22 +147,19 @@ Init == (* Global variables *)
         /\ outstanding = 0
         /\ buffer = [kk \in 0..N-1 |-> 0]
         (* Procedure reader *)
-        /\ i_ = [ self \in ProcSet |-> defaultInitValue]
-        /\ k = [ self \in ProcSet |-> 100]
+        /\ i_ = [ self \in ProcSet |-> self]
         (* Procedure writer *)
         /\ i = [ self \in ProcSet |-> defaultInitValue]
         /\ stack = [self \in ProcSet |-> << >>]
         /\ pc = [self \in ProcSet |-> CASE self = 100 -> "w_while"
-                                        [] self = 0 -> "r_start"
-                                        [] self = 1 -> "r_start2"]
+                                        [] self \in 0..Reader-1 -> "r_start"]
 
 r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
                      /\ IF outstanding # 0
                            THEN /\ outstanding' = outstanding - 1
                                 /\ pc' = [pc EXCEPT ![self] = "r_try_lock"]
-                                /\ UNCHANGED << stack, i_, k >>
+                                /\ UNCHANGED << stack, i_ >>
                            ELSE /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                                /\ k' = [k EXCEPT ![self] = Head(stack[self]).k]
                                 /\ i_' = [i_ EXCEPT ![self] = Head(stack[self]).i_]
                                 /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                                 /\ UNCHANGED outstanding
@@ -186,25 +174,24 @@ r_try_lock(self) == /\ pc[self] = "r_try_lock"
                                /\ pc' = [pc EXCEPT ![self] = "r_try_lock"]
                                /\ rrsvd' = rrsvd
                     /\ UNCHANGED << reader_k, wptr, outstanding, buffer, stack, 
-                                    i_, k, i >>
+                                    i_, i >>
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i_[self]]] = rptr[i_[self]] + 1000, 
                               "Failure of assertion at line 92, column 21.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
-                                    buffer, stack, i_, k, i >>
+                                    buffer, stack, i_, i >>
 
 r_read_buf(self) == /\ pc[self] = "r_read_buf"
                     /\ buffer' = [buffer EXCEPT ![rptr[i_[self]]] = 0]
                     /\ rrsvd' = [rrsvd EXCEPT ![rptr[i_[self]]] = 0]
                     /\ pc' = [pc EXCEPT ![self] = "r_done"]
                     /\ UNCHANGED << reader_k, rptr, wptr, outstanding, stack, 
-                                    i_, k, i >>
+                                    i_, i >>
 
 r_done(self) == /\ pc[self] = "r_done"
                 /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                /\ k' = [k EXCEPT ![self] = Head(stack[self]).k]
                 /\ i_' = [i_ EXCEPT ![self] = Head(stack[self]).i_]
                 /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                 /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
@@ -218,14 +205,14 @@ w_is_full(self) == /\ pc[self] = "w_is_full"
                          THEN /\ pc' = [pc EXCEPT ![self] = "w_early_return"]
                          ELSE /\ pc' = [pc EXCEPT ![self] = "w_chk_st"]
                    /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
-                                   buffer, stack, i_, k, i >>
+                                   buffer, stack, i_, i >>
 
 w_early_return(self) == /\ pc[self] = "w_early_return"
                         /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
                         /\ i' = [i EXCEPT ![self] = Head(stack[self]).i]
                         /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                         /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, 
-                                        outstanding, buffer, i_, k >>
+                                        outstanding, buffer, i_ >>
 
 w_chk_st(self) == /\ pc[self] = "w_chk_st"
                   /\ IF rrsvd[wptr] # 0
@@ -235,38 +222,38 @@ w_chk_st(self) == /\ pc[self] = "w_chk_st"
                         ELSE /\ pc' = [pc EXCEPT ![self] = "w_write_buf"]
                              /\ UNCHANGED << stack, i >>
                   /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
-                                  buffer, i_, k >>
+                                  buffer, i_ >>
 
 w_write_buf(self) == /\ pc[self] = "w_write_buf"
                      /\ buffer' = [buffer EXCEPT ![wptr] = wptr + 1000]
                      /\ pc' = [pc EXCEPT ![self] = "w_mark_written"]
                      /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
-                                     stack, i_, k, i >>
+                                     stack, i_, i >>
 
 w_mark_written(self) == /\ pc[self] = "w_mark_written"
                         /\ rrsvd' = [rrsvd EXCEPT ![wptr] = 1]
                         /\ pc' = [pc EXCEPT ![self] = "w_inc"]
                         /\ UNCHANGED << reader_k, rptr, wptr, outstanding, 
-                                        buffer, stack, i_, k, i >>
+                                        buffer, stack, i_, i >>
 
 w_inc(self) == /\ pc[self] = "w_inc"
                /\ outstanding' = outstanding + 1
                /\ pc' = [pc EXCEPT ![self] = "w_inc_wptr"]
                /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, buffer, stack, i_, 
-                               k, i >>
+                               i >>
 
 w_inc_wptr(self) == /\ pc[self] = "w_inc_wptr"
                     /\ wptr' = (wptr + 1) % N
                     /\ pc' = [pc EXCEPT ![self] = "w_done"]
                     /\ UNCHANGED << reader_k, rrsvd, rptr, outstanding, buffer, 
-                                    stack, i_, k, i >>
+                                    stack, i_, i >>
 
 w_done(self) == /\ pc[self] = "w_done"
                 /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
                 /\ i' = [i EXCEPT ![self] = Head(stack[self]).i]
                 /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                 /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
-                                buffer, i_, k >>
+                                buffer, i_ >>
 
 writer(self) == w_is_full(self) \/ w_early_return(self) \/ w_chk_st(self)
                    \/ w_write_buf(self) \/ w_mark_written(self)
@@ -280,44 +267,29 @@ w_while == /\ pc[100] = "w_while"
                                                   \o stack[100]]
            /\ pc' = [pc EXCEPT ![100] = "w_is_full"]
            /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, buffer, 
-                           i_, k >>
+                           i_ >>
 
 writer_0 == w_while
 
-r_start == /\ pc[0] = "r_start"
-           /\ /\ i_' = [i_ EXCEPT ![0] = 0]
-              /\ stack' = [stack EXCEPT ![0] = << [ procedure |->  "reader",
-                                                    pc        |->  "r_start",
-                                                    k         |->  k[0],
-                                                    i_        |->  i_[0] ] >>
-                                                \o stack[0]]
-           /\ k' = [k EXCEPT ![0] = 100]
-           /\ pc' = [pc EXCEPT ![0] = "r_chk_empty"]
-           /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, buffer, i >>
+r_start(self) == /\ pc[self] = "r_start"
+                 /\ stack' = [stack EXCEPT ![self] = << [ procedure |->  "reader",
+                                                          pc        |->  "r_start",
+                                                          i_        |->  i_[self] ] >>
+                                                      \o stack[self]]
+                 /\ i_' = [i_ EXCEPT ![self] = self]
+                 /\ pc' = [pc EXCEPT ![self] = "r_chk_empty"]
+                 /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
+                                 buffer, i >>
 
-reader_0 == r_start
+reader_k_(self) == r_start(self)
 
-r_start2 == /\ pc[1] = "r_start2"
-            /\ /\ i_' = [i_ EXCEPT ![1] = 1]
-               /\ stack' = [stack EXCEPT ![1] = << [ procedure |->  "reader",
-                                                     pc        |->  "r_start2",
-                                                     k         |->  k[1],
-                                                     i_        |->  i_[1] ] >>
-                                                 \o stack[1]]
-            /\ k' = [k EXCEPT ![1] = 100]
-            /\ pc' = [pc EXCEPT ![1] = "r_chk_empty"]
-            /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, buffer, 
-                            i >>
-
-reader_1 == r_start2
-
-Next == writer_0 \/ reader_0 \/ reader_1
+Next == writer_0
            \/ (\E self \in ProcSet: reader(self) \/ writer(self))
+           \/ (\E self \in 0..Reader-1: reader_k_(self))
 
 Spec == /\ Init /\ [][Next]_vars
         /\ WF_vars(writer_0) /\ WF_vars(writer(100))
-        /\ WF_vars(reader_0) /\ WF_vars(reader(0))
-        /\ WF_vars(reader_1) /\ WF_vars(reader(1))
+        /\ \A self \in 0..Reader-1 : WF_vars(reader_k_(self)) /\ WF_vars(reader(self))
 
 \* END TRANSLATION 
 
