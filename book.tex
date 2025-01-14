@@ -1,0 +1,374 @@
+
+\documentclass{report}
+
+\usepackage{tlatex}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{comment}
+
+% java -cp /home/richard/dev/tla2tex/tla2tools.jar  tla2tex.TeX  book.tex 
+
+\lstset { %
+    language=C++,
+    backgroundcolor=\color{black!5}, % set backgroundcolor
+    basicstyle=\footnotesize,% basic font setting
+}
+
+
+\title{More TLA+ Examples}
+\author{Richard Tang}
+\date{\today}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+
+... TODO: more content here ... \newline
+
+With diminishing return on vertical scaling, the industry now invest heavily
+towards horizontal scaling. This shifts complexity from hardware to software
+with solution such as distributed algorithms. However, distributed algorithms
+are hard to get right. The system is now a cluster of independently operating
+entities and need to somehow collectively offer the correct system behaviour. To
+make matter worse, human cognition is inherently singled threaded. We are not
+good at reasoning about parallel execution. The usual anti-pattern is to keep
+bandaiding the solution until bug reports stop comming in - but how does anyone
+know if the solution is actually \textit{correct by design}? To solve this
+problem, we then must rely on tools to do the reasoning for us, entering TLA+.
+\newline
+
+TLA+ is a \textit{system specification language}, with the intent to describe
+the system with implementation details removed. TLA+ allows designer to
+describe the system as a sequence of states. The designer can expresses
+transition condition from one state to another, describe invariants that must
+hold true in every state and liveness properties that the overall system should
+converge to. The key innovation of TLA+ is once the system is modeled as a
+finite state machine, the states can be \textit{exhaustively} explored (via
+breath-first-search) to ensure certain properties are held through out the
+entire state space (either per state or a sequence of states).\newline
+
+\chapter{TLA+ Primer}
+
+Assume the following trivial example of a blinking LED:
+\begin{tla}
+    Next ==
+    \/ /\ b = 0
+       /\ b' = 1
+    \/ /\ b = 1
+       /\ b' = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \.{\land} b \.{=} 0}%
+\@x{\@s{27.51} \.{\land} b \.{'} \.{=} 1}%
+\@x{\@s{16.4} \.{\lor} \.{\land} b \.{=} 1}%
+\@x{\@s{27.51} \.{\land} b \.{'} \.{=} 0}%
+\end{tlatex}
+
+TLA+ syntax is roots in propositional logic and can appear unfamiliar. The key
+operators in TLA+ are conjunctions (and) and disjunctions (or). The above
+describes disjunctions of two states where:
+\begin{itemize}
+    \item First state is (b is 0 AND b next is 1)
+    \item Second state is (b is 0 AND b next is 1)
+\end{itemize}
+This effectively describe a two-state state machine, where b toggles between 0
+and 1. Note that b can technically be \textit{anything}. b can be 0, 1, -42, a
+dinosaur, etc. TLA+ specifies values of b which are valid in the system.
+
+\section{Temporal Logic}
+
+\section{Safety Property}
+
+Safety properties are properties invariants that must hold true in
+\textit{every} state. An invariant in the blinking LED example can be: 
+\begin{tla}
+    type_ok == b \in {0, 1}
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} type\_ok \.{\defeq} b \.{\in} \{ 0 ,\, 1 \}}%
+\end{tlatex}
+
+\section{Liveness Property}
+
+Safety properties describe what must be upheld in every state. \textit{Liveness}
+properties on the other hand describe properties of a sequence of states. In the
+blinking LED example, a liveness property can be the if b is 0, it toggles to 1,
+and vice versa.\newline
+
+In an abstract sense, liveness properties verifies the intent behind the
+specification.  Some possible liveness properties include: 
+\begin{itemize}
+    \item A consensus protocol eventually converges
+    \item All indices are eventually used in a lockless queue
+    \item All tasks are eventually scheduled by the scheduler
+    \item ... etc
+\end{itemize}
+
+\section{Limitation}
+
+Since TLA+ exhaustively explores all possible state, a linear growth of
+variables leads to TLC (temporal logic checker) execution time grows
+\textit{exponentially}.\newline
+
+This means the specification must be scoped correctly to limit the state space.
+Similarly, if you want to verify concurrent psuedo code implementation in
+PlusCal, you can at most verify 10s of lines of code.
+
+\chapter{SPSC Lockfree Queue}
+
+Single producer single consumer (SPSC) \textit{Lockfree} queue is a standard
+data exchange queue between a producer and a consumer. The SPSC lockfree queue
+promises data can exchange between producer and consumer in a \textit{lockfree}
+fashion, suggesting all condition both producer and consumer can make
+progress.\newline
+
+Contrast to standard shared queues, a SPSC waitfree queue doesn't require the
+use of a \textit{lock} (eg. mutex). The queue can be logically represented
+fairly simply as:
+
+\begin{lstlisting}
+    template <typename T, ssize_t N>
+    class cQueue<T> { 
+        ssize_t rptr = 0; 
+        ssize_t wptr = 0; 
+        std::array<T, N> buffer;
+        /* TODO: API definition below... */
+    };
+\end{lstlisting}
+
+A real implementation need to account for memory ordering effects specific to
+the architecture. For example, ARM has weak memory ordering model where
+read/write may appear out of order between CPUs. In this chapter we will only
+assume \textit{logical} execution where each command is issued sequentially
+(even perceived across CPUs) to focus the discussion on TLA+.
+\section{Algorithm}
+
+As mentioned in earlier section, a SPSC queue is represented by an array, a pair
+of read write pointer. The implementation is (hopefully) descriptively trivial:
+
+\begin{itemize}
+    \item Two executing context, reader and writer
+    \item Writer advances wtpr after writes
+    \item Reader advances rtpr after reads
+    \item If rtpr equals wptr, queue is empty
+    \item If (wtpr + 1) \% N equals rptr, queue is full
+\end{itemize}
+% \newline
+
+A possible implementation may look like below (not accounting for memory
+ordering effects):
+\begin{lstlisting}
+    template <typename T, ssize_t N>
+    class cQueue { 
+        ssize_t rptr = 0;
+        ssize_t wptr = 0; 
+        std::array<T, N> buffer;
+
+    public:
+        bool read(T &v) { 
+            /* queue empty check */
+            if (rptr == wptr) { 
+                return false;
+            }
+            /* data get */
+            v = buffer[rptr]; 
+            /* rtpr update */
+            rptr = (rptr + 1) % N;
+            return true;
+        }
+
+        bool write(const T &v) { 
+            /* queue full check */
+            if ((wptr + 1) % N == rptr) { 
+                return false;
+            }
+            /* data write */
+            buffer[wptr] = v;
+            /* wptr update */
+            wptr = (wptr + 1) % N;
+            return true;
+        }
+    };
+\end{lstlisting}
+
+Since reader and writer execute in different context, the instructions in read
+and write can interleave in \textit{any} way imaginable:
+\begin{itemize}
+    \item queue empty check can happen before or after queue full check
+    \item data write happens immediately before data read
+    \item ... so on and so forth
+\end{itemize}
+
+The key observations is that buffer[wtpr] is reserved by the producer.
+buffer[wtpr] is either unused or being written to. In either case the reader is
+not allowed to access it. Symmetric reasoning applies to rptr. This provides
+the \textit{safety} to the design - but how do we verify this?\newline
+
+This is where TLA+ can help us formally verify the design.
+
+\section{Spec}
+
+TLA+ specification can be writen using its native formal specification
+language, or a C-like syntax called PlusCal (which transpiles down to itse
+native form). In this example, I chose to implement the specification using
+PlusCal, since the content to be verified is psuedo implementation. While it is
+possible specify SPSC in native TLA+, it is the author's opinion that it is
+more error prone in this case, each line is effective an individual state needs
+to be modeled.\newline
+
+The following is a snippet of the specification written in PlusCal, hopefully
+intuitive to read:
+\begin{ppcal}
+procedure reader(i) 
+variable 
+begin
+r_chk_empty:        if rptr = wptr then 
+r_early_ret:            return;
+                    end if;
+r_read_buf:         assert buffer[rptr] # 0;
+r_cs:               buffer[rptr] := 0;
+r_upd_rtpr:         rptr := (rptr + 1) % N;
+                    return;
+end procedure; 
+
+procedure writer(i) begin
+w_chk_full:         if (wptr + 1) % N = rptr then 
+w_early_ret:            return; 
+                    end if;
+w_write_buf:        assert buffer[wptr] = 0;
+w_cs:               buffer[wptr] := wptr + 1000;
+w_upd_wptr:         wptr := (wptr + 1) % N;
+                    return;
+end procedure; 
+\end{ppcal}\newline
+\begin{tlatex}
+\@x{ {\p@procedure} reader ( i )}%
+\@x{ {\p@variable}}%
+\@x{ {\p@begin}}%
+ \@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@if} rptr \.{=} wptr
+ {\p@then}}%
+ \@x{ r\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{51.39} {\p@return}
+ {\p@semicolon}}%
+\@x{\@s{91.60} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}\@s{36.83} {\p@assert} buffer [ rptr
+ ] \.{\neq} 0 {\p@semicolon}}%
+ \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}\@s{66.02} buffer [ rptr ] \.{:=} 0
+ {\p@semicolon}}%
+ \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}\@s{36.98} rptr \.{:=} ( rptr \.{+} 1
+ ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{91.60} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\@pvspace{8.0pt}%
+\@x{ {\p@procedure} writer ( i ) {\p@begin}}%
+ \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}\@s{35.97} {\p@if} ( wptr \.{+} 1 )
+ \.{\%} N \.{=} rptr {\p@then}}%
+ \@x{ w\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{45.1} {\p@return}
+ {\p@semicolon}}%
+\@x{\@s{89.45} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@assert} buffer [ wptr
+ ] \.{=} 0 {\p@semicolon}}%
+ \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}\@s{64.27} buffer [ wptr ] \.{:=} wptr \.{+}
+ 1000 {\p@semicolon}}%
+ \@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}\@s{32.8} wptr \.{:=} ( wptr \.{+} 1
+ ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{92.28} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\end{tlatex}
+
+Note each command starts with a \textit{label}, such as r\_chk\_empty. All the
+actions associated with the label is assumed executed atomically. This is
+reflected in the generated TLA+ code:
+\begin{tla}
+    r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
+                     /\ IF rptr = wptr
+                           THEN /\ pc' = [pc EXCEPT ![self] = "r_early_ret"]
+                           ELSE /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
+                     /\ UNCHANGED << rptr, wptr, buffer, stack, i_, i >>
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} r\_chk\_empty ( self ) \.{\defeq} \.{\land} pc [ self ]
+ \.{=}\@w{r\_chk\_empty}}%
+\@x{\@s{97.45} \.{\land} {\IF} rptr \.{=} wptr}%
+ \@x{\@s{120.71} \.{\THEN} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
+ self ] \.{=}\@w{r\_early\_ret} ]}%
+ \@x{\@s{120.71} \.{\ELSE} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
+ self ] \.{=}\@w{r\_read\_buf} ]}%
+ \@x{\@s{97.45} \.{\land} {\UNCHANGED} {\langle} rptr ,\, wptr ,\, buffer ,\,
+ stack ,\, i\_ ,\, i {\rangle}}%
+\end{tlatex}
+
+\section{Safety Properties}
+
+As mentioned before, safety properties need to hold true in every single state.
+Some safety requirement we can enforce, for example:\newline
+
+Reader and writer cannot access the same index at the same time:
+\begin{equation}
+    \sim ((pc[100] = "w\_cs") \land (pc[101] = "r\_cs") \land rptr = wptr)
+\end{equation}
+
+All unused index should be set to 0:
+\begin{equation}
+    \A kk \in unused : buffer[kk] = 0
+\end{equation}
+
+At any given moment, buffer[wtpr] may be unused or written. buffer[rptr] may be
+unused or read:
+\begin{tla}
+    \/ Cardinality(to_be_read) + 1 = Cardinality(reading)
+    \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
+    \/ Cardinality(to_be_read)     = Cardinality(reading)
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=} Cardinality
+ ( reading )}%
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
+ Cardinality ( reading ) \.{+} 1}%
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
+ Cardinality ( reading )}%
+\end{tlatex}
+
+\section{Liveness Properties}
+
+All indicies are eventually used:
+
+\begin{tla}
+    Liveness ==
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness \.{\defeq}}%
+\@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{16.4} {\Diamond} ( buffer [ k ] \.{\neq} 0 )}%
+\end{tlatex}
+
+Unused index 0 becomes used, used index 0 becomes unused.
+\begin{tla}
+    Liveness2 ==
+    /\ (buffer[0] = 0) ~> buffer[0] = 1000
+    /\ (buffer[0] = 1000) ~> buffer[0] = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness2 \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 0 ) \.{\leadsto} buffer [ 0 ]
+ \.{=} 1000}%
+ \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 1000 ) \.{\leadsto} buffer [ 0 ]
+ \.{=} 0}%
+\end{tlatex}
+
+\section{Configuration}
+
+\chapter{SPMC Lockless Queue}
+
+\chapter{Simple Gossip Protocol}
+
+https://ahelwer.ca/post/2023-11-01-tla-finite-monotonic/
+
+\chapter{Raft Consensus Protocol}
+
+\chapter{OS Scheduler}
+
+\end{document}
