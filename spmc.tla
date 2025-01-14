@@ -83,26 +83,26 @@ begin
 r_chk_empty:        if outstanding # 0 then 
                         outstanding := outstanding - 1; 
                     else 
-                        return;
+r_early_ret:            return;
                     end if;
                     \* reserved a read - now find it
 r_try_lock:         if rrsvd[rptr[i]] = 1 then 
                         rrsvd[rptr[i]] := 2;
                     else 
-                        rptr[i] := (rptr[i] + 1) % N;
+r_retry:                rptr[i] := (rptr[i] + 1) % N;
                         goto r_try_lock;
                     end if;
 r_data_chk:         assert buffer[rptr[i]] = rptr[i] + 1000;
 r_read_buf:         buffer[rptr[i]] := 0;
-                    rrsvd[rptr[i]] := 0;
+r_unlock:           rrsvd[rptr[i]] := 0;
 r_done:                    return;
 end procedure; 
 
 \* rrsvd = 0 is unused, 1 written, 2 reserved for read
 
 procedure writer(i) begin
-w_is_full:          if outstanding = N - 1 then 
-w_early_return:         return; 
+w_chk_full:         if outstanding = N - 1 then 
+w_early_ret:            return; 
                     end if;
 w_chk_st:           if rrsvd[wptr] # 0 then 
                         return;
@@ -131,7 +131,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "91186815" /\ chksum(tla) = "9c9890dc")
+\* BEGIN TRANSLATION (chksum(pcal) = "e0e4df61" /\ chksum(tla) = "dda5c6ca")
 \* Process reader_k at line 125 col 6 changed to reader_k_
 \* Procedure variable i of procedure reader at line 81 col 5 changed to i_
 CONSTANT defaultInitValue
@@ -167,23 +167,32 @@ r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
                      /\ IF outstanding # 0
                            THEN /\ outstanding' = outstanding - 1
                                 /\ pc' = [pc EXCEPT ![self] = "r_try_lock"]
-                                /\ UNCHANGED << stack, i_ >>
-                           ELSE /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
-                                /\ i_' = [i_ EXCEPT ![self] = Head(stack[self]).i_]
-                                /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                           ELSE /\ pc' = [pc EXCEPT ![self] = "r_early_ret"]
                                 /\ UNCHANGED outstanding
-                     /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, buffer, i >>
+                     /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, buffer, 
+                                     stack, i_, i >>
+
+r_early_ret(self) == /\ pc[self] = "r_early_ret"
+                     /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
+                     /\ i_' = [i_ EXCEPT ![self] = Head(stack[self]).i_]
+                     /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
+                     /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
+                                     buffer, i >>
 
 r_try_lock(self) == /\ pc[self] = "r_try_lock"
                     /\ IF rrsvd[rptr[i_[self]]] = 1
                           THEN /\ rrsvd' = [rrsvd EXCEPT ![rptr[i_[self]]] = 2]
                                /\ pc' = [pc EXCEPT ![self] = "r_data_chk"]
-                               /\ rptr' = rptr
-                          ELSE /\ rptr' = [rptr EXCEPT ![i_[self]] = (rptr[i_[self]] + 1) % N]
-                               /\ pc' = [pc EXCEPT ![self] = "r_try_lock"]
+                          ELSE /\ pc' = [pc EXCEPT ![self] = "r_retry"]
                                /\ rrsvd' = rrsvd
-                    /\ UNCHANGED << reader_k, wptr, outstanding, buffer, stack, 
-                                    i_, i >>
+                    /\ UNCHANGED << reader_k, rptr, wptr, outstanding, buffer, 
+                                    stack, i_, i >>
+
+r_retry(self) == /\ pc[self] = "r_retry"
+                 /\ rptr' = [rptr EXCEPT ![i_[self]] = (rptr[i_[self]] + 1) % N]
+                 /\ pc' = [pc EXCEPT ![self] = "r_try_lock"]
+                 /\ UNCHANGED << reader_k, rrsvd, wptr, outstanding, buffer, 
+                                 stack, i_, i >>
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i_[self]]] = rptr[i_[self]] + 1000, 
@@ -194,10 +203,15 @@ r_data_chk(self) == /\ pc[self] = "r_data_chk"
 
 r_read_buf(self) == /\ pc[self] = "r_read_buf"
                     /\ buffer' = [buffer EXCEPT ![rptr[i_[self]]] = 0]
-                    /\ rrsvd' = [rrsvd EXCEPT ![rptr[i_[self]]] = 0]
-                    /\ pc' = [pc EXCEPT ![self] = "r_done"]
-                    /\ UNCHANGED << reader_k, rptr, wptr, outstanding, stack, 
-                                    i_, i >>
+                    /\ pc' = [pc EXCEPT ![self] = "r_unlock"]
+                    /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
+                                    stack, i_, i >>
+
+r_unlock(self) == /\ pc[self] = "r_unlock"
+                  /\ rrsvd' = [rrsvd EXCEPT ![rptr[i_[self]]] = 0]
+                  /\ pc' = [pc EXCEPT ![self] = "r_done"]
+                  /\ UNCHANGED << reader_k, rptr, wptr, outstanding, buffer, 
+                                  stack, i_, i >>
 
 r_done(self) == /\ pc[self] = "r_done"
                 /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
@@ -206,15 +220,16 @@ r_done(self) == /\ pc[self] = "r_done"
                 /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
                                 buffer, i >>
 
-reader(self) == r_chk_empty(self) \/ r_try_lock(self) \/ r_data_chk(self)
-                   \/ r_read_buf(self) \/ r_done(self)
+reader(self) == r_chk_empty(self) \/ r_early_ret(self) \/ r_try_lock(self)
+                   \/ r_retry(self) \/ r_data_chk(self) \/ r_read_buf(self)
+                   \/ r_unlock(self) \/ r_done(self)
 
-w_is_full(self) == /\ pc[self] = "w_is_full"
-                   /\ IF outstanding = N - 1
-                         THEN /\ pc' = [pc EXCEPT ![self] = "w_early_return"]
-                         ELSE /\ pc' = [pc EXCEPT ![self] = "w_chk_st"]
-                   /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
-                                   buffer, stack, i_, i >>
+w_chk_full(self) == /\ pc[self] = "w_chk_full"
+                    /\ IF outstanding = N - 1
+                          THEN /\ pc' = [pc EXCEPT ![self] = "w_early_return"]
+                          ELSE /\ pc' = [pc EXCEPT ![self] = "w_chk_st"]
+                    /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
+                                    buffer, stack, i_, i >>
 
 w_early_return(self) == /\ pc[self] = "w_early_return"
                         /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
@@ -264,7 +279,7 @@ w_done(self) == /\ pc[self] = "w_done"
                 /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
                                 buffer, i_ >>
 
-writer(self) == w_is_full(self) \/ w_early_return(self) \/ w_chk_st(self)
+writer(self) == w_chk_full(self) \/ w_early_return(self) \/ w_chk_st(self)
                    \/ w_write_buf(self) \/ w_mark_written(self)
                    \/ w_inc(self) \/ w_inc_wptr(self) \/ w_done(self)
 
@@ -274,7 +289,7 @@ w_while == /\ pc[100] = "w_while"
                                                       pc        |->  "w_while",
                                                       i         |->  i[100] ] >>
                                                   \o stack[100]]
-           /\ pc' = [pc EXCEPT ![100] = "w_is_full"]
+           /\ pc' = [pc EXCEPT ![100] = "w_chk_full"]
            /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, buffer, 
                            i_ >>
 
