@@ -18,59 +18,27 @@ variables
     \* wstate = "write_init";
 
 define
-\* written == 
-\*     IF rptr <= wptr THEN 
-\*         {k \in rptr..wptr - 1: TRUE}
-\*     ELSE 
-\*         {k \in rptr..N-1: TRUE} \cup 
-\*         {k \in 0..wptr-1: TRUE} 
-
-\* writing == 
-\*     {wptr}
 
 reading == 
     {k \in 0..N-1: rrsvd[k] = 2}
 
-\* reading == 
-\*      IF rptr <= rptr_next THEN 
-\*         {k \in rptr..rptr_next - 1: TRUE}
-\*     ELSE 
-\*         {k \in rptr..N-1: TRUE} \cup 
-\*         {k \in 0..rptr_next-1: TRUE} 
+written == 
+    {k \in 0..N-1: rrsvd[k] = 1}
 
-\* to_read == 
-\*     IF rptr_next <= wptr THEN 
-\*         {k \in rptr_next..wptr - 1: TRUE}
-\*     ELSE 
-\*         {k \in rptr_next..N-1: TRUE} \cup 
-\*         {k \in 0..wptr-1: TRUE} 
+buffer_filled == 
+    {k \in 0..N-1: buffer[k] # 0}
 
-\* all ==
-\*     {k \in 0..N-1: TRUE}
+\* all index eventually become reserved
+Liveness == 
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
 
-\* read_reserved ==  
-\*     {k \in 0..N-1: rrsvd[k] = 1}
-
-\* unused ==
-\*     all \ (written \cup writing)
-
-\* reader_reading == 
-\*     {k \in written : rrsvd[k] = 1}
-
-\* reader_read == 
-\*     {k \in written : rrsvd[k] = 0} 
-
-\* \* all index eventually become reserved
-\* Liveness == 
-\*     \A k \in 0..N-1:
-\*     <>(buffer[k] # 0)
-
-\* \* we can get weird interleaving patterns with spmc, a later reserved index done
-\* \* before an earlier reserved index. Confirms the earlier reserved index eventually 
-\* \* clear. 
-\* Liveness2 == 
-\*     /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[0] = 0)
-\*     \* /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[2] = 0)
+\* we can get weird interleaving patterns with spmc, a later reserved index done
+\* before an earlier reserved index. Confirms the earlier reserved index eventually 
+\* clear. 
+Liveness2 == 
+    /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[0] = 0)
+    /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[2] = 0)
 
 end define;
 
@@ -95,7 +63,7 @@ r_retry:                rptr[i] := (rptr[i] + 1) % N;
 r_data_chk:         assert buffer[rptr[i]] = rptr[i] + 1000;
 r_read_buf:         buffer[rptr[i]] := 0;
 r_unlock:           rrsvd[rptr[i]] := 0;
-r_done:                    return;
+r_done:             return;
 end procedure; 
 
 \* rrsvd = 0 is unused, 1 written, 2 reserved for read
@@ -131,13 +99,31 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "986ad155" /\ chksum(tla) = "4b9793f3")
-\* Process reader_k at line 125 col 6 changed to reader_k_
+\* BEGIN TRANSLATION (chksum(pcal) = "1a207b09" /\ chksum(tla) = "f5b59511")
+\* Process reader_k at line 93 col 6 changed to reader_k_
 VARIABLES reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
 reading ==
     {k \in 0..N-1: rrsvd[k] = 2}
+
+written ==
+    {k \in 0..N-1: rrsvd[k] = 1}
+
+buffer_filled ==
+    {k \in 0..N-1: buffer[k] # 0}
+
+
+Liveness ==
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
+
+
+
+
+Liveness2 ==
+    /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[0] = 0)
+    /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[2] = 0)
 
 VARIABLE i
 
@@ -191,7 +177,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 95, column 21.")
+                              "Failure of assertion at line 63, column 21.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
                                     buffer, stack, i >>
@@ -312,6 +298,10 @@ Spec == /\ Init /\ [][Next]_vars
 
 Inv_Basics == 
     /\ Cardinality(reading) <= Reader
+    /\ Cardinality(buffer_filled) <= Cardinality(written) + Cardinality(reading) + 1
+    \* /\ Cardinality(written) <= outstanding + Reader
+    \* /\ (Cardinality(reading) + Cardinality(written)) <= outstanding + 1
+    \* /\ ~(rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1)
 \*     /\ ((written \cup writing) \cup unused) = all
 \*     /\ reading \subseteq written                            \* reading is a subset of written
 \*     /\ to_read \subseteq written                            \* to_read is a subset of written
