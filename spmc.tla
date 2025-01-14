@@ -28,6 +28,9 @@ define
 \* writing == 
 \*     {wptr}
 
+reading == 
+    {k \in 0..N-1: rrsvd[k] = 2}
+
 \* reading == 
 \*      IF rptr <= rptr_next THEN 
 \*         {k \in rptr..rptr_next - 1: TRUE}
@@ -128,11 +131,17 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "f789d949" /\ chksum(tla) = "d9c77d69")
-\* Process reader_k at line 122 col 6 changed to reader_k_
-\* Procedure variable i of procedure reader at line 78 col 5 changed to i_
+\* BEGIN TRANSLATION (chksum(pcal) = "91186815" /\ chksum(tla) = "9c9890dc")
+\* Process reader_k at line 125 col 6 changed to reader_k_
+\* Procedure variable i of procedure reader at line 81 col 5 changed to i_
 CONSTANT defaultInitValue
-VARIABLES reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack, i_, i
+VARIABLES reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack
+
+(* define statement *)
+reading ==
+    {k \in 0..N-1: rrsvd[k] = 2}
+
+VARIABLES i_, i
 
 vars == << reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack, i_, i
         >>
@@ -178,7 +187,7 @@ r_try_lock(self) == /\ pc[self] = "r_try_lock"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i_[self]]] = rptr[i_[self]] + 1000, 
-                              "Failure of assertion at line 92, column 21.")
+                              "Failure of assertion at line 95, column 21.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
                                     buffer, stack, i_, i >>
@@ -293,7 +302,8 @@ Spec == /\ Init /\ [][Next]_vars
 
 \* END TRANSLATION 
 
-\* Inv_Basics == 
+Inv_Basics == 
+    /\ Cardinality(reading) <= Reader
 \*     /\ ((written \cup writing) \cup unused) = all
 \*     /\ reading \subseteq written                            \* reading is a subset of written
 \*     /\ to_read \subseteq written                            \* to_read is a subset of written
