@@ -131,7 +131,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "1c5abd9" /\ chksum(tla) = "cabb5354")
+\* BEGIN TRANSLATION (chksum(pcal) = "986ad155" /\ chksum(tla) = "4b9793f3")
 \* Process reader_k at line 125 col 6 changed to reader_k_
 VARIABLES reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack
 
@@ -235,7 +235,7 @@ w_early_ret(self) == /\ pc[self] = "w_early_ret"
 w_chk_st(self) == /\ pc[self] = "w_chk_st"
                   /\ IF rrsvd[wptr] # 0
                         THEN /\ pc' = [pc EXCEPT ![self] = "w_early_ret2"]
-                        ELSE /\ pc' = [pc EXCEPT ![self] = "w_inc"]
+                        ELSE /\ pc' = [pc EXCEPT ![self] = "w_write_buf"]
                   /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
                                   buffer, stack, i >>
 
@@ -245,11 +245,6 @@ w_early_ret2(self) == /\ pc[self] = "w_early_ret2"
                       /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
                                       buffer, i >>
 
-w_inc(self) == /\ pc[self] = "w_inc"
-               /\ outstanding' = outstanding + 1
-               /\ pc' = [pc EXCEPT ![self] = "w_write_buf"]
-               /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, buffer, stack, i >>
-
 w_write_buf(self) == /\ pc[self] = "w_write_buf"
                      /\ buffer' = [buffer EXCEPT ![wptr] = wptr + 1000]
                      /\ pc' = [pc EXCEPT ![self] = "w_mark_written"]
@@ -258,9 +253,14 @@ w_write_buf(self) == /\ pc[self] = "w_write_buf"
 
 w_mark_written(self) == /\ pc[self] = "w_mark_written"
                         /\ rrsvd' = [rrsvd EXCEPT ![wptr] = 1]
-                        /\ pc' = [pc EXCEPT ![self] = "w_inc_wptr"]
+                        /\ pc' = [pc EXCEPT ![self] = "w_inc"]
                         /\ UNCHANGED << reader_k, rptr, wptr, outstanding, 
                                         buffer, stack, i >>
+
+w_inc(self) == /\ pc[self] = "w_inc"
+               /\ outstanding' = outstanding + 1
+               /\ pc' = [pc EXCEPT ![self] = "w_inc_wptr"]
+               /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, buffer, stack, i >>
 
 w_inc_wptr(self) == /\ pc[self] = "w_inc_wptr"
                     /\ wptr' = (wptr + 1) % N
@@ -275,8 +275,8 @@ w_done(self) == /\ pc[self] = "w_done"
                                 buffer, i >>
 
 writer(self) == w_chk_full(self) \/ w_early_ret(self) \/ w_chk_st(self)
-                   \/ w_early_ret2(self) \/ w_inc(self)
-                   \/ w_write_buf(self) \/ w_mark_written(self)
+                   \/ w_early_ret2(self) \/ w_write_buf(self)
+                   \/ w_mark_written(self) \/ w_inc(self)
                    \/ w_inc_wptr(self) \/ w_done(self)
 
 w_while == /\ pc[100] = "w_while"
