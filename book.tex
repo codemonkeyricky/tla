@@ -5,6 +5,23 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{comment}
+\usepackage{fancyhdr}
+% \usepackage{amsmath}
+\usepackage{amssymb}
+
+% Configure fancyhdr
+\pagestyle{fancy}
+\fancyhf{} % Clear default header and footer
+
+% Header settings
+\fancyhead[L]{Left Header}      % Left-aligned header
+\fancyhead[C]{Center Header}    % Centered header
+\fancyhead[R]{Right Header}     % Right-aligned header
+
+% Footer settings
+\fancyfoot[L]{Left Footer}      % Left-aligned footer
+\fancyfoot[C]{Page \thepage}    % Centered footer with page number
+\fancyfoot[R]{Right Footer}     % Right-aligned footer
 
 % java -cp /home/richard/dev/tla2tex/tla2tools.jar  tla2tex.TeX  book.tex 
 
@@ -48,73 +65,225 @@ finite state machine, the states can be \textit{exhaustively} explored (via
 breath-first-search) to ensure certain properties are held through out the
 entire state space (either per state or a sequence of states).\newline
 
-\chapter{TLA+ Primer}
+\chapter{Blinking LED}
 
-Assume the following trivial example of a blinking LED:
+Let's start with a trivial specification of a blinking LED. The intent of this example 
+is to demonstrate the core functionalities of TLA+ specification language.
+
+\section{Requirement}
+
+The LED is represented by a boolean variable that can be either 0 or 1.\newline
+
+... that's it.
+
+\section{Specification}
+
+The specification language may appear alienating as it is mathematically
+motivated based on propositional logic. Despite the (possibly) daunting syntax,
+designer only need to be familiar with a handful of key operators to start
+realizing value using TLA+. This chapter will attempt to describe the example in
+exhaustive detail to reduce the learning curve.
+
+The following describe the core portion of the blinking LED spec. 
+
 \begin{tla}
-    Next ==
-    \/ /\ b = 0
-       /\ b' = 1
-    \/ /\ b = 1
-       /\ b' = 0
+--------------------------- MODULE blinking ----------------------------
+VARIABLES b 
+vars == <<b>>
+Init ==
+    /\ b = 0
+On == 
+    /\ b = 0
+    /\ b' = 1
+Off == 
+    /\ b = 1
+    /\ b' = 0
+Next ==
+    \/ Off 
+    \/ On
+Spec ==
+    /\ Init
+    /\ [][Next]_vars
+========
 \end{tla}
 \begin{tlatex}
-\@x{\@s{16.4} Next \.{\defeq}}%
-\@x{\@s{16.4} \.{\lor} \.{\land} b \.{=} 0}%
-\@x{\@s{27.51} \.{\land} b \.{'} \.{=} 1}%
-\@x{\@s{16.4} \.{\lor} \.{\land} b \.{=} 1}%
-\@x{\@s{27.51} \.{\land} b \.{'} \.{=} 0}%
+\@x{}\moduleLeftDash\@xx{ {\MODULE} blinking}\moduleRightDash\@xx{}%
+\@x{ {\VARIABLES} b}%
+\@x{ vars \.{\defeq} {\langle} b {\rangle}}%
+\@x{ Init\@s{2.02} \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} b \.{=} 0}%
+\@x{ On \.{\defeq}}%
+\@x{\@s{18.15} \.{\land} b \.{=} 0}%
+\@x{\@s{18.15} \.{\land} b \.{'} \.{=} 1}%
+\@x{ Off \.{\defeq}}%
+\@x{\@s{15.91} \.{\land} b \.{=} 1}%
+\@x{\@s{15.91} \.{\land} b \.{'} \.{=} 0}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} Off}%
+\@x{\@s{16.4} \.{\lor} On}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{}\bottombar\@xx{}%
 \end{tlatex}
 
-TLA+ syntax is roots in propositional logic and can appear unfamiliar. The key
-operators in TLA+ are conjunctions (and) and disjunctions (or). The above
-describes disjunctions of two states where:
 \begin{itemize}
-    \item First state is (b is 0 AND b next is 1)
-    \item Second state is (b is 0 AND b next is 1)
+    \item $\defeq$ is the \textit{defines equal} operator 
+    \item $\land$ and $\lor$ are the AND and OR operator. The effect
+    of these operator follow the natural definition in English: 
+    \begin{itemize}
+        \item $C \defeq A \land B$: C is true iff A and B are true
+        \item $C \defeq A \lor B$: C is true iff A or B is true
+    \end{itemize}
+    \item The $'$ operator represents the next state. $b'$ represent b's next state. 
+    \item $VARIABLES$ keyword defines a list of variables for the spec. In this case 
+    the spec defines a variable $b$ which can be either 0 or 1
+    \item $vars$ is typically defined as a shorthand to refer to \textit{all}
+    variables in the spec. 
 \end{itemize}
-This effectively describe a two-state state machine, where b toggles between 0
-and 1. Note that b can technically be \textit{anything}. b can be 0, 1, -42, a
-dinosaur, etc. TLA+ specifies values of b which are valid in the system.
 
-\section{Temporal Logic}
+With the above definition, we can revisit the Action definitions: $Init$ defines
+the initial system state, where b is set to 0.\newline 
 
-\section{Safety Property}
+$Next$ requires more elaboration. TLA+ specifies the system as a collection of
+states with transitions between them. In a simplified sense, the state is
+described as a collection of ANDs (eg. system is in state C if both A and B are
+true), the ORs then describe the states the system can possibly be in (eg.
+system can be in state C OR D). Revisiting the example, the blinking LED has two
+states:
+\begin{itemize}
+    \item $On \defeq b = 0 \land b' = 1$: b switches on 
+    \item $Off \defeq = 1 \land b' = 0$: b switches off
+\end{itemize}
 
-Safety properties are properties invariants that must hold true in
-\textit{every} state. An invariant in the blinking LED example can be: 
+The system's $Next$ state is defined to be one of these states:\newline
+$Next \defeq On \lor Off$.\newline
+
+$\Box[Next]_{vars}$ is a \textbf{Box-Action Formula}, where \textit{Next} is an
+action and \textit{vars} is a state function. The formula is true iff every
+successive pair of steps in behaviour is a $[Next]_{vars}$. Finally $Spec$ is
+conjunction between $Init$ and $\Box[Next]_{vars}$. Note \textbf{all} TLA+
+specification follows very similar template. There are situation we will need to
+provide \textit{fairness} description - this will be covered later. \newline
+
+In short: this specification describes a two-state state machine where b toggles
+between 0 and 1.\newline
+
+Note that b can technically be \textit{anything}. b can be 0, 1, -42, a
+dinosaur, etc. TLA+ specifies values of $b$ which are valid in the system.
+
+\section{Safety}
+
+The spec so far only defines the possible states - but the \textit{power} of
+TLA+ lies in its \textit{properties} description. Safety properties are
+invariants that must hold true in \textit{every} state. An invariant in the
+blinking LED example is: 
 \begin{tla}
-    type_ok == b \in {0, 1}
+    Type_OK == b \in {0, 1}
 \end{tla}
 \begin{tlatex}
-\@x{\@s{16.4} type\_ok \.{\defeq} b \.{\in} \{ 0 ,\, 1 \}}%
+\@x{\@s{16.4} Type\_OK \.{\defeq} b \.{\in} \{ 0 ,\, 1 \}}%
+\end{tlatex}
+Which states the only valid value of b is 0 or 1. If b is ever set to anything
+else, the spec is invalid.\newline
+
+Some example safety properties include: Only a single thread have exclusive
+access to critical section, number of concurrent reads cannot exceed data
+available to be read, etc. 
+
+\section{Liveness}
+
+While safety properties describe invariant that must be upheld in every state,
+\textit{Liveness} describe properties of a sequence of states. In the blinking
+LED example, a liveness property can be the if b is 0, it eventually becomes 1,
+and vice versa. This is described below:
+\begin{tla}
+    Liveness == 
+        /\ b = 0 ~> b = 1
+        /\ b = 1 ~> b = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} b \.{=} 0 \.{\leadsto} b \.{=} 1}%
+\@x{\@s{32.8} \.{\land} b \.{=} 1 \.{\leadsto} b \.{=} 0}%
 \end{tlatex}
 
-\section{Liveness Property}
+It is the author's opinion liveness describes the \textit{design essense} behind
+the spec. Some possible liveness properties include: A consensus protocol
+eventually converges, all indices are eventually used in a lockless
+queue, all tasks are eventually scheduled by the scheduler, etc. 
 
-Safety properties describe what must be upheld in every state. \textit{Liveness}
-properties on the other hand describe properties of a sequence of states. In the
-blinking LED example, a liveness property can be the if b is 0, it toggles to 1,
-and vice versa.\newline
+\section{Full Spec}
 
-In an abstract sense, liveness properties verifies the intent behind the
-specification.  Some possible liveness properties include: 
-\begin{itemize}
-    \item A consensus protocol eventually converges
-    \item All indices are eventually used in a lockless queue
-    \item All tasks are eventually scheduled by the scheduler
-    \item ... etc
-\end{itemize}
+Since the blinking LED is trivially specified, the full specification is
+included below. For subsequent chapters only snippet will be included. Please
+refer to the accompanied material for full spec source. 
+
+The following is the content of \textit{blinking.tla}:
+\begin{tla}
+--------------------------- MODULE blinking ----------------------------
+EXTENDS Naturals
+VARIABLES b 
+vars == <<b>>
+TypeOK ==
+  /\ b \in {0, 1} 
+Liveness == 
+    /\ b = 0 ~> b = 1
+    /\ b = 1 ~> b = 0
+Init ==
+  /\ b = 0
+Next ==
+  \/ /\ b = 0
+     /\ b' = 1
+  \/ /\ b = 1
+     /\ b' = 0
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+=============================================================================
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} blinking}\moduleRightDash\@xx{}%
+\@x{ {\EXTENDS} Naturals}%
+\@x{ {\VARIABLES} b}%
+\@x{ vars \.{\defeq} {\langle} b {\rangle}}%
+\@x{ TypeOK \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} b \.{\in} \{ 0 ,\, 1 \}}%
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} b \.{=} 0 \.{\leadsto} b \.{=} 1}%
+\@x{\@s{16.4} \.{\land} b \.{=} 1 \.{\leadsto} b \.{=} 0}%
+\@x{ Init \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} b \.{=} 0}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} \.{\land} b \.{=} 0}%
+\@x{\@s{20.94} \.{\land} b \.{'} \.{=} 1}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} \.{\land} b \.{=} 1}%
+\@x{\@s{20.94} \.{\land} b \.{'} \.{=} 0}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ vars} ( Next )}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+The following is the content of \textit{blinking.cfg}:
+
+\begin{lstlisting}
+    SPECIFICATION Spec
+    INVARIANTS TypeOK
+    PROPERTIES Liveness
+\end{lstlisting}
 
 \section{Limitation}
 
 Since TLA+ exhaustively explores all possible state, a linear growth of
 variables leads to TLC (temporal logic checker) execution time grows
-\textit{exponentially}.\newline
+\textit{exponentially}.This means the specification must be scoped correctly to
+limit the state space.\newline
 
-This means the specification must be scoped correctly to limit the state space.
 Similarly, if you want to verify concurrent psuedo code implementation in
-PlusCal, you can at most verify 10s of lines of code.
+PlusCal, you can likely at most verify 10s of lines of code.
 
 \chapter{SPSC Lockfree Queue}
 
@@ -299,7 +468,7 @@ reflected in the generated TLA+ code:
  stack ,\, i\_ ,\, i {\rangle}}%
 \end{tlatex}
 
-\section{Safety Properties}
+\section{Safety}
 
 As mentioned before, safety properties need to hold true in every single state.
 Some safety requirement we can enforce, for example:\newline
@@ -330,7 +499,7 @@ unused or read:
  Cardinality ( reading )}%
 \end{tlatex}
 
-\section{Liveness Properties}
+\section{Liveness}
 
 All indicies are eventually used:
 
@@ -396,6 +565,8 @@ Now let's look at how a simple gossip protocol can be described by TLA+.
 
 \section{Spec}
 
+\subsection{Base}
+
 In gossip protocol, every node needs to remember every other node's current
 state. In programming language this is typically described as counter[][]. The following is
 the equivalent in TLA+: 
@@ -443,17 +614,17 @@ Gossip(n, o) ==
 \@x{\@s{16.4} ]}%
 \end{tlatex}
 
-There's more to unpack here: 
+A few things to unpack here:
 \begin{itemize}
-    \item $n, o$ are the two nodes gossip exchanged. o is the node to be updated
-    and n is the neighbor o is gossiping with.
-    \item $LET .. IN$ syntax that allows local definition under LET to be used in
-    IN. In this case Max is a local macro defined to return max of a and b.
+    \item $n, o$ are the two nodes exchanging gossip. $o$ is the node to be updated
+    and $n$ is the neighbor $o$ gossips with.
+    \item $LET .. IN$ allows local definition under $LET$ used under
+    $IN$. In this case $Max$ is a local macro defined to return maximum between a and b.
     \item $counter'$ (or refered to as counter \textit{prime}) is what the
     variable will be in the next state. TLA+ doesn't provide a way to update a
     variable in a collection, so the convention is to assign a new array to the variable. 
-    \item $counter\ EXCEPT ![o] = [...]$ return $counter$, except replace $counter[o]$
-    with definition in the bracket.
+    \item $counter\ EXCEPT ![o] = [...]$ return $counter$ with $counter[o]$
+    defined in the bracket. 
     \item where $[...]$ is a collection of nodes with with counter set to the
     max between the current node and neighbour.
 \end{itemize}
@@ -490,14 +661,14 @@ The second conjunction formula is a \textbf{Box-Action Formula}, where
 is true iff every successive pair of steps in behaviour is a $[Next]_{counter}$.
 The spec defines a temporal theorem that is \textit{always true}. 
 
-\section{Spec - Finitized}
+\subsection{Finitized}
 
 There's a minor problem with the definition above. Gossip protocol, like many
 converging protocols, have a \textit{monotonic increasing} requirement. On
 failures, the protocol bumps the version, which increases monotonically. Since
 TLA+ spec models the system as a graph, a monotonic increasing version number
 means the graph is \textit{infinitely large}. To put the specification back into
-finite space, we can transform the state to normalize the versions:\newline
+finite space, we can normalize the state:\newline
 
 \begin{tla}
 GarbageCollect ==
@@ -524,6 +695,75 @@ GarbageCollect ==
 \@x{\@s{44.99} ]}%
 \@x{\@s{36.79} \.{\land} {\UNCHANGED} converge}%
 \end{tlatex}
+
+$SetMin(s)$ implements standard TLA+ semantics to retrieve the minimum element
+in the set. The definition can be read as \textit{choose an $e$ from $S$ such
+that for every $o$ in $S$, $o$ is equal or bigger than $e$}. $Transpose$ is then
+subsequently defined as the minimum value exist in counter. Finally, $counter'$
+is updated such that \textit{every} elements substracts $Transpose$.
+
+
+% The $CHOOSE$ operator is described in \textit{Specifying
+% Systems} 16.1.2 and takes the following form: 
+%     \begin{equation}
+%         CHOOSE\ x \in S : p
+%     \end{equation}
+% The chosen $x$ has to satisfy condition $p$. 
+
+The increment function is now updated to: 
+\begin{tla}
+    Increment(n) ==
+        /\ ~converge
+        /\ counter[n][n] < Divergence
+        /\ S!Increment(n)
+        /\ UNCHANGED converge
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Increment ( n ) \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} {\lnot} converge}%
+\@x{\@s{32.8} \.{\land} counter [ n ] [ n ] \.{<} Divergence}%
+\@x{\@s{32.8} \.{\land} S {\bang} Increment ( n )}%
+\@x{\@s{32.8} \.{\land} {\UNCHANGED} converge}%
+\end{tlatex}
+
+The conjunction $counter[n][n] < Divergence$ limits the maximum counter value.
+Finally, the Next action is updated to the follow:
+
+\begin{tla}
+    Next ==
+        \/ \E n \in Node : Increment(n)
+        \/ \E n, o \in Node : Gossip(n, o)
+        \/ Converge
+        \/ GarbageCollect
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Next \.{\defeq}}%
+\@x{\@s{32.8} \.{\lor} \E\, n \.{\in} Node \.{:} Increment ( n )}%
+\@x{\@s{32.8} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
+\@x{\@s{32.8} \.{\lor} Converge}%
+\@x{\@s{32.8} \.{\lor} GarbageCollect}%
+\end{tlatex}
+
+Note $GarbageCollect$ is a now part of possible state transition. We will
+discuss $Converge$ later, as it is related to liveness check. Lastly: 
+
+\begin{tla}
+    Fairness == \A n, o \in Node : WF_vars(Gossip(n, o))
+    Spec ==
+        /\ Init
+        /\ [][Next]_vars
+        /\ Fairness
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Fairness \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} {\WF}_{
+ vars} ( Gossip ( n ,\, o ) )}%
+\@x{\@s{16.4} Spec \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} Init}%
+\@x{\@s{32.8} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{32.8} \.{\land} Fairness}%
+\end{tlatex}
+
+The $Fairness$ conjunction ensures Gossip runs between every pair of n and o. 
 
 \chapter{Raft Consensus Protocol}
 
