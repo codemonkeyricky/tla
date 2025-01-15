@@ -365,7 +365,165 @@ Unused index 0 becomes used, used index 0 becomes unused.
 
 \chapter{Simple Gossip Protocol}
 
-https://ahelwer.ca/post/2023-11-01-tla-finite-monotonic/
+This section the author's notes on a simple gossip protocol by Andrew Hewler:\newline
+https://ahelwer.ca/post/2023-11-01-tla-finite-monotonic/\newline
+
+\section{Requirement}
+
+Gossip protocols are used to communicate cluster information in a distributed
+fashion, (unsurprisingly) in a distributed system. Prior to gossip protocol, all
+the nodes in a cluster relies on a centralized server (ie. zookeeper) to
+communicate cluster wide information. As one can imagine this introduces a
+single failure point in the system. As the name suggest, gossip protocol relies
+on nodes to gossip with each other. The nodes in the cluster periodically
+selects a set of neighbors to share the latest information. The recency
+information is baked inside the gossip message itself, allowing the node and the
+peer its talking to quickly decide who has the latest information on a node, and
+converge to it. Assume a N node cluster and each interal a node selects k
+neighbours to gossip with, the total amount of gossip propagation time is
+described logrithmticly below:
+
+\begin{equation} 
+    propagation\_time = \log_k N * gossip\_interval
+\end{equation}
+
+With the total number of messages exchanged: 
+\begin{equation} 
+    messages\_exchanged = \log_k N * k
+\end{equation}
+
+Now let's look at how a simple gossip protocol can be described by TLA+.
+
+\section{Spec}
+
+In gossip protocol, every node needs to remember every other node's current
+state. In programming language this is typically described as counter[][]. The following is
+the equivalent in TLA+: 
+\begin{tla}
+    Init == counter = [n \in Node |-> [o \in Node |-> 0]] 
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Init \.{\defeq} counter \.{=} [ n \.{\in} Node \.{\mapsto} [ o
+ \.{\in} Node \.{\mapsto} 0 ] ]}%
+\end{tlatex}
+
+This defines counter a collection of nodes, where each node also contains a
+collection of nodes initialized to 0.\newline
+
+The nodes can move to a new version: 
+\begin{tla}
+    Increment(n) == counter' = [counter EXCEPT ![n][n] = @ + 1]
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Increment ( n ) \.{\defeq} counter \.{'} \.{=} [ counter
+ {\EXCEPT} {\bang} [ n ] [ n ] \.{=} @ \.{+} 1 ]}%
+\end{tlatex}
+ \newline\newline
+Note only the n's version is incremented. Communicating the update is done by
+the gossip action defined below:
+\begin{tla}
+Gossip(n, o) ==                  
+    LET Max(a, b) == IF a > b THEN a ELSE b 
+    IN counter' = [
+        counter EXCEPT ![o] = [
+            nn \in Node |->            
+                Max(counter[n][nn], counter[o][nn])
+            ] 
+    ]
+\end{tla}
+\begin{tlatex}
+\@x{ Gossip ( n ,\, o ) \.{\defeq}}%
+ \@x{\@s{16.4} \.{\LET} Max ( a ,\, b ) \.{\defeq} {\IF} a \.{>} b \.{\THEN} a
+ \.{\ELSE} b}%
+\@x{\@s{16.4} \.{\IN} counter \.{'} \.{=} [}%
+\@x{\@s{40.89} counter {\EXCEPT} {\bang} [ o ] \.{=} [}%
+\@x{\@s{57.29} nn \.{\in} Node \.{\mapsto}}%
+\@x{\@s{73.41} Max ( counter [ n ] [ nn ] ,\, counter [ o ] [ nn ] )}%
+\@x{\@s{57.29} ]}%
+\@x{\@s{16.4} ]}%
+\end{tlatex}
+
+There's more to unpack here: 
+\begin{itemize}
+    \item $n, o$ are the two nodes gossip exchanged. o is the node to be updated
+    and n is the neighbor o is gossiping with.
+    \item $LET .. IN$ syntax that allows local definition under LET to be used in
+    IN. In this case Max is a local macro defined to return max of a and b.
+    \item $counter'$ (or refered to as counter \textit{prime}) is what the
+    variable will be in the next state. TLA+ doesn't provide a way to update a
+    variable in a collection, so the convention is to assign a new array to the variable. 
+    \item $counter\ EXCEPT ![o] = [...]$ return $counter$, except replace $counter[o]$
+    with definition in the bracket.
+    \item where $[...]$ is a collection of nodes with with counter set to the
+    max between the current node and neighbour.
+\end{itemize}
+
+Finally, the actual spec: 
+\begin{tla}
+    Next == \/ \E n \in Node : Increment(n)
+            \/ \E n, o \in Node : Gossip(n, o)
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Next \.{\defeq} \.{\lor} \E\, n \.{\in} Node \.{:} Increment (
+ n )}%
+\@x{\@s{56.23} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
+\end{tlatex}
+
+Next supports two possible next steps describe using disjunctions. The first is
+bumping the version of a random node, the second is select a pair of nodes to
+gossip. Note the \textit{existential qualifier} on both, which basically states
+there exists a node n in nodes, or there exists a pair of nodes n, o in nodes,
+respectively.\newline
+
+Finally, the actual spec definition:
+\begin{tla}
+    Spec == /\ Init
+            /\ [][Next]_counter  
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Spec \.{\defeq} \.{\land} Init}%
+\@x{\@s{54.76} \.{\land} {\Box} [ Next ]_{ counter}}%
+\end{tlatex}
+
+The second conjunction formula is a \textbf{Box-Action Formula}, where
+\textit{Next} is an action and \textit{counter} is a state function. The formula
+is true iff every successive pair of steps in behaviour is a $[Next]_{counter}$.
+The spec defines a temporal theorem that is \textit{always true}. 
+
+\section{Spec - Finitized}
+
+There's a minor problem with the definition above. Gossip protocol, like many
+converging protocols, have a \textit{monotonic increasing} requirement. On
+failures, the protocol bumps the version, which increases monotonically. Since
+TLA+ spec models the system as a graph, a monotonic increasing version number
+means the graph is \textit{infinitely large}. To put the specification back into
+finite space, we can transform the state to normalize the versions:\newline
+
+\begin{tla}
+GarbageCollect ==
+    LET SetMin(s) == CHOOSE e \in s : \A o \in s : e <= o IN
+    LET Transpose == SetMin({counter[n][o] : n, o \in Node}) IN
+        /\ counter' = [
+            n \in Node |-> [
+                o \in Node |-> counter[n][o] - Transpose
+            ]
+          ]
+        /\ UNCHANGED converge
+\end{tla}
+\begin{tlatex}
+\@x{ GarbageCollect \.{\defeq}}%
+ \@x{\@s{16.4} \.{\LET} SetMin ( s ) \.{\defeq} {\CHOOSE} e \.{\in} s \.{:}
+ \A\, o \.{\in} s \.{:} e \.{\leq} o \.{\IN}}%
+ \@x{\@s{16.4} \.{\LET} Transpose\@s{0.58} \.{\defeq} SetMin ( \{ counter [ n
+ ] [ o ] \.{:} n ,\, o \.{\in} Node \} ) \.{\IN}}%
+\@x{\@s{36.79} \.{\land} counter \.{'} \.{=} [}%
+\@x{\@s{52.01} n \.{\in} Node \.{\mapsto} [}%
+ \@x{\@s{66.60} o \.{\in} Node \.{\mapsto} counter [ n ] [ o ] \.{-}
+ Transpose}%
+\@x{\@s{52.01} ]}%
+\@x{\@s{44.99} ]}%
+\@x{\@s{36.79} \.{\land} {\UNCHANGED} converge}%
+\end{tlatex}
 
 \chapter{Raft Consensus Protocol}
 
