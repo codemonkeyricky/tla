@@ -41,7 +41,14 @@
 
 \chapter{Introduction}
 
-... TODO: more content here ... \newline
+TODO: TLA+ was developed ahead of its time, and software complexity finally
+caught up 
+
+TODO: concurrent programming use case 
+
+TODO: distributed system use case
+
+TODO: exhaustively check the entire space
 
 With diminishing return on vertical scaling, the industry now invest heavily
 towards horizontal scaling. This shifts complexity from hardware to software
@@ -213,11 +220,17 @@ the spec. Some possible liveness properties include: A consensus protocol
 eventually converges, all indices are eventually used in a lockless
 queue, all tasks are eventually scheduled by the scheduler, etc. 
 
-\section{Full Spec}
+\section{Model Checking}
 
 Since the blinking LED is trivially specified, the full specification is
 included below. For subsequent chapters only snippet will be included. Please
 refer to the accompanied material for full spec source. 
+
+TODO: install toolchain 
+
+TODO: commandline
+
+TODO: using TLC
 
 The following is the content of \textit{blinking.tla}:
 \begin{tla}
@@ -539,18 +552,25 @@ https://ahelwer.ca/post/2023-11-01-tla-finite-monotonic/\newline
 
 \section{Requirement}
 
+In a distributed system, a cluster of nodes collectively provide a serivce. A
+distributed database may have a collection of 10s to 100s of nodes working
+together to offer the service in a geo diverse fashion to be immnue to partial
+outage.  The nodes often have requirements to know about each other. In the
+context of distributed database, a node may need to know the key range another
+of its peers. The cluster needs a way to communicate this information. One such
+mechanism is the gossip protocol.
+
 Gossip protocols are used to communicate cluster information in a distributed
-fashion, (unsurprisingly) in a distributed system. Prior to gossip protocol, all
-the nodes in a cluster relies on a centralized server (ie. zookeeper) to
-communicate cluster wide information. As one can imagine this introduces a
-single failure point in the system. As the name suggest, gossip protocol relies
-on nodes to gossip with each other. The nodes in the cluster periodically
-selects a set of neighbors to share the latest information. The recency
-information is baked inside the gossip message itself, allowing the node and the
-peer its talking to quickly decide who has the latest information on a node, and
-converge to it. Assume a N node cluster and each interal a node selects k
-neighbours to gossip with, the total amount of gossip propagation time is
-described logrithmticly below:
+fashion, (unsurprisingly) in a distributed system. Without gossip protocol, 
+nodes in a cluster learns about its neighbours by contacting a centralized
+server. This introduces a single failure point in the system. As the name
+suggest, gossip protocol relies on nodes to gossip with each other. The nodes in
+the cluster periodically selects a set of neighbors to exchange what it knows
+about the cluster. The recency information is part of the gossip message
+itself, allowing the node and the peer its talking to quickly decide who has the
+latest information on a node, and converge to it. Assume a N node cluster and
+each interal a node selects k neighbours to gossip with, the total amount of
+gossip propagation time is described logrithmticly below:
 
 \begin{equation} 
     propagation\_time = \log_k N * gossip\_interval
@@ -768,5 +788,7 @@ The $Fairness$ conjunction ensures Gossip runs between every pair of n and o.
 \chapter{Raft Consensus Protocol}
 
 \chapter{OS Scheduler}
+
+\chapter{Miscellaneous}
 
 \end{document}
