@@ -1080,7 +1080,19 @@ The $Fairness$ conjunction ensures Gossip runs between every pair of n and o.
 
 \chapter{Raft Consensus Protocol}
 
-\chapter{OS Scheduler}
+\chapter{Simple Scheduler}
+
+\section{Requirement}
+
+In this section we will define a spec for a simple task scheduler. The task sechdeuler has the following
+requirements:
+\begin{itemize}
+    \item Supporting N number of execution context (ie. CPUs)
+    \item Supporting T number of tasks
+    \item Tasks have identical priority, and are scheduled coopertively
+    \item Task can take a lock, create another task, or terminate
+\end{itemize}
+
 
 \chapter{Miscellaneous}
 
