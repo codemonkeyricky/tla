@@ -1,8 +1,9 @@
 --------------------------- MODULE scheduler ----------------------------
-EXTENDS Naturals, TLC
+EXTENDS Naturals, TLC, Sequences
 
-CONSTANTS
-    N, Tasks
+\* Constants
+N == 2
+Tasks == <<"pid0", "pid1", "pid2", "pid3">>
 
 VARIABLES 
     ready_q,
@@ -23,15 +24,15 @@ Schedule ==
             ELSE 
                 100
         t ==
-            IF ready_q # {} THEN 
-                CHOOSE x \in ready_q : TRUE 
+            IF ready_q # <<>> THEN 
+                Head(ready_q)
             ELSE 
                 "none"
     IN 
         /\ k # 100
         /\ t # "none"
         /\ cpus' = [cpus EXCEPT ![k] = t]
-        /\ ready_q' = ready_q \ {t}
+        /\ ready_q' = Tail(ready_q)
 
 \* deschedule a busy CPU
 Deschedule == 
@@ -43,7 +44,7 @@ Deschedule ==
                 100
     IN 
         /\ k # 100
-        /\ ready_q' = ready_q \union {cpus[k]} 
+        /\ ready_q' = Append(ready_q, cpus[k]) 
         /\ cpus' = [cpus EXCEPT ![k] = ""]
 
 Next == 
