@@ -22,12 +22,11 @@ Schedule ==
     IN 
         /\ idle_cpus # {}
         /\ cpus' = [cpus EXCEPT ![k] = t]
-        /\ UNCHANGED ready_q
-     \* /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
-
+        /\ ready_q' = ready_q \ {t}
 
 Next == 
     \/ Schedule
+    \* \/ Deschedule
 
 Spec ==
   /\ Init
