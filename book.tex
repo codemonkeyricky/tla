@@ -6,7 +6,6 @@
 \usepackage{xcolor}
 \usepackage{comment}
 \usepackage{fancyhdr}
-% \usepackage{amsmath}
 \usepackage{amssymb}
 
 % Configure fancyhdr
@@ -78,21 +77,22 @@ entire state space (either per state or a sequence of states).\newline
 \section{Design Intent}
 
 The key insight into TLA+ is modelling a system as a state machine. A blinking
-LED system can be described using a single variable with two states. LED being
+LED system can be described using a single variable with two states, LED being
 on or off. A simple digital clock can be represented by two variables, hour and
-minute. The number of possible states in a digital clock is $24 * 60 = 1440$. For
-example, $10:01$ is the next state $10:00$ can transition to.  Extrapolating
+minute and the number of possible states in a digital clock is $24 * 60 = 1440$.
+For example, $10:01$ is the next state $10:00$ can transition to.  Extrapolating
 further, Asssume an arbitrarily system described by N variables, each variable
 having K possible values such arbitrary system can have up to $N^K$
 state.\newline
 
-Designer can specify \textit{safety} proerty (or invariants) that must be true
-in \textit{every} states. For example, in any state of the digital clock hour
-\textit{must} be between 0 to 23, or formally described as $hour \in 0..23$.
-Similarly, $minute \in 0..59$. More generic invariant examples include: in any
-state, only one thread has exclusive access to a critical region, all variables
-in the system are within allowable value, the resource allocation manager never
-allocates more than available resources, etc. \newline
+For every specification, designer can specify \textit{safety} proerty (or
+invariants) that must be true in \textit{every} states. For example, in any
+state of the digital clock hour \textit{must} be between 0 to 23, or formally
+described as $hour \in 0..23$.  Similarly, $minute \in 0..59$. More generic
+invariant examples include: in any state, only one thread has exclusive access
+to a critical region, all variables in the system are within allowable value,
+the resource allocation manager never allocates more than available resources,
+etc. \newline
 
 Designer can also specify \textit{liveness} property. These are properties that
 are satisfied by a \textit{sequence of state}. One liveness property for the
@@ -106,10 +106,12 @@ TLC checks a TLA+ spec using \textit{breath-first search} algorithm to explore
 \textit{all} states in the state machine and ensure safety and liveness
 properties are upheld.
 
-\section{TLA Spec}
+\section{Digital Clock}
 
-TLA+ specifies the system using \textit{propositional logic}. In the clock example, 
-the \textit{Init} state of the system can be possibly described as: \newline
+TLA+ specifies the system using \textit{propositional logic}. In this example, 
+we will specify a digital clock that has hour and minute. The clock increments 
+one minute at a time, and wraps around at midnight (ie. 23:59 transitions to
+00:00). The \textit{Init} state of such system can be described as: \newline
 \begin{tla}
     Init ==
         /\ hour = 0
@@ -120,14 +122,16 @@ the \textit{Init} state of the system can be possibly described as: \newline
 \@x{\@s{32.8} \.{\land} hour \.{=} 0}%
 \@x{\@s{32.8} \.{\land} minute \.{=} 0}%
 \end{tlatex}
+ \newline
 
-$\defeq$ is \textit{defines equal} symbol and $\land$ is the \textit{logical
-and} symbol. The above TLA+ syntax can be read as \textit{Init} state is when
-hour AND minute are both 0.\newline
+$\defeq$ is the \textit{defines equal} symbol and $\land$ is the \textit{logical
+and} symbol. The above TLA+ syntax can be read as \textit{Init} state is defined
+as both hour and minute are both 0.\newline
 
 The spec also always include a $Next$ definition, an \textit{action formula}
-defining the possible next states in the system. Action formula contains primed
-variables to indicate variable's value in its next state:\newline
+describing how the system transition from one state to another. Action formula
+contains \textit{primed} variables what happens to the variable in its next
+state. The $Next$ action for the digital clock can be defined as:\newline
 
 \begin{tla}
     NextHour ==
@@ -155,18 +159,69 @@ variables to indicate variable's value in its next state:\newline
 \@x{\@s{32.8} \.{\lor} NextMinute}%
 \@x{\@s{32.8} \.{\lor} NextHour}%
 \end{tlatex}
+ \newline
 
+Here's a breakdown of what the spec does:
 \begin{itemize}
-    \item $Next$ can be either take $NextMinute$ or $NextHour$
-    \item $Next$ takes $NextMinute$ when $minute$ is NOT 59, next hour is hour, next minute is minute + 1. 
+    \item $Next$ can take $NextMinute$ or $NextHour$
+    \item $Next$ takes $NextMinute$ when $minute$ is not 59, next hour is hour, next minute is minute + 1. 
     \item $Next$ takes $NextHour$ when $minute$ is 59, next hour is (hour + 1) modulus 24, next minute set to 0
 \end{itemize}
 
-Technically a possible next state is when \textit{both} $NextMinute$ and
-$NextHour$ take. This is not possible here as $NextMinute$ are defined in a
-\textit{mutually exlusively} fashion.
+Technically it's possible for $Next$ to take both $NextMinute$ and $NextHour$.
+This is not possible in this definition as $NextHour$ and $NextMinute$ are
+defined in a \textit{mutually exlusively} fashion.\newline
+
+Finally, the spec itself is formally defined as:\newline
+\begin{tla}
+    vars == <<hour, minute>>
+    Spec ==
+        /\ Init
+        /\ [][Next]_vars
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} vars\@s{0.63} \.{\defeq} {\langle} hour ,\, minute {\rangle}}%
+\@x{\@s{16.4} Spec \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} Init}%
+\@x{\@s{32.8} \.{\land} {\Box} [ Next ]_{ vars}}%
+\end{tlatex}
+\newline
+
+$\Box[Next]_{vars}$ deserves some special attention:
+\begin{itemize}
+    \item $vars$ is defined to be \textit{all} variables in the spec. Different
+    combination of these variables constitute the states of the system (eg.
+    23:59 and 00:00 are both states in the system).
+    \item $\Box[Next]_{vars}$ is a \textit{box-action formula}, where
+    \textit{Next} is an action and \textit{vars} is a state function.
+    \item $\Box$ operator asserts the formula is always true for every step in the behaviour.
+    \item And steps in the behaviour is defined as $[Next]_{vars}$, where $Next$
+    describe the action and $vars$ capturing all variables representing the state.
+\end{itemize}
+
+%  $,  The formula is true iff every
+% successive pair of steps in behaviour is a $[Next]_{vars}$. Finally $Spec$ is
+% conjunction between $Init$ and $\Box[Next]_{vars}$. Note \textbf{all} TLA+
+% specification follows very similar template. There are situation we will need to
+% provide \textit{fairness} description - this will be covered later. \newline
+
+\subsection{Safety}
+
+Safety property describes invariant that must hold true in every state of
+system. A common invariant is \textit{type safety} checks, defined below:\newline
+\begin{tla}
+    
+\end{tla}
+
+\subsection{Liveness}
 
 \section{TLC Model Checker}
+
+The TLA+ can be verified using TLC model checker.
+
+\begin{tla}
+    
+\end{tla}
 
 \chapter{Blinking LED}
 
