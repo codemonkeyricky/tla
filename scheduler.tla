@@ -18,7 +18,7 @@ Init ==
     /\ lock_owner = ""
 
 \* schedule a task to a busy CPU
-Schedule == 
+Read == 
     LET 
         k ==
             IF \E x \in DOMAIN cpus: cpus[x] = "" THEN 
@@ -51,6 +51,7 @@ Deschedule ==
         /\ cpus' = [cpus EXCEPT ![k] = ""]
         /\ UNCHANGED lock_owner
 
+
 \* any running thread can acquire lock
 Lock == 
     LET 
@@ -77,11 +78,14 @@ Unlock ==
         /\ lock_owner' = ""
         /\ UNCHANGED <<ready_q, cpus>>
 
-Next == 
-    \/ Schedule
+Running == 
     \/ Deschedule
     \/ Lock
     \/ Unlock
+
+Next == 
+    \/ Read
+    \/ Running
 
 Spec ==
   /\ Init
