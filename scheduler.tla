@@ -37,25 +37,27 @@ Read ==
         /\ ready_q' = Tail(ready_q)
         /\ UNCHANGED lock_owner
 
-\* deschedule a busy CPU
+\* deschedule a task
 Deschedule(k) == 
     /\ k # 100
     /\ ready_q' = Append(ready_q, cpus[k]) 
     /\ cpus' = [cpus EXCEPT ![k] = ""]
     /\ UNCHANGED lock_owner
 
-\* any running thread can acquire lock
 Lock(k) == 
+    \* acquire lock if lock is free 
     \/  /\ k # 100
         /\ lock_owner = ""
         /\ lock_owner' = cpus[k]
         /\ UNCHANGED <<ready_q, cpus>>
+    \* deschedule if lock is taken
     \/  /\ k # 100
         /\ lock_owner # ""
         /\ Deschedule(k)
 
 Unlock(k) == 
     /\ k # 100 
+    /\ lock_owner = cpus[k]
     /\ lock_owner' = ""
     /\ UNCHANGED <<ready_q, cpus>>
 
