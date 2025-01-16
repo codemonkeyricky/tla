@@ -12,16 +12,23 @@ vars == <<ready_q, cpus>>
 
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
-    /\ ready_q = {"pid0", "pid1"}
+    /\ ready_q = Tasks
 
 \* schedule a task to a busy CPU
 Schedule == 
     LET 
-        idle_cpus == {i \in 0..N-1 : cpus[i] = ""}
-        k == CHOOSE s \in idle_cpus : TRUE
-        t == CHOOSE p \in ready_q : TRUE
+        k ==IF \E x \in DOMAIN cpus: cpus[x] = ""
+            THEN 
+                CHOOSE x \in DOMAIN cpus: cpus[x] = ""
+            ELSE 
+                100
+        t ==IF ready_q # {} THEN 
+                CHOOSE x \in ready_q : TRUE 
+            ELSE 
+                "none"
     IN 
-        /\ idle_cpus # {}
+        /\ k # 100
+        /\ t # "none"
         /\ cpus' = [cpus EXCEPT ![k] = t]
         /\ ready_q' = ready_q \ {t}
 
@@ -29,7 +36,7 @@ Schedule ==
 Deschedule == 
     LET 
         k == 
-            IF \E x \in cpus: cpus[x] # ""
+            IF \E x \in DOMAIN cpus: cpus[x] # ""
             THEN 
                 CHOOSE x \in DOMAIN cpus: cpus[x] # ""
             ELSE 
