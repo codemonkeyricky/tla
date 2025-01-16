@@ -17,12 +17,13 @@ Init ==
 \* schedule a task to a busy CPU
 Schedule == 
     LET 
-        k ==IF \E x \in DOMAIN cpus: cpus[x] = ""
-            THEN 
+        k ==
+            IF \E x \in DOMAIN cpus: cpus[x] = "" THEN 
                 CHOOSE x \in DOMAIN cpus: cpus[x] = ""
             ELSE 
                 100
-        t ==IF ready_q # {} THEN 
+        t ==
+            IF ready_q # {} THEN 
                 CHOOSE x \in ready_q : TRUE 
             ELSE 
                 "none"
@@ -36,8 +37,7 @@ Schedule ==
 Deschedule == 
     LET 
         k == 
-            IF \E x \in DOMAIN cpus: cpus[x] # ""
-            THEN 
+            IF \E x \in DOMAIN cpus: cpus[x] # "" THEN 
                 CHOOSE x \in DOMAIN cpus: cpus[x] # ""
             ELSE 
                 100
