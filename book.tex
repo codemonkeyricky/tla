@@ -208,13 +208,154 @@ $\Box[Next]_{vars}$ deserves some special attention:
 \subsection{Safety}
 
 Safety property describes invariant that must hold true in every state of
-system. A common invariant is \textit{type safety} checks, defined below:\newline
+system. A common invariant is \textit{type safety} checks. In a digital clock, 
+hour can only be in value between 0 to 23, and minute can only be value of 0 to 59:\newline
 
-\subsection{Liveness}
+\begin{tla}
+    Type_OK == 
+        /\ hour \in 0..23
+        /\ minute \in 0..59
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Type\_OK \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} hour \.{\in} 0 \.{\dotdot} 23}%
+\@x{\@s{32.8} \.{\land} minute \.{\in} 0 \.{\dotdot} 59}%
+\end{tlatex}
+
+\section{Liveness}
+
+Liveness property verifies certain behavioural across a sequence of state. One
+liveness property can be confirming the clock wraps around correctly at
+midnight (which involves mutliple states): \newline
+
+\begin{tla}
+    Liveness ==
+        /\ hour = 23 /\ minute = 59 ~> hour = 0 /\ minute = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness \.{\defeq}}%
+ \@x{\@s{32.8} \.{\land} hour \.{=} 23 \.{\land} minute \.{=} 59 \.{\leadsto}
+ hour \.{=} 0 \.{\land} minute \.{=} 0}%
+\end{tlatex}
+\newline
+
+$\leadsto$ is the \textit{leads to} operator, which suggest something is
+eventually true. TLA+ provides a set of formulas that can be used to describe
+liveness property.\newline 
+
+To verify liveness, we need to modify the spec slightly to enable
+\textit{fairness} to prevent \textit{stuttering}. In plain terms, fairness
+ensure \textit{something} always happen in every step, allowing the states to
+transition. Without fairness the spec is allowed to \textit{do nothing} as next
+step. This means the liveness condition may fail because the spec permits the
+system to do nothing in perpetuity as a possible next state. Fairness will be
+covered in more detailed in later chapter.\newline
+
+\begin{tla}
+    Spec ==
+        /\ Init
+        /\ [][Next]_vars
+        /\ WF_vars(Next)
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Spec \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} Init}%
+\@x{\@s{32.8} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{32.8} \.{\land} {\WF}_{ vars} ( Next )}%
+\end{tlatex}
+\newline
+
+$WF_{vars}(Next)$ is the fairness qualifier.
+
+% TODO: insert reference here to specifying systems 8.1 
 
 \section{TLC Model Checker}
 
-The TLA+ can be verified using TLC model checker.
+The TLA+ spec can be verified using TLC model checker. The TLC model checker
+runs the spec and verifies all configured safety and liveness properties are
+satisfied during execution. To run TLC, we need two things:
+\begin{itemize}
+    \item clock.tla - the spec itself
+    \item clock.cfg - the corresponding configuration file
+\end{itemize}
+
+For reference, clock.tla spec is listed below:
+
+\begin{tla}
+--------------------------- MODULE clock ----------------------------
+EXTENDS Naturals
+VARIABLES hour, minute
+vars == <<hour, minute>>
+Type_OK == 
+    /\ hour \in 0..23
+    /\ minute \in 0..59
+Liveness ==
+    /\ hour = 23 /\ minute = 59 ~> hour = 0 /\ minute = 0
+Init ==
+    /\ hour = 0
+    /\ minute = 0
+NextMinute ==
+    /\ minute = 59 
+    /\ hour' = (hour + 1) % 24
+    /\ minute' = 0
+NextHour == 
+    /\ minute # 59
+    /\ hour' = hour 
+    /\ minute' = minute + 1 
+Next ==
+    \/ NextMinute
+    \/ NextHour
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+=============================================================================
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} clock}\moduleRightDash\@xx{}%
+\@x{ {\EXTENDS} Naturals}%
+\@x{ {\VARIABLES} hour ,\, minute}%
+\@x{ vars \.{\defeq} {\langle} hour ,\, minute {\rangle}}%
+\@x{ Type\_OK \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} hour \.{\in} 0 \.{\dotdot} 23}%
+\@x{\@s{16.4} \.{\land} minute \.{\in} 0 \.{\dotdot} 59}%
+\@x{ Liveness \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} hour \.{=} 23 \.{\land} minute \.{=} 59 \.{\leadsto}
+ hour \.{=} 0 \.{\land} minute \.{=} 0}%
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} hour \.{=} 0}%
+\@x{\@s{16.4} \.{\land} minute \.{=} 0}%
+\@x{ NextMinute \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} minute \.{=} 59}%
+\@x{\@s{16.4} \.{\land} hour \.{'} \.{=} ( hour \.{+} 1 ) \.{\%} 24}%
+\@x{\@s{16.4} \.{\land} minute \.{'} \.{=} 0}%
+\@x{ NextHour \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} minute \.{\neq} 59}%
+\@x{\@s{16.4} \.{\land} hour \.{'} \.{=} hour}%
+\@x{\@s{16.4} \.{\land} minute \.{'} \.{=} minute \.{+} 1}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} NextMinute}%
+\@x{\@s{16.4} \.{\lor} NextHour}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ vars} ( Next )}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+The corresponding clock.cfg is listed below: 
+\begin{lstlisting}
+    SPECIFICATION Spec
+    INVARIANTS Type_OK
+    PROPERTIES Liveness
+\end{lstlisting}
+
+Now run TLC and one should see something like this: 
+\begin{lstlisting}
+Model checking completed. No error has been found.
+...
+The depth of the complete state graph search is 1440.
+\end{lstlisting}
 
 
 \chapter{Blinking LED}
