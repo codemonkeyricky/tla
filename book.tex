@@ -14,14 +14,14 @@
 \fancyhf{} % Clear default header and footer
 
 % Header settings
-\fancyhead[L]{Left Header}      % Left-aligned header
-\fancyhead[C]{Center Header}    % Centered header
-\fancyhead[R]{Right Header}     % Right-aligned header
+\fancyhead[L]{\nouppercase{\leftmark}} % Chapter number and title on the left
+% \fancyhead[C]{Center Header}    % Centered header
+\fancyhead[R]{\thepage}     % Right-aligned header
 
 % Footer settings
-\fancyfoot[L]{Left Footer}      % Left-aligned footer
-\fancyfoot[C]{Page \thepage}    % Centered footer with page number
-\fancyfoot[R]{Right Footer}     % Right-aligned footer
+% \fancyfoot[L]{Left Footer}      % Left-aligned footer
+% \fancyfoot[C]{Page \thepage}    % Centered footer with page number
+% \fancyfoot[R]{Right Footer}     % Right-aligned footer
 
 % java -cp /home/richard/dev/tla2tex/tla2tools.jar  tla2tex.TeX  book.tex 
 
@@ -31,7 +31,6 @@
     basicstyle=\footnotesize,% basic font setting
 }
 
-
 \title{More TLA+ Examples}
 \author{Richard Tang}
 \date{\today}
@@ -40,6 +39,8 @@
 \tableofcontents
 
 \chapter{Introduction}
+
+TODO: personal industry experience 
 
 TODO: TLA+ was developed ahead of its time, and software complexity finally
 caught up 
@@ -72,10 +73,107 @@ finite state machine, the states can be \textit{exhaustively} explored (via
 breath-first-search) to ensure certain properties are held through out the
 entire state space (either per state or a sequence of states).\newline
 
+\chapter{TLA+ Primer}
+
+\section{Design Intent}
+
+The key insight into TLA+ is modelling a system as a state machine. A blinking
+LED system can be described using a single variable with two states. LED being
+on or off. A simple digital clock can be represented by two variables, hour and
+minute. The number of possible states in a digital clock is $24 * 60 = 1440$. For
+example, $10:01$ is the next state $10:00$ can transition to.  Extrapolating
+further, Asssume an arbitrarily system described by N variables, each variable
+having K possible values such arbitrary system can have up to $N^K$
+state.\newline
+
+Designer can specify \textit{safety} proerty (or invariants) that must be true
+in \textit{every} states. For example, in any state of the digital clock hour
+\textit{must} be between 0 to 23, or formally described as $hour \in 0..23$.
+Similarly, $minute \in 0..59$. More generic invariant examples include: in any
+state, only one thread has exclusive access to a critical region, all variables
+in the system are within allowable value, the resource allocation manager never
+allocates more than available resources, etc. \newline
+
+Designer can also specify \textit{liveness} property. These are properties that
+are satisfied by a \textit{sequence of state}. One liveness property for the
+digital clock could be when the clock is $10:00$, it will eventually become
+$11:00$ (\textit{$10:00$ leads to $11:00$}). More generic liveness property
+include: a distributed system eventually converges, the scheduler eventually
+schedules every tasks in the task queue, the resource allocation manager fairly
+allocates resources, etc. \newline
+
+TLC checks a TLA+ spec using \textit{breath-first search} algorithm to explore
+\textit{all} states in the state machine and ensure safety and liveness
+properties are upheld.
+
+\section{TLA Spec}
+
+TLA+ specifies the system using \textit{propositional logic}. In the clock example, 
+the \textit{Init} state of the system can be possibly described as: \newline
+\begin{tla}
+    Init ==
+        /\ hour = 0
+        /\ minute = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Init \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} hour \.{=} 0}%
+\@x{\@s{32.8} \.{\land} minute \.{=} 0}%
+\end{tlatex}
+
+$\defeq$ is \textit{defines equal} symbol and $\land$ is the \textit{logical
+and} symbol. The above TLA+ syntax can be read as \textit{Init} state is when
+hour AND minute are both 0.\newline
+
+The spec also always include a $Next$ definition, an \textit{action formula}
+defining the possible next states in the system. Action formula contains primed
+variables to indicate variable's value in its next state:\newline
+
+\begin{tla}
+    NextHour ==
+        /\ minute = 59 
+        /\ hour' = (hour + 1) % 24
+        /\ minute' = 0
+    NextMinute == 
+        /\ minute # 59
+        /\ hour' = hour 
+        /\ minute' = minute + 1 
+    Next ==
+        \/ NextMinute
+        \/ NextHour
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} NextHour \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} minute \.{=} 59}%
+\@x{\@s{32.8} \.{\land} hour \.{'} \.{=} ( hour \.{+} 1 ) \.{\%} 24}%
+\@x{\@s{32.8} \.{\land} minute \.{'} \.{=} 0}%
+\@x{\@s{16.4} NextMinute \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} minute \.{\neq} 59}%
+\@x{\@s{32.8} \.{\land} hour \.{'} \.{=} hour}%
+\@x{\@s{32.8} \.{\land} minute \.{'} \.{=} minute \.{+} 1}%
+\@x{\@s{16.4} Next \.{\defeq}}%
+\@x{\@s{32.8} \.{\lor} NextMinute}%
+\@x{\@s{32.8} \.{\lor} NextHour}%
+\end{tlatex}
+
+\begin{itemize}
+    \item $Next$ can be either take $NextMinute$ or $NextHour$
+    \item $Next$ takes $NextMinute$ when $minute$ is NOT 59, next hour is hour, next minute is minute + 1. 
+    \item $Next$ takes $NextHour$ when $minute$ is 59, next hour is (hour + 1) modulus 24, next minute set to 0
+\end{itemize}
+
+Technically a possible next state is when \textit{both} $NextMinute$ and
+$NextHour$ take. This is not possible here as $NextMinute$ are defined in a
+\textit{mutually exlusively} fashion.
+
+\section{TLC Model Checker}
+
 \chapter{Blinking LED}
 
 Let's start with a trivial specification of a blinking LED. The intent of this example 
 is to demonstrate the core functionalities of TLA+ specification language.
+
+TODO: briefly talk about tla+ and model checker here.
 
 \section{Requirement}
 
@@ -83,7 +181,7 @@ The LED is represented by a boolean variable that can be either 0 or 1.\newline
 
 ... that's it.
 
-\section{Specification}
+\section{Spec}
 
 The specification language may appear alienating as it is mathematically
 motivated based on propositional logic. Despite the (possibly) daunting syntax,
@@ -118,7 +216,7 @@ Spec ==
 \@x{ {\VARIABLES} b}%
 \@x{ vars \.{\defeq} {\langle} b {\rangle}}%
 \@x{ Init\@s{2.02} \.{\defeq}}%
-\@x{\@s{8.2} \.{\land} b \.{=} 0}%
+\@x{\@s{16.4} \.{\land} b \.{=} 0}%
 \@x{ On \.{\defeq}}%
 \@x{\@s{18.15} \.{\land} b \.{=} 0}%
 \@x{\@s{18.15} \.{\land} b \.{'} \.{=} 1}%
@@ -129,8 +227,8 @@ Spec ==
 \@x{\@s{16.4} \.{\lor} Off}%
 \@x{\@s{16.4} \.{\lor} On}%
 \@x{ Spec \.{\defeq}}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{16.4} \.{\land} Init}%
+\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
 \@x{}\bottombar\@xx{}%
 \end{tlatex}
 
@@ -186,12 +284,13 @@ TLA+ lies in its \textit{properties} description. Safety properties are
 invariants that must hold true in \textit{every} state. An invariant in the
 blinking LED example is: 
 \begin{tla}
-    Type_OK == b \in {0, 1}
+    TypeOK == b \in {0, 1}
 \end{tla}
 \begin{tlatex}
-\@x{\@s{16.4} Type\_OK \.{\defeq} b \.{\in} \{ 0 ,\, 1 \}}%
+\@x{\@s{16.4} TypeOK \.{\defeq} b \.{\in} \{ 0 ,\, 1 \}}%
 \end{tlatex}
-Which states the only valid value of b is 0 or 1. If b is ever set to anything
+
+This states the only valid value of b is 0 or 1. If b is ever set to anything
 else, the spec is invalid.\newline
 
 Some example safety properties include: Only a single thread have exclusive
@@ -216,9 +315,13 @@ and vice versa. This is described below:
 \end{tlatex}
 
 It is the author's opinion liveness describes the \textit{design essense} behind
-the spec. Some possible liveness properties include: A consensus protocol
-eventually converges, all indices are eventually used in a lockless
-queue, all tasks are eventually scheduled by the scheduler, etc. 
+the spec. The key characteristic of a system is described by its
+\textit{behaviour} across a series of states. Does a distribute algorithm
+eventually converge to a working state? Does a resource manager fairly allocate
+resources in all scenarios? Does a scheduler ensure all tasks are eventually
+scheduled? These are behaviours that are \textit{cannot} be concluded by looking
+at a single state, but across a \textit{sequence of state}. Liveness allows 
+designer to express and verify these properties.
 
 \section{Model Checking}
 
@@ -325,7 +428,7 @@ the architecture. For example, ARM has weak memory ordering model where
 read/write may appear out of order between CPUs. In this chapter we will only
 assume \textit{logical} execution where each command is issued sequentially
 (even perceived across CPUs) to focus the discussion on TLA+.
-\section{Algorithm}
+\section{Requirement}
 
 As mentioned in earlier section, a SPSC queue is represented by an array, a pair
 of read write pointer. The implementation is (hopefully) descriptively trivial:
