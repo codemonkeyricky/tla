@@ -1,9 +1,9 @@
 --------------------------- MODULE scheduler ----------------------------
-EXTENDS Naturals, TLC, Sequences
+EXTENDS Naturals, TLC, Sequences, FiniteSets
 
-\* Constants
-N == 2
-Tasks == <<"pid0", "pid1", "pid2", "pid3">>
+CONSTANTS 
+    N,
+    Tasks
 
 VARIABLES 
     ready_q,
@@ -13,13 +13,21 @@ VARIABLES
 
 vars == <<ready_q, cpus, lock_owner>>
 
+RECURSIVE S2T(_)
+S2T(S) == IF Cardinality(S) = 0 THEN <<>>
+          ELSE
+          LET
+            x == CHOOSE x \in S : TRUE
+          IN
+            <<x>> \o S2T(S \ {x})
+
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
-    /\ ready_q = Tasks
+    /\ ready_q = S2T(Tasks)
     /\ blocked_q = <<>>
     /\ lock_owner = ""
 
-\* schedule a task to a busy CPU
+\* schedule a task to a free CPU
 Ready == 
     LET 
         k ==
