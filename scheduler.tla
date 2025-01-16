@@ -24,9 +24,22 @@ Schedule ==
         /\ cpus' = [cpus EXCEPT ![k] = t]
         /\ ready_q' = ready_q \ {t}
 
+Deschedule == 
+    LET 
+        k == 
+            IF \E x \in DOMAIN cpus: cpus[x] # ""
+            THEN 
+                CHOOSE x \in DOMAIN cpus: cpus[x] # ""
+            ELSE 
+                100
+    IN 
+        /\ k # 100
+        /\ ready_q' = ready_q \union {cpus[k]} 
+        /\ cpus' = [cpus EXCEPT ![k] = ""]
+
 Next == 
     \/ Schedule
-    \* \/ Deschedule
+    \/ Deschedule
 
 Spec ==
   /\ Init
