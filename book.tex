@@ -239,17 +239,17 @@ midnight (which involves mutliple states): \newline
 \end{tlatex}
 \newline
 
-$\leadsto$ is the \textit{leads to} operator, which suggest something is
-eventually true. TLA+ provides a set of formulas that can be used to describe
-liveness property.\newline 
+$\leadsto$ is the \textit{leads to} operator, suggesting something is eventually
+true. TLA+ provides a set of formulas that can be used to describe liveness
+property.\newline 
 
 To verify liveness, we need to modify the spec slightly to enable
 \textit{fairness} to prevent \textit{stuttering}. In plain terms, fairness
 ensure \textit{something} always happen in every step, allowing the states to
 transition. Without fairness the spec is allowed to \textit{do nothing} as next
-step. This means the liveness condition may fail because the spec permits the
-system to do nothing in perpetuity as a possible next state. Fairness will be
-covered in more detailed in later chapter.\newline
+step, this means liveness condition may fail because the spec permits the system
+to do nothing in perpetuity as next state. Fairness will be covered in more
+detailed in later chapter.\newline
 
 \begin{tla}
     Spec ==
