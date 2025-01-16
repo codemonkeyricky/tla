@@ -12,21 +12,22 @@ vars == <<ready_q, cpus>>
 
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
-    /\ ready_q = {"idle"}
+    /\ ready_q = {"pid0", "pid1"}
 
 Schedule == 
     LET 
         idle_cpus == {i \in 0..N-1 : cpus[i] = ""}
         k == CHOOSE s \in idle_cpus : TRUE
+        t == CHOOSE p \in ready_q : TRUE
     IN 
         /\ idle_cpus # {}
-        /\ cpus' = [cpus EXCEPT ![k] = "a" ]
+        /\ cpus' = [cpus EXCEPT ![k] = t]
         /\ UNCHANGED ready_q
      \* /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
 
 
 Next == 
-    /\ Schedule
+    \/ Schedule
 
 Spec ==
   /\ Init
