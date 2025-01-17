@@ -64,28 +64,19 @@ Lock(k) ==
     \* someone else has the lock
     \/  /\ cpus[k] # "" 
         /\ lock_owner # ""
-        /\ lock_owner # cpus[k]
+        /\ lock_owner # cpus[k] \* cannot double lock
         /\ blocked_q' = Append(blocked_q, cpus[k])
         /\ cpus' = [cpus EXCEPT ![k] = ""]
         /\ UNCHANGED <<ready_q, lock_owner>>
 
 \* unlock
 Unlock(k) == 
-    \* unlock when no one is waiting 
-    \/  /\ cpus[k] # "" 
-        /\ lock_owner = cpus[k]
-        /\ lock_owner' = ""
-        /\ Len(blocked_q) = 0 
-        /\ UNCHANGED <<cpus, blocked_q, ready_q>>
-    \* unlock when someone is waiting
-    \/  /\ cpus[k] # "" 
-        /\ lock_owner = cpus[k]
-        /\ lock_owner' = ""
-        /\ Len(blocked_q) # 0 
-        /\ cpus' = [cpus EXCEPT ![k] = ""]
-        /\ ready_q' = ready_q \o blocked_q \o <<cpus[k]>>
-        /\ blocked_q' = <<>>
-        \* /\ UNCHANGED <<cpus>>
+    /\ cpus[k] # "" 
+    /\ lock_owner = cpus[k]
+    /\ lock_owner' = ""
+    /\ cpus' = [cpus EXCEPT ![k] = ""]
+    /\ ready_q' = ready_q \o blocked_q \o <<cpus[k]>>
+    /\ blocked_q' = <<>>
 
 Running == 
     \E k \in DOMAIN cpus:
