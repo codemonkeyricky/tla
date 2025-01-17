@@ -97,10 +97,22 @@ Next ==
 
 HoldingLock2 == 
     /\ lock_owner = "pid2"
+HoldingLock0 == 
+    /\ lock_owner = "pid0"
+HoldingLock1 == 
+    /\ lock_owner = "pid1"
+HoldingLock3 == 
+    /\ lock_owner = "pid3"
 
 L == 
     /\ SF_vars(Unlock(1) /\ HoldingLock2)
     /\ SF_vars(Unlock(0) /\ HoldingLock2)
+    /\ SF_vars(Unlock(1) /\ HoldingLock0)
+    /\ SF_vars(Unlock(0) /\ HoldingLock0)
+    /\ SF_vars(Unlock(1) /\ HoldingLock1)
+    /\ SF_vars(Unlock(0) /\ HoldingLock1)
+    /\ SF_vars(Unlock(1) /\ HoldingLock3)
+    /\ SF_vars(Unlock(0) /\ HoldingLock3)
 
 Spec ==
   /\ Init
