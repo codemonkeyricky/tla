@@ -27,79 +27,64 @@ Init ==
     /\ blocked_q = <<>>
     /\ lock_owner = ""
 
+Liveness == 
+    LET 
+        s == {x \in DOMAIN blocked_q : TRUE}
+    IN 
+        \* /\ Assert(0,"")
+        /\ s # {} ~> FALSE
+
 \* schedule a task to a free CPU
 Ready == 
-    LET 
-        k ==
-            IF \E x \in DOMAIN cpus: cpus[x] = "" THEN 
-                CHOOSE x \in DOMAIN cpus: cpus[x] = ""
-            ELSE 
-                100
-        t ==
-            IF ready_q # <<>> THEN 
-                Head(ready_q)
-            ELSE 
-                "none"
-    IN 
-        /\ k # 100
-        /\ t # "none"
-        /\ cpus' = [cpus EXCEPT ![k] = t]
+    \E t \in DOMAIN ready_q:
+        \E k \in DOMAIN cpus:
+        /\ cpus[k] = "" 
+        /\ cpus' = [cpus EXCEPT ![k] = Head(ready_q)]
         /\ ready_q' = Tail(ready_q)
         /\ UNCHANGED <<lock_owner, blocked_q>>
+    \* /\ Assert(0,"")
 
-\* deschedule a task
-MoveToReadyy(k) == 
-    /\ k # 100
+\* can only move to ready if not holding a lock
+MoveToReady(k) == 
+    /\ cpus[k] # "" 
+    /\ lock_owner # cpus[k]
     /\ ready_q' = Append(ready_q, cpus[k]) 
     /\ cpus' = [cpus EXCEPT ![k] = ""]
     /\ UNCHANGED <<lock_owner, blocked_q>>
+    \* /\ Assert(0,"")
 
-MoveToBlocked(k) == 
-    /\ k # 100
-    /\ blocked_q' = Append(blocked_q, cpus[k]) 
-    /\ cpus' = [cpus EXCEPT ![k] = ""]
-    /\ UNCHANGED <<lock_owner, ready_q>>
-
+\* get the lock
 Lock(k) == 
-    \* acquire lock if lock is free 
-    \/  /\ k # 100
-        /\ lock_owner = ""
-        /\ lock_owner' = cpus[k]
-        /\ UNCHANGED <<ready_q, cpus, blocked_q>>
-    \* deschedule if lock is taken
-    \/  /\ k # 100
-        /\ lock_owner # ""
-        /\ cpus[k] # lock_owner
-        /\ MoveToBlocked(k)
+    /\ cpus[k] # "" 
+    /\ lock_owner = ""
+    /\ lock_owner' = cpus[k]
+    /\ UNCHANGED <<ready_q, cpus, blocked_q>>
 
 \* unblock one blocked task
-Unblock == 
-    /\ blocked_q # <<>>
-    /\ blocked_q' = Tail(blocked_q)
-    /\ ready_q' = Append(ready_q, Head(blocked_q))
-    /\ UNCHANGED <<cpus>>
+\* Unblock == 
+\*     /\ cpus[k] # "" 
+\*     /\ blocked_q # <<>>
+\*     /\ blocked_q' = Tail(blocked_q)
+\*     /\ ready_q' = Append(ready_q, Head(blocked_q))
+\*     /\ UNCHANGED <<cpus>>
 
+\* unlock
 Unlock(k) == 
-    /\ k # 100 
+    /\ cpus[k] # "" 
     /\ lock_owner = cpus[k]
     /\ lock_owner' = ""
-    /\ Unblock
+    /\ UNCHANGED <<cpus, blocked_q, ready_q>>
 
 Running == 
-    LET 
-        k == 
-            IF \E x \in DOMAIN cpus: cpus[x] # "" THEN 
-                CHOOSE x \in DOMAIN cpus: cpus[x] # ""
-            ELSE 
-                100
-    IN 
-        \/ MoveToReadyy(k)
-        \/ Lock(k)
-        \/ Unlock(k)
+    \E k \in DOMAIN cpus:
+        /\ cpus[k] # "" 
+        /\ \/ MoveToReady(k)
+           \/ Lock(k)
+           \/ Unlock(k)
 
 Next == 
-    \/ Ready
     \/ Running
+    \/ Ready
 
 Spec ==
   /\ Init
