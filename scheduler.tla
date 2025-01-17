@@ -92,8 +92,19 @@ Next ==
     \/ Running
     \/ Ready
 
+\* v == 
+\*     <<>>
+
+HoldingLock2 == 
+    /\ lock_owner = "pid2"
+
+L == 
+    /\ SF_vars(Unlock(1) /\ HoldingLock2)
+    /\ SF_vars(Unlock(0) /\ HoldingLock2)
+
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
+  /\ L 
 =============================================================================
