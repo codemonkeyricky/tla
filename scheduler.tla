@@ -29,10 +29,9 @@ Init ==
 
 Liveness == 
     LET 
-        s == {x \in DOMAIN blocked_q : TRUE}
+        s == {x \in DOMAIN blocked_q : blocked_q[x] = "pid0"}
     IN 
-        \* /\ Assert(0,"")
-        /\ s # {} ~> FALSE
+        /\ s # {} ~> s = {}
 
 \* schedule a task to a free CPU
 Ready == 
