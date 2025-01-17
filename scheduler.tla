@@ -80,8 +80,8 @@ Unlock(k) ==
         /\ lock_owner = cpus[k]
         /\ lock_owner' = ""
         /\ Len(blocked_q) # 0 
-        /\ ready_q' = Append(ready_q, Head(blocked_q))
-        /\ blocked_q' = Tail(blocked_q) 
+        /\ ready_q' = ready \o blocked_q \o cpus[k]
+        /\ blocked_q' = <<>>
         /\ UNCHANGED <<cpus>>
 
 Running == 
