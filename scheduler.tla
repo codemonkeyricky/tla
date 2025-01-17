@@ -29,9 +29,11 @@ Init ==
 
 Liveness == 
     LET 
-        s == {x \in DOMAIN blocked_q : blocked_q[x] = "pid0"}
+        s == {x \in DOMAIN ready_q : ready_q[x] = "pid0"}
     IN 
         /\ s # {} ~> s = {}
+        \* /\ <>(s = {})
+        \* /\ <>(s # {})
 
 \* schedule a task to a free CPU
 Ready == 
@@ -80,9 +82,10 @@ Unlock(k) ==
         /\ lock_owner = cpus[k]
         /\ lock_owner' = ""
         /\ Len(blocked_q) # 0 
-        /\ ready_q' = ready \o blocked_q \o cpus[k]
+        /\ cpus' = [cpus EXCEPT ![k] = ""]
+        /\ ready_q' = ready_q \o blocked_q \o <<cpus[k]>>
         /\ blocked_q' = <<>>
-        /\ UNCHANGED <<cpus>>
+        \* /\ UNCHANGED <<cpus>>
 
 Running == 
     \E k \in DOMAIN cpus:
