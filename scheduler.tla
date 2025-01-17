@@ -69,10 +69,20 @@ Lock(k) ==
 
 \* unlock
 Unlock(k) == 
-    /\ cpus[k] # "" 
-    /\ lock_owner = cpus[k]
-    /\ lock_owner' = ""
-    /\ UNCHANGED <<cpus, blocked_q, ready_q>>
+    \* unlock when no one is waiting 
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner = cpus[k]
+        /\ lock_owner' = ""
+        /\ Len(blocked_q) = 0 
+        /\ UNCHANGED <<cpus, blocked_q, ready_q>>
+    \* unlock when someone is waiting
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner = cpus[k]
+        /\ lock_owner' = ""
+        /\ Len(blocked_q) # 0 
+        /\ ready_q' = Append(ready_q, Head(blocked_q))
+        /\ blocked_q' = Tail(blocked_q) 
+        /\ UNCHANGED <<cpus>>
 
 Running == 
     \E k \in DOMAIN cpus:
