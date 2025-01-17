@@ -146,8 +146,18 @@ entire state space (either per state or a sequence of states).\newline
 
 This book was motivated by the intent to solve problems. The book is designed to
 be example heavy with many chapter each represnting an problem that can be
-modelled using TLA+. The book will also contain a few chapters that discuss
-topics that deserve extra attention.
+modelled using TLA+.\newline
+
+Examples are split into two categories: A set of examples written using native
+TLA+ syntax, and another set of examples written using PlusCal (C-like syntax).
+I believe they are useful under different use cases. The differences will be
+highlighted in their respective sections. All examples will follow a similar 
+layout, covering the expected design process (eg. requirement, spec, safety and
+liveness properties). \newline
+
+Finally, there will be part that language reference portion that that discuss a
+few topics deserving extra attention. The intent is to be using this section of the 
+book as a \textit{reference}.
 
 \chapter{TLA+ Primer}
 
@@ -677,253 +687,6 @@ limit the state space.\newline
 Similarly, if you want to verify concurrent psuedo code implementation in
 PlusCal, you can likely at most verify 10s of lines of code.
 
-\chapter{SPSC Lockfree Queue}
-
-Single producer single consumer (SPSC) \textit{Lockfree} queue is a standard
-data exchange queue between a producer and a consumer. The SPSC lockfree queue
-promises data can exchange between producer and consumer in a \textit{lockfree}
-fashion, suggesting all condition both producer and consumer can make
-progress.\newline
-
-Contrast to standard shared queues, a SPSC waitfree queue doesn't require the
-use of a \textit{lock} (eg. mutex). The queue can be logically represented
-fairly simply as:
-
-\begin{lstlisting}
-    template <typename T, ssize_t N>
-    class cQueue<T> { 
-        ssize_t rptr = 0; 
-        ssize_t wptr = 0; 
-        std::array<T, N> buffer;
-        /* TODO: API definition below... */
-    };
-\end{lstlisting}
-
-A real implementation need to account for memory ordering effects specific to
-the architecture. For example, ARM has weak memory ordering model where
-read/write may appear out of order between CPUs. In this chapter we will only
-assume \textit{logical} execution where each command is issued sequentially
-(even perceived across CPUs) to focus the discussion on TLA+.
-\section{Requirement}
-
-As mentioned in earlier section, a SPSC queue is represented by an array, a pair
-of read write pointer. The implementation is (hopefully) descriptively trivial:
-
-\begin{itemize}
-    \item Two executing context, reader and writer
-    \item Writer advances wtpr after writes
-    \item Reader advances rtpr after reads
-    \item If rtpr equals wptr, queue is empty
-    \item If (wtpr + 1) \% N equals rptr, queue is full
-\end{itemize}
-% \newline
-
-A possible implementation may look like below (not accounting for memory
-ordering effects):
-\begin{lstlisting}
-    template <typename T, ssize_t N>
-    class cQueue { 
-        ssize_t rptr = 0;
-        ssize_t wptr = 0; 
-        std::array<T, N> buffer;
-
-    public:
-        bool read(T &v) { 
-            /* queue empty check */
-            if (rptr == wptr) { 
-                return false;
-            }
-            /* data get */
-            v = buffer[rptr]; 
-            /* rtpr update */
-            rptr = (rptr + 1) % N;
-            return true;
-        }
-
-        bool write(const T &v) { 
-            /* queue full check */
-            if ((wptr + 1) % N == rptr) { 
-                return false;
-            }
-            /* data write */
-            buffer[wptr] = v;
-            /* wptr update */
-            wptr = (wptr + 1) % N;
-            return true;
-        }
-    };
-\end{lstlisting}
-
-Since reader and writer execute in different context, the instructions in read
-and write can interleave in \textit{any} way imaginable:
-\begin{itemize}
-    \item queue empty check can happen before or after queue full check
-    \item data write happens immediately before data read
-    \item ... so on and so forth
-\end{itemize}
-
-The key observations is that buffer[wtpr] is reserved by the producer.
-buffer[wtpr] is either unused or being written to. In either case the reader is
-not allowed to access it. Symmetric reasoning applies to rptr. This provides
-the \textit{safety} to the design - but how do we verify this?\newline
-
-This is where TLA+ can help us formally verify the design.
-
-\section{Spec}
-
-TLA+ specification can be writen using its native formal specification
-language, or a C-like syntax called PlusCal (which transpiles down to itse
-native form). In this example, I chose to implement the specification using
-PlusCal, since the content to be verified is psuedo implementation. While it is
-possible specify SPSC in native TLA+, it is the author's opinion that it is
-more error prone in this case, each line is effective an individual state needs
-to be modeled.\newline
-
-The following is a snippet of the specification written in PlusCal, hopefully
-intuitive to read:
-\begin{ppcal}
-procedure reader(i) 
-variable 
-begin
-r_chk_empty:        if rptr = wptr then 
-r_early_ret:            return;
-                    end if;
-r_read_buf:         assert buffer[rptr] # 0;
-r_cs:               buffer[rptr] := 0;
-r_upd_rtpr:         rptr := (rptr + 1) % N;
-                    return;
-end procedure; 
-
-procedure writer(i) begin
-w_chk_full:         if (wptr + 1) % N = rptr then 
-w_early_ret:            return; 
-                    end if;
-w_write_buf:        assert buffer[wptr] = 0;
-w_cs:               buffer[wptr] := wptr + 1000;
-w_upd_wptr:         wptr := (wptr + 1) % N;
-                    return;
-end procedure; 
-\end{ppcal}\newline
-\begin{tlatex}
-\@x{ {\p@procedure} reader ( i )}%
-\@x{ {\p@variable}}%
-\@x{ {\p@begin}}%
- \@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@if} rptr \.{=} wptr
- {\p@then}}%
- \@x{ r\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{51.39} {\p@return}
- {\p@semicolon}}%
-\@x{\@s{91.60} {\p@end} {\p@if} {\p@semicolon}}%
- \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}\@s{36.83} {\p@assert} buffer [ rptr
- ] \.{\neq} 0 {\p@semicolon}}%
- \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}\@s{66.02} buffer [ rptr ] \.{:=} 0
- {\p@semicolon}}%
- \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}\@s{36.98} rptr \.{:=} ( rptr \.{+} 1
- ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{91.60} {\p@return} {\p@semicolon}}%
-\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
-\@pvspace{8.0pt}%
-\@x{ {\p@procedure} writer ( i ) {\p@begin}}%
- \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}\@s{35.97} {\p@if} ( wptr \.{+} 1 )
- \.{\%} N \.{=} rptr {\p@then}}%
- \@x{ w\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{45.1} {\p@return}
- {\p@semicolon}}%
-\@x{\@s{89.45} {\p@end} {\p@if} {\p@semicolon}}%
- \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@assert} buffer [ wptr
- ] \.{=} 0 {\p@semicolon}}%
- \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}\@s{64.27} buffer [ wptr ] \.{:=} wptr \.{+}
- 1000 {\p@semicolon}}%
- \@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}\@s{32.8} wptr \.{:=} ( wptr \.{+} 1
- ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{92.28} {\p@return} {\p@semicolon}}%
-\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
-\end{tlatex}
-
-Note each command starts with a \textit{label}, such as r\_chk\_empty. All the
-actions associated with the label is assumed executed atomically. This is
-reflected in the generated TLA+ code:
-\begin{tla}
-    r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
-                     /\ IF rptr = wptr
-                           THEN /\ pc' = [pc EXCEPT ![self] = "r_early_ret"]
-                           ELSE /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
-                     /\ UNCHANGED << rptr, wptr, buffer, stack, i_, i >>
-\end{tla}
-\begin{tlatex}
- \@x{\@s{16.4} r\_chk\_empty ( self ) \.{\defeq} \.{\land} pc [ self ]
- \.{=}\@w{r\_chk\_empty}}%
-\@x{\@s{97.45} \.{\land} {\IF} rptr \.{=} wptr}%
- \@x{\@s{120.71} \.{\THEN} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
- self ] \.{=}\@w{r\_early\_ret} ]}%
- \@x{\@s{120.71} \.{\ELSE} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
- self ] \.{=}\@w{r\_read\_buf} ]}%
- \@x{\@s{97.45} \.{\land} {\UNCHANGED} {\langle} rptr ,\, wptr ,\, buffer ,\,
- stack ,\, i\_ ,\, i {\rangle}}%
-\end{tlatex}
-
-\section{Safety}
-
-As mentioned before, safety properties need to hold true in every single state.
-Some safety requirement we can enforce, for example:\newline
-
-Reader and writer cannot access the same index at the same time:
-\begin{equation}
-    \sim ((pc[100] = "w\_cs") \land (pc[101] = "r\_cs") \land rptr = wptr)
-\end{equation}
-
-All unused index should be set to 0:
-\begin{equation}
-    \A kk \in unused : buffer[kk] = 0
-\end{equation}
-
-At any given moment, buffer[wtpr] may be unused or written. buffer[rptr] may be
-unused or read:
-\begin{tla}
-    \/ Cardinality(to_be_read) + 1 = Cardinality(reading)
-    \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
-    \/ Cardinality(to_be_read)     = Cardinality(reading)
-\end{tla}
-\begin{tlatex}
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=} Cardinality
- ( reading )}%
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
- Cardinality ( reading ) \.{+} 1}%
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
- Cardinality ( reading )}%
-\end{tlatex}
-
-\section{Liveness}
-
-All indicies are eventually used:
-
-\begin{tla}
-    Liveness ==
-    \A k \in 0..N-1:
-    <>(buffer[k] # 0)
-\end{tla}
-\begin{tlatex}
-\@x{\@s{16.4} Liveness \.{\defeq}}%
-\@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
-\@x{\@s{16.4} {\Diamond} ( buffer [ k ] \.{\neq} 0 )}%
-\end{tlatex}
-
-Unused index 0 becomes used, used index 0 becomes unused.
-\begin{tla}
-    Liveness2 ==
-    /\ (buffer[0] = 0) ~> buffer[0] = 1000
-    /\ (buffer[0] = 1000) ~> buffer[0] = 0
-\end{tla}
-\begin{tlatex}
-\@x{\@s{16.4} Liveness2 \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 0 ) \.{\leadsto} buffer [ 0 ]
- \.{=} 1000}%
- \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 1000 ) \.{\leadsto} buffer [ 0 ]
- \.{=} 0}%
-\end{tlatex}
-
-\section{Configuration}
-
-\chapter{SPMC Lockless Queue}
-
 \chapter{Simple Gossip Protocol}
 
 This section the author's notes on a simple gossip protocol by Andrew Hewler:\newline
@@ -1179,13 +942,448 @@ requirements:
     \item System has a single global lock
     \item Any task can attempt to acquire the lock, Any task attempting to
     acquire the lock are gauranteed to be scheduled.
+    \item If multiple tasks attempt to grab the lock, the tasks will be
+    scheduled in lock request order. 
 \end{itemize}
+
+\section{Spec}
+
+We will model scheduler using the following variables:\newline
+\begin{tla}
+Init ==
+    /\ cpus = [i \in 0..N-1 |-> ""] 
+    /\ ready_q = S2T(Tasks)
+    /\ blocked_q = <<>>
+    /\ lock_owner = ""
+\end{tla}
+\begin{tlatex}
+\@x{ Init \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} cpus \.{=} [ i \.{\in} 0 \.{\dotdot} N \.{-} 1
+ \.{\mapsto}\@w{} ]}%
+\@x{\@s{16.4} \.{\land} ready\_q \.{=} S2T ( Tasks )}%
+\@x{\@s{16.4} \.{\land} blocked\_q \.{=} {\langle} {\rangle}}%
+\@x{\@s{16.4} \.{\land} lock\_owner \.{=}\@w{}}%
+\end{tlatex}
+\newline
+
+A few things to note:
+\begin{itemize}
+    \item The system has $N$ executing context, represented as number of CPUs.
+    When a task is running, $cpus[k]$ is set to $taskName$. When CPU is idle,
+    $cpus[k]$ is set to an empty string. 
+    \item $ready_q$ and $blocked_q$ are initialized as \textit{ordered tuple},
+    due to the cooperative scheduling requirement.
+    \item $S2T$ is a macro that converts a set into a ordered tuple. This is to
+    accommodate the fact it appears I cannot define tuple in .cfg file.
+    \item Finally, the single system lock is represented as $lock\_owner$. 
+\end{itemize}
+
+A task can be in three possible state: Ready, Blocked and Running. The $Next$
+box-action fomula will define a Ready and Running action, and the implementation
+will include related lock contention handling.\newline
+
+\begin{tla}
+------- MODULE scheduler ---- 
+MoveToReady(k) == 
+    /\ cpus[k] # "" 
+    /\ lock_owner # cpus[k]
+    /\ ready_q' = Append(ready_q, cpus[k]) 
+    /\ cpus' = [cpus EXCEPT ![k] = ""]
+    /\ UNCHANGED <<lock_owner, blocked_q>>
+Lock(k) == 
+    \* lock is empty
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner = ""
+        /\ lock_owner' = cpus[k]
+        /\ UNCHANGED <<ready_q, cpus, blocked_q>>
+    \* someone else has the lock
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner # ""
+        /\ lock_owner # cpus[k] \* cannot double lock
+        /\ blocked_q' = Append(blocked_q, cpus[k])
+        /\ cpus' = [cpus EXCEPT ![k] = ""]
+        /\ UNCHANGED <<ready_q, lock_owner>>
+Unlock(k) == 
+    /\ cpus[k] # "" 
+    /\ lock_owner = cpus[k]
+    /\ lock_owner' = ""
+    /\ cpus' = [cpus EXCEPT ![k] = ""]
+    /\ ready_q' = ready_q \o blocked_q \o <<cpus[k]>>
+    /\ blocked_q' = <<>>
+
+Running == 
+    \E k \in DOMAIN cpus:
+        /\ cpus[k] # "" 
+        /\ \/ MoveToReady(k)
+           \/ Lock(k)
+           \/ Unlock(k)
+=============================================================================
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} scheduler}\moduleRightDash\@xx{}%
+\@x{ MoveToReady ( k ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
+\@x{\@s{16.4} \.{\land} lock\_owner \.{\neq} cpus [ k ]}%
+ \@x{\@s{16.4} \.{\land} ready\_q \.{'} \.{=} Append ( ready\_q ,\, cpus [ k ]
+ )}%
+ \@x{\@s{16.4} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ]
+ \.{=}\@w{} ]}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} lock\_owner ,\, blocked\_q
+ {\rangle}}%
+\@x{ Lock ( k ) \.{\defeq}}%
+\@x{\@s{20.63}}%
+\@y{%
+  lock is empty
+}%
+\@xx{}%
+\@x{\@s{20.63} \.{\lor}\@s{4.1} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
+\@x{\@s{35.84} \.{\land} lock\_owner \.{=}\@w{}}%
+\@x{\@s{35.84} \.{\land} lock\_owner \.{'} \.{=} cpus [ k ]}%
+ \@x{\@s{35.84} \.{\land} {\UNCHANGED} {\langle} ready\_q ,\, cpus ,\,
+ blocked\_q {\rangle}}%
+\@x{\@s{20.63}}%
+\@y{%
+  someone else has the lock
+}%
+\@xx{}%
+\@x{\@s{20.63} \.{\lor}\@s{4.1} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
+\@x{\@s{35.84} \.{\land} lock\_owner \.{\neq}\@w{}}%
+\@x{\@s{35.84} \.{\land} lock\_owner \.{\neq} cpus [ k ]}%
+\@y{%
+  cannot double lock
+}%
+\@xx{}%
+ \@x{\@s{35.84} \.{\land} blocked\_q \.{'}\@s{5.22} \.{=} Append ( blocked\_q
+ ,\, cpus [ k ] )}%
+ \@x{\@s{35.84} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ]
+ \.{=}\@w{} ]}%
+ \@x{\@s{35.84} \.{\land} {\UNCHANGED} {\langle} ready\_q ,\, lock\_owner
+ {\rangle}}%
+\@x{ Unlock ( k ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
+\@x{\@s{16.4} \.{\land} lock\_owner \.{=} cpus [ k ]}%
+\@x{\@s{16.4} \.{\land} lock\_owner \.{'} \.{=}\@w{}}%
+ \@x{\@s{16.4} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ]
+ \.{=}\@w{} ]}%
+ \@x{\@s{16.4} \.{\land} ready\_q \.{'} \.{=} ready\_q \.{\circ} blocked\_q
+ \.{\circ} {\langle} cpus [ k ] {\rangle}}%
+\@x{\@s{16.4} \.{\land} blocked\_q \.{'} \.{=} {\langle} {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ Running \.{\defeq}}%
+\@x{\@s{16.4} \E\, k \.{\in} {\DOMAIN} cpus \.{:}}%
+\@x{\@s{27.72} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
+\@x{\@s{27.72} \.{\land} \.{\lor} MoveToReady ( k )}%
+\@x{\@s{38.83} \.{\lor} Lock ( k )}%
+\@x{\@s{38.83} \.{\lor} Unlock ( k )}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+\section{Safety}
+
+\section{Liveness}
+
+I believe this is the most important part of cooperative scheduler design. While
+the scheduler can't \textit{force} a task to relinquish a lock (the scheduler
+doesn't dictate when the task is \textit{done}), the scheduler can ensure
+scheduling fairness by scheduling the next lock requester intsead of the task 
+that just relinquished the lock.\newline
+
+\begin{tla}
+Liveness == 
+    \A t \in Tasks:
+        LET 
+            b == {x \in DOMAIN blocked_q : blocked_q[x] = t}
+        IN 
+            /\ b # {} ~> b = {}
+\end{tla}
+\begin{tlatex}
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \A\, t \.{\in} Tasks \.{:}}%
+\@x{\@s{27.72} \.{\LET}}%
+ \@x{\@s{44.12} b \.{\defeq} \{ x \.{\in} {\DOMAIN} blocked\_q \.{:}
+ blocked\_q [ x ] \.{=} t \}}%
+\@x{\@s{27.72} \.{\IN}}%
+\@x{\@s{44.12} \.{\land} b \.{\neq} \{ \} \.{\leadsto} b \.{=} \{ \}}%
+\end{tlatex}
+\newline
+
+The formula defines set b to be either an empty set or a set of one task. Assume
+a set of \{"p0", "p1", "p2\}. Possible value of b include: \{\}, \{"p0"\},
+\{"p1"\} and \{"p2"\}. The fomula then states an non empty set of b leads to an
+\textit{empty set} of b. In other words: \newline
+
+\textit{If a task ever becomes blocked, it will eventually become unblocked}.\newline
+
+However, when we actually run the model checker, we will find the liveness
+property is \textit{violated}. The failure scenario is basically one task
+holding onto the lock in one CPU, while the scheduler repeatedly
+schedule/deschedule a separate task in another CPU. While this is perfectly
+allowed, the model checker detects a possible path for the the system to trap in
+a local state and fail the liveness property.\newline 
+
+Perhaps not surprisingly, if you construct similar liveness property to verify 
+a task is \textit{eventually} always scheduled, it will also fail. The model
+checker will provide a counter case where a task is never scheduled because
+another task is repeatedly acquire/release the global lock.\newline
+
+We need \textit{Strong Fairness} to solve this problem.
 
 \chapter{Simple Elevator}
 
 https://surfingcomplexity.blog/2024/10/16/a-liveness-example-in-tla/
 
 \chapter{Miscellaneous}
+
+\part{Examples with PlusCal}
+
+\chapter{SPSC Lockfree Queue}
+
+Single producer single consumer (SPSC) \textit{Lockfree} queue is a standard
+data exchange queue between a producer and a consumer. The SPSC lockfree queue
+promises data can exchange between producer and consumer in a \textit{lockfree}
+fashion, suggesting all condition both producer and consumer can make
+progress.\newline
+
+Contrast to standard shared queues, a SPSC waitfree queue doesn't require the
+use of a \textit{lock} (eg. mutex). The queue can be logically represented
+fairly simply as:
+
+\begin{lstlisting}
+    template <typename T, ssize_t N>
+    class cQueue<T> { 
+        ssize_t rptr = 0; 
+        ssize_t wptr = 0; 
+        std::array<T, N> buffer;
+        /* TODO: API definition below... */
+    };
+\end{lstlisting}
+
+A real implementation need to account for memory ordering effects specific to
+the architecture. For example, ARM has weak memory ordering model where
+read/write may appear out of order between CPUs. In this chapter we will only
+assume \textit{logical} execution where each command is issued sequentially
+(even perceived across CPUs) to focus the discussion on TLA+.
+\section{Requirement}
+
+As mentioned in earlier section, a SPSC queue is represented by an array, a pair
+of read write pointer. The implementation is (hopefully) descriptively trivial:
+
+\begin{itemize}
+    \item Two executing context, reader and writer
+    \item Writer advances wtpr after writes
+    \item Reader advances rtpr after reads
+    \item If rtpr equals wptr, queue is empty
+    \item If (wtpr + 1) \% N equals rptr, queue is full
+\end{itemize}
+% \newline
+
+A possible implementation may look like below (not accounting for memory
+ordering effects):
+\begin{lstlisting}
+    template <typename T, ssize_t N>
+    class cQueue { 
+        ssize_t rptr = 0;
+        ssize_t wptr = 0; 
+        std::array<T, N> buffer;
+
+    public:
+        bool read(T &v) { 
+            /* queue empty check */
+            if (rptr == wptr) { 
+                return false;
+            }
+            /* data get */
+            v = buffer[rptr]; 
+            /* rtpr update */
+            rptr = (rptr + 1) % N;
+            return true;
+        }
+
+        bool write(const T &v) { 
+            /* queue full check */
+            if ((wptr + 1) % N == rptr) { 
+                return false;
+            }
+            /* data write */
+            buffer[wptr] = v;
+            /* wptr update */
+            wptr = (wptr + 1) % N;
+            return true;
+        }
+    };
+\end{lstlisting}
+
+Since reader and writer execute in different context, the instructions in read
+and write can interleave in \textit{any} way imaginable:
+\begin{itemize}
+    \item queue empty check can happen before or after queue full check
+    \item data write happens immediately before data read
+    \item ... so on and so forth
+\end{itemize}
+
+The key observations is that buffer[wtpr] is reserved by the producer.
+buffer[wtpr] is either unused or being written to. In either case the reader is
+not allowed to access it. Symmetric reasoning applies to rptr. This provides
+the \textit{safety} to the design - but how do we verify this?\newline
+
+This is where TLA+ can help us formally verify the design.
+
+\section{Spec}
+
+TLA+ specification can be writen using its native formal specification
+language, or a C-like syntax called PlusCal (which transpiles down to itse
+native form). In this example, I chose to implement the specification using
+PlusCal, since the content to be verified is psuedo implementation. While it is
+possible specify SPSC in native TLA+, it is the author's opinion that it is
+more error prone in this case, each line is effective an individual state needs
+to be modeled.\newline
+
+The following is a snippet of the specification written in PlusCal, hopefully
+intuitive to read:
+\begin{ppcal}
+procedure reader(i) 
+variable 
+begin
+r_chk_empty:        if rptr = wptr then 
+r_early_ret:            return;
+                    end if;
+r_read_buf:         assert buffer[rptr] # 0;
+r_cs:               buffer[rptr] := 0;
+r_upd_rtpr:         rptr := (rptr + 1) % N;
+                    return;
+end procedure; 
+
+procedure writer(i) begin
+w_chk_full:         if (wptr + 1) % N = rptr then 
+w_early_ret:            return; 
+                    end if;
+w_write_buf:        assert buffer[wptr] = 0;
+w_cs:               buffer[wptr] := wptr + 1000;
+w_upd_wptr:         wptr := (wptr + 1) % N;
+                    return;
+end procedure; 
+\end{ppcal}\newline
+\begin{tlatex}
+\@x{ {\p@procedure} reader ( i )}%
+\@x{ {\p@variable}}%
+\@x{ {\p@begin}}%
+ \@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@if} rptr \.{=} wptr
+ {\p@then}}%
+ \@x{ r\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{51.39} {\p@return}
+ {\p@semicolon}}%
+\@x{\@s{91.60} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}\@s{36.83} {\p@assert} buffer [ rptr
+ ] \.{\neq} 0 {\p@semicolon}}%
+ \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}\@s{66.02} buffer [ rptr ] \.{:=} 0
+ {\p@semicolon}}%
+ \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}\@s{36.98} rptr \.{:=} ( rptr \.{+} 1
+ ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{91.60} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\@pvspace{8.0pt}%
+\@x{ {\p@procedure} writer ( i ) {\p@begin}}%
+ \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}\@s{35.97} {\p@if} ( wptr \.{+} 1 )
+ \.{\%} N \.{=} rptr {\p@then}}%
+ \@x{ w\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{45.1} {\p@return}
+ {\p@semicolon}}%
+\@x{\@s{89.45} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@assert} buffer [ wptr
+ ] \.{=} 0 {\p@semicolon}}%
+ \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}\@s{64.27} buffer [ wptr ] \.{:=} wptr \.{+}
+ 1000 {\p@semicolon}}%
+ \@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}\@s{32.8} wptr \.{:=} ( wptr \.{+} 1
+ ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{92.28} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\end{tlatex}
+
+Note each command starts with a \textit{label}, such as r\_chk\_empty. All the
+actions associated with the label is assumed executed atomically. This is
+reflected in the generated TLA+ code:
+\begin{tla}
+    r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
+                     /\ IF rptr = wptr
+                           THEN /\ pc' = [pc EXCEPT ![self] = "r_early_ret"]
+                           ELSE /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
+                     /\ UNCHANGED << rptr, wptr, buffer, stack, i_, i >>
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} r\_chk\_empty ( self ) \.{\defeq} \.{\land} pc [ self ]
+ \.{=}\@w{r\_chk\_empty}}%
+\@x{\@s{97.45} \.{\land} {\IF} rptr \.{=} wptr}%
+ \@x{\@s{120.71} \.{\THEN} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
+ self ] \.{=}\@w{r\_early\_ret} ]}%
+ \@x{\@s{120.71} \.{\ELSE} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
+ self ] \.{=}\@w{r\_read\_buf} ]}%
+ \@x{\@s{97.45} \.{\land} {\UNCHANGED} {\langle} rptr ,\, wptr ,\, buffer ,\,
+ stack ,\, i\_ ,\, i {\rangle}}%
+\end{tlatex}
+
+\section{Safety}
+
+As mentioned before, safety properties need to hold true in every single state.
+Some safety requirement we can enforce, for example:\newline
+
+Reader and writer cannot access the same index at the same time:
+\begin{equation}
+    \sim ((pc[100] = "w\_cs") \land (pc[101] = "r\_cs") \land rptr = wptr)
+\end{equation}
+
+All unused index should be set to 0:
+\begin{equation}
+    \A kk \in unused : buffer[kk] = 0
+\end{equation}
+
+At any given moment, buffer[wtpr] may be unused or written. buffer[rptr] may be
+unused or read:
+\begin{tla}
+    \/ Cardinality(to_be_read) + 1 = Cardinality(reading)
+    \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
+    \/ Cardinality(to_be_read)     = Cardinality(reading)
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=} Cardinality
+ ( reading )}%
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
+ Cardinality ( reading ) \.{+} 1}%
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
+ Cardinality ( reading )}%
+\end{tlatex}
+
+\section{Liveness}
+
+All indicies are eventually used:
+
+\begin{tla}
+    Liveness ==
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness \.{\defeq}}%
+\@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{16.4} {\Diamond} ( buffer [ k ] \.{\neq} 0 )}%
+\end{tlatex}
+
+Unused index 0 becomes used, used index 0 becomes unused.
+\begin{tla}
+    Liveness2 ==
+    /\ (buffer[0] = 0) ~> buffer[0] = 1000
+    /\ (buffer[0] = 1000) ~> buffer[0] = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness2 \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 0 ) \.{\leadsto} buffer [ 0 ]
+ \.{=} 1000}%
+ \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 1000 ) \.{\leadsto} buffer [ 0 ]
+ \.{=} 0}%
+\end{tlatex}
+
+\section{Configuration}
+
+\chapter{SPMC Lockless Queue}
+
+
 
 \part{Language Reference}
 

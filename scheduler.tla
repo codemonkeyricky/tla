@@ -35,7 +35,6 @@ Ready ==
         /\ cpus' = [cpus EXCEPT ![k] = Head(ready_q)]
         /\ ready_q' = Tail(ready_q)
         /\ UNCHANGED <<lock_owner, blocked_q>>
-    \* /\ Assert(0,"")
 
 \* can only move to ready if not holding a lock
 MoveToReady(k) == 
@@ -44,7 +43,6 @@ MoveToReady(k) ==
     /\ ready_q' = Append(ready_q, cpus[k]) 
     /\ cpus' = [cpus EXCEPT ![k] = ""]
     /\ UNCHANGED <<lock_owner, blocked_q>>
-    \* /\ Assert(0,"")
 
 \* get the lock
 Lock(k) == 
@@ -79,14 +77,20 @@ Running ==
 
 \* verify pid0 is eventually scheduled
 Liveness == 
-    LET 
-        s == {x \in DOMAIN ready_q : ready_q[x] = "pid0"}
-        b == {x \in DOMAIN blocked_q : blocked_q[x] = "pid0"}
-    IN 
-        /\ WF_vars(Ready)
-        /\ WF_vars(Running)
-        /\ s # {} ~> s = {}
-        /\ b # {} ~> b = {}
+    \A t \in Tasks:
+        LET 
+            b == {x \in DOMAIN blocked_q : blocked_q[x] = t}
+        IN 
+            /\ b # {} ~> b = {}
+
+Liveness2 == 
+    \A t \in Tasks:
+        LET 
+            s == {x \in DOMAIN ready_q : ready_q[x] = t}
+            b == {x \in DOMAIN blocked_q : blocked_q[x] = t}
+        IN 
+            /\ s # {} ~> s = {}
+            /\ b # {} ~> b = {}
 
 Next == 
     \/ Running
