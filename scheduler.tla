@@ -55,18 +55,18 @@ MoveToReady(k) ==
 
 \* get the lock
 Lock(k) == 
-    /\ cpus[k] # "" 
-    /\ lock_owner = ""
-    /\ lock_owner' = cpus[k]
-    /\ UNCHANGED <<ready_q, cpus, blocked_q>>
-
-\* unblock one blocked task
-\* Unblock == 
-\*     /\ cpus[k] # "" 
-\*     /\ blocked_q # <<>>
-\*     /\ blocked_q' = Tail(blocked_q)
-\*     /\ ready_q' = Append(ready_q, Head(blocked_q))
-\*     /\ UNCHANGED <<cpus>>
+    \* lock is empty
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner = ""
+        /\ lock_owner' = cpus[k]
+        /\ UNCHANGED <<ready_q, cpus, blocked_q>>
+    \* someone else has the lock
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner # ""
+        /\ lock_owner # cpus[k]
+        /\ blocked_q' = Append(blocked_q, cpus[k])
+        /\ cpus' = [cpus EXCEPT ![k] = ""]
+        /\ UNCHANGED <<ready_q, lock_owner>>
 
 \* unlock
 Unlock(k) == 
