@@ -57,16 +57,16 @@ When the system enters a low power state, it executes possibly hundreds of
 instruction.  If the microcode attempts to access the memory interface when the
 power island has been shut off, the system would hang. Since the power island
 has been shut off, the JTAG port is also shut off, leaving the developer with
-\textit{no way} of live debugging related problem. at this point the developer
+\textit{no way} of live debugging related problem. At this point the developer
 needs to siphon through (possibly hundreds) of instructions to catch invariant
 violation \textit{manually}.\newline
 
-Since the propietary low power processor was fairly simple (as far as ASIC
-design goes) and only had a handful of instructions, I was able to create an
-emulator to verify the microcode prior to deploying it on target. The emulator
-tracks the system state on every command execution and confirm every step along
-the way none of the system invariants have been violated. This included stuff
-such as:
+As one can imagine, maintaining the microcode was very expensive. Fortunately,
+the propietary low power processor only had a handful of instructions, I was
+able to reduce the maintenance cost by creating an emulator to verify the
+microcode prior to deploying it on target. The emulator tracks the system state
+on every command execution and confirm every step along the way none of the
+system invariants have been violated. This included stuff such as: 
 \begin{itemize}
     \item Accessing memory interface after power off leads to a hang
     \item Accessing certain register in certain chip revision leads to a hang 
@@ -79,16 +79,17 @@ algorithm, providing \textit{100\%} microcode coverage before deploy on
 target.\newline
 
 This was a very enlighting experience. To generalize, there are a class of
-problem in the industry where the solution space with very high 
-\textit{correctness} requirement, such as lockless/waitfree data structure,
-distributed algorithms, OS scheduler, etc. The failure cost to these problems 
-tend to be high, because they are possibly extremely difficult to debug or
-reproduce. \textit{Why isn't there a generic way of solving this problem?}
+problem in the industry where the solution space with very high \textit{failure
+cost}.  Solutions such as lockless/waitfree data structure, distributed
+algorithms, OS scheduler, etc tend to have high failure cost because they are
+possibly extremely difficult to debug or reproduce. \newline 
+
+\textit{There's gotta be a better way to solve these problems.}. 
 
 \section{The Generalized Problem}
 
-Fast forward to now, as I was learning about distributed algorithms, I found out
-about TLA+, a formalized solution to what I was looking for.\newline
+Fast forward to now: I stumbled across TLA+ as I was learning about distributed
+algorithms.  A formalized solution of what I was looking for.\newline
 
 Leslie Lamport invented the TLA+ 1999, but didn't appear to have caught on until
 the 2010's. I'm of the opinion that TLA+ was invented ahead of its time, and
@@ -103,11 +104,11 @@ cores. Software vendors finds it more financially attractive to buy two of the
 same machine than buying the same machine with twice the capability, etc. All of
 these motivates software or hardware solution in the horizontal scaling space.\newline
 
-One slight problem: \textit{human are inherently bad at reasoning things
-concurrently}.  Humans are fundamentally single-threaded machines. Reasoning
-things that execute in parallel is possible, but difficult. It is hard to
-enumerate all possible scenario in one's mind to ensure the design accommodates
-all the edge cases. 
+One slight problem: \textit{human are bad at concurrent reasoning.}\newline
+
+Humans are fundamentally single-threaded machines. Reasoning things that execute
+in parallel is possible, but difficult. It is hard to enumerate all possible
+scenario in one's mind to ensure the design accommodates all the edge cases. 
 \newline
 
 Consider a distributed system. The system is a cluster of independently
@@ -140,6 +141,8 @@ The key innovation of TLA+ is once the system is modeled as a finite state
 machine, the states can be \textit{exhaustively} explored (via
 breath-first-search) to ensure certain properties are held through out the
 entire state space (either per state or a sequence of states).\newline
+
+\section{Book Layout}
 
 This book was motivated by the intent to solve problems. The book is designed to
 be example heavy with many chapter each represnting an problem that can be
@@ -287,7 +290,7 @@ $\Box[Next]_{vars}$ deserves some special attention:
 % specification follows very similar template. There are situation we will need to
 % provide \textit{fairness} description - this will be covered later. \newline
 
-\subsection{Safety}
+\section{Safety}
 
 Safety property describes invariant that must hold true in every state of
 system. A common invariant is \textit{type safety} checks. In a digital clock, 
