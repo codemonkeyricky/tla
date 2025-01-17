@@ -1089,14 +1089,17 @@ scheduling fairness by scheduling the next lock requester intsead of the task
 that just relinquished the lock.\newline
 
 \begin{tla}
+----- MODULE scheduler ---- 
 Liveness == 
     \A t \in Tasks:
         LET 
             b == {x \in DOMAIN blocked_q : blocked_q[x] = t}
         IN 
             /\ b # {} ~> b = {}
+==========
 \end{tla}
 \begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} scheduler}\moduleRightDash\@xx{}%
 \@x{ Liveness \.{\defeq}}%
 \@x{\@s{16.4} \A\, t \.{\in} Tasks \.{:}}%
 \@x{\@s{27.72} \.{\LET}}%
@@ -1104,6 +1107,7 @@ Liveness ==
  blocked\_q [ x ] \.{=} t \}}%
 \@x{\@s{27.72} \.{\IN}}%
 \@x{\@s{44.12} \.{\land} b \.{\neq} \{ \} \.{\leadsto} b \.{=} \{ \}}%
+\@x{}\bottombar\@xx{}%
 \end{tlatex}
 \newline
 
@@ -1132,7 +1136,7 @@ We need \textit{Strong Fairness} to solve this problem:
 L ==
     \A t \in Tasks :
         \A n \in 0..(N-1) :
-            SF_vars(HoldingLock(t) /\ Unlock(n))
+            WF_vars(HoldingLock(t) /\ Unlock(n))
 Spec ==
   /\ Init
   /\ [][Next]_vars
@@ -1153,6 +1157,9 @@ Spec ==
 \@x{\@s{8.2} \.{\land}\@s{0.16} L}%
 \@x{}\bottombar\@xx{}%
 \end{tlatex}
+\newline
+
+Fairness ensures that we are never stuck in a repeated state.
 
 \chapter{Simple Elevator}
 

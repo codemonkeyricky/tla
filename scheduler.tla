@@ -96,16 +96,13 @@ Next ==
     \/ Running
     \/ Ready
 
-\* v == 
-\*     <<>>
-
 HoldingLock(t) == 
     /\ lock_owner = t
 
 L ==
     \A t \in Tasks :
         \A n \in 0..(N-1) :
-            SF_vars(HoldingLock(t) /\ Unlock(n))
+            WF_vars(HoldingLock(t) /\ Unlock(n))
 
 Spec ==
   /\ Init
