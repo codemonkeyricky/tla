@@ -1126,7 +1126,33 @@ a task is \textit{eventually} always scheduled, it will also fail. The model
 checker will provide a counter case where a task is never scheduled because
 another task is repeatedly acquire/release the global lock.\newline
 
-We need \textit{Strong Fairness} to solve this problem.
+We need \textit{Strong Fairness} to solve this problem:
+\begin{tla}
+----- MODULE scheduler ---- 
+L ==
+    \A t \in Tasks :
+        \A n \in 0..(N-1) :
+            SF_vars(HoldingLock(t) /\ Unlock(n))
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+  /\ L 
+======= 
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} scheduler}\moduleRightDash\@xx{}%
+\@x{ L \.{\defeq}}%
+\@x{\@s{14.47} \A\, t \.{\in} Tasks \.{:}}%
+\@x{\@s{25.79} \A\, n \.{\in} 0 \.{\dotdot} ( N \.{-} 1 ) \.{:}}%
+\@x{\@s{37.11} {\SF}_{ vars} ( HoldingLock ( t ) \.{\land} Unlock ( n ) )}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ vars} ( Next )}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} L}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
 
 \chapter{Simple Elevator}
 
