@@ -27,14 +27,6 @@ Init ==
     /\ blocked_q = <<>>
     /\ lock_owner = ""
 
-Liveness == 
-    LET 
-        s == {x \in DOMAIN ready_q : ready_q[x] = "pid0"}
-    IN 
-        /\ s # {} ~> s = {}
-        \* /\ <>(s = {})
-        \* /\ <>(s # {})
-
 \* schedule a task to a free CPU
 Ready == 
     \E t \in DOMAIN ready_q:
@@ -84,6 +76,17 @@ Running ==
         /\ \/ MoveToReady(k)
            \/ Lock(k)
            \/ Unlock(k)
+
+\* verify pid0 is eventually scheduled
+Liveness == 
+    LET 
+        s == {x \in DOMAIN ready_q : ready_q[x] = "pid0"}
+        b == {x \in DOMAIN blocked_q : blocked_q[x] = "pid0"}
+    IN 
+        /\ WF_vars(Ready)
+        /\ WF_vars(Running)
+        /\ s # {} ~> s = {}
+        /\ b # {} ~> b = {}
 
 Next == 
     \/ Running
