@@ -7,6 +7,7 @@
 \usepackage{comment}
 \usepackage{fancyhdr}
 \usepackage{amssymb}
+\usepackage{inputenc}
 
 % !TeX spellcheck = en_GB 
 
@@ -929,6 +930,44 @@ The $Fairness$ conjunction ensures Gossip runs between every pair of n and o.
 
 \chapter{Raft Consensus Protocol}
 
+Raft consensus protocol is a consensus algorithm that allows a cluster of
+independent nodes to work collectly to offer a service. One application of the
+raft consensus protocol is for database replication protocol. Assume replication 
+factor of 3 and hard drive failure rate of 0.81\% per year, the possibility of 
+the total failure where the entire replication group goes down is $1-0.0081^3 =
+99.9999\%$ uptime \cite{backblaze}.\newline
+
+This section will provide a brief description of the protocol, enough to enable
+discussion of the TLA+ protocol. For a full description of the the Raft
+protocol, please refer to the sentinal paper \cite{raft}.\newline
+
+The Raft protocol implements a few key tenent principles. Here we refer the cluster 
+of nodes as the \textit{system}:
+\begin{itemize}
+    \item A Raft cluster have N nodes 
+    \item Each node can be in one of three possible states: Follower, Candidate, Leader
+    \item During normal operations, a cluster of N nodes have a single leader
+    and N-1 followers.
+    \item The leader handles all the client interactions. Requests sent to followers will be 
+    redirected to the leader. 
+    \item The leader regularly sends heartbeat to the follower, indicate its
+    alive.
+    \item The leader forwards all client requests to all of the followers. Once 
+    the majority nodes have processed the request, the request is now considered
+    \textit{committed to the system}. 
+    \item Once a request is \textit{committed}, the protocol gaurantees the
+    \textit{system} will persist (and possibly correct and re-replicate) all
+    records across the cluster under \textit{all} circumstance, including: 
+    \begin{itemize}
+        \item One or more server lost packet due to unfavourable network condition 
+        \item One or more server crashed and recovered
+        \item A subset of the server were partitioned off for some period of time
+        \item ... etc
+    \end{itemize}
+    \item If a follower cannot detect heartbeat from the leader, it will
+    transition to become a candidate, vote for itself, and campaign for leader.
+\end{itemize}
+
 \chapter{Simple Scheduler}
 
 \section{Requirement}
@@ -971,7 +1010,7 @@ A few things to note:
     \item The system has $N$ executing context, represented as number of CPUs.
     When a task is running, $cpus[k]$ is set to $taskName$. When CPU is idle,
     $cpus[k]$ is set to an empty string. 
-    \item $ready_q$ and $blocked_q$ are initialized as \textit{ordered tuple},
+    \item $ready\_q$ and $blocked\_q$ are initialized as \textit{ordered tuple},
     due to the cooperative scheduling requirement.
     \item $S2T$ is a macro that converts a set into a ordered tuple. This is to
     accommodate the fact it appears I cannot define tuple in .cfg file.
@@ -1149,7 +1188,7 @@ Spec ==
 \@x{ L \.{\defeq}}%
 \@x{\@s{14.47} \A\, t \.{\in} Tasks \.{:}}%
 \@x{\@s{25.79} \A\, n \.{\in} 0 \.{\dotdot} ( N \.{-} 1 ) \.{:}}%
-\@x{\@s{37.11} {\SF}_{ vars} ( HoldingLock ( t ) \.{\land} Unlock ( n ) )}%
+\@x{\@s{37.11} {\WF}_{ vars} ( HoldingLock ( t ) \.{\land} Unlock ( n ) )}%
 \@x{ Spec \.{\defeq}}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
@@ -1160,6 +1199,7 @@ Spec ==
 \newline
 
 Fairness ensures that we are never stuck in a repeated state.
+
 
 \chapter{Simple Elevator}
 
@@ -1416,14 +1456,107 @@ Unused index 0 becomes used, used index 0 becomes unused.
 
 \chapter{SPMC Lockless Queue}
 
-
-
 \part{Language Reference}
 
 \chapter{Data Structure}
 
-\chapter{Common Pattern}
+Like other languages, TLA+ provides its data structure. I assume the readers are
+already familiar with common data structure, and this chapter will only focus on
+the TLA+ language semantics. 
+
+\section{Set}
+
+This is the most common data structure used in TLA+ spec. The following is a few examples on
+how a set can be used:\newline
+\begin{tla}
+a == {0, 1, 2}
+b == {2, 3, 4}
+c == a \union b         \* \{0, 1, 2, 3, 4\}
+d == a \intersect b     \* \{2\}
+e == \E x \in c: x > 3  \* TRUE - because 4 in c is bigger than 3
+f == \E x \in c: x > 5  \* FALSE - nothing in c is bigger than 5
+g == \A x \in c: x < 3  \* FALSE - not all elements in c are smaller than 3
+h == \A x \in c: x < 5  \* TRUE - all elements in c are smaller than 3
+i == {x \in c: x < 3}   \* \{0, 1, 2\} - all elementse less than 3
+j == Cardinality(c)     \* 5 - the number of elements in c
+k == c \ d              \* \{0, 1, 3, 4\} - c substracts d
+\end{tla}
+\begin{tlatex}
+\@x{ a\@s{0.26} \.{\defeq} \{ 0 ,\, 1 ,\, 2 \}}%
+\@x{ b\@s{0.91} \.{\defeq} \{ 2 ,\, 3 ,\, 4 \}}%
+\@x{ c\@s{0.97} \.{\defeq} a \.{\cup} b\@s{48.73}}%
+\@y{%
+  \{0, 1, 2, 3, 4\}
+}%
+\@xx{}%
+\@x{ d \.{\defeq} a \.{\cap} b\@s{48.73}}%
+\@y{%
+  \{2\}
+}%
+\@xx{}%
+\@x{ e\@s{0.79} \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 3\@s{6.87}}%
+\@y{%
+  TRUE - because 4 in c is bigger than 3
+}%
+\@xx{}%
+\@x{ f\@s{0.95} \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 5\@s{6.87}}%
+\@y{%
+  FALSE - nothing in c is bigger than 5
+}%
+\@xx{}%
+\@x{ g\@s{0.65} \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 3\@s{6.87}}%
+\@y{%
+  FALSE - not all elements in c are smaller than 3
+}%
+\@xx{}%
+\@x{ h\@s{0.26} \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 5\@s{6.87}}%
+\@y{%
+  TRUE - all elements in c are smaller than 3
+}%
+\@xx{}%
+\@x{ i\@s{2.05} \.{\defeq} \{ x \.{\in} c \.{:} x \.{<} 3 \}\@s{8.2}}%
+\@y{%
+  \{0, 1, 2\} - all elementse less than 3
+}%
+\@xx{}%
+\@x{ j\@s{1.63} \.{\defeq} Cardinality ( c )\@s{16.4}}%
+\@y{%
+  5 - the number of elements in c
+}%
+\@xx{}%
+\@x{ k\@s{0.46} \.{\defeq} c \.{\,\backslash\,} d\@s{51.30}}%
+\@y{%
+  \{0, 1, 3, 4\} - c substracts d
+}%
+\@xx{}%
+\end{tlatex}
+
+\section{Tuple}
+
+\chapter{Idiom}
 
 \chapter{Liveness Revisited}
 
+\chapter{Reference}
+
+\begin{thebibliography}{9}
+
+\bibitem{}
+Srikumar Subramanian
+\textit{https://sriku.org/posts/fairness-in-tlaplus/}, 2015
+
+\bibitem{}
+% https://www.cds.caltech.edu/~murray/courses/afrl-sp12/L3_ltl-24Apr12.pdf
+Richard M. Murray, Nok Wongpiromsarn
+\textit{Linear Temporal Logic, Lecture 3}, 2012
+
+\bibitem{backblaze}
+\textit{https://www.backblaze.com/blog/cloud-storage-durability/}
+
+\bibitem{raft}
+\textit{https://raft.github.io/raft.pdf}
+
+\end{thebibliography}
+
 \end{document}
+
