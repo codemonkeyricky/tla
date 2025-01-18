@@ -46,11 +46,11 @@
 
 Years ago, I worked on a propietary low power processor in an embedded system.
 The processor ran microcode featuring a custom instruction set. To enter (or
-exit) a low power state, a set of (possibly hundreds) instructions had to be
+exit) a low power state, a set of (possibly hundreds) instructions were
 executed. These instructions progressively puts the system in lower power state.
-For example, turn off IP A, then turn off IP B, then turn off power island to
-the IPs, etc. To save cost and power, the low power processor had very little
-debug support.\newline
+For example: turn off IP A, then turn off IP B, then turn off the power island to
+the IPs, etc. To save cost and power, the low power processor had very limited
+debuggability support.\newline
 
 An experienced reader may start to notice some redflags.\newline
 
@@ -86,6 +86,12 @@ algorithms, OS scheduler, etc tend to have high failure cost because they are
 possibly extremely difficult to debug or reproduce. \newline 
 
 \textit{There's gotta be a better way to solve these problems.}. 
+
+\section{Target Audience}
+
+TODO: describe target audience 
+
+\section{Prerequisite}
 
 \section{The Generalized Problem}
 
@@ -754,7 +760,7 @@ The nodes can move to a new version:
 \end{tlatex}
  \newline\newline
 Note only the n's version is incremented. Communicating the update is done by
-the gossip action defined below:
+the gossip action defined below:\newline
 \begin{tla}
 Gossip(n, o) ==                  
     LET Max(a, b) == IF a > b THEN a ELSE b 
@@ -776,6 +782,7 @@ Gossip(n, o) ==
 \@x{\@s{57.29} ]}%
 \@x{\@s{16.4} ]}%
 \end{tlatex}
+\newline
 
 A few things to unpack here:
 \begin{itemize}
@@ -792,7 +799,7 @@ A few things to unpack here:
     max between the current node and neighbour.
 \end{itemize}
 
-Finally, the actual spec: 
+Finally, the actual spec: \newline
 \begin{tla}
     Next == \/ \E n \in Node : Increment(n)
             \/ \E n, o \in Node : Gossip(n, o)
@@ -807,22 +814,7 @@ Next supports two possible next steps describe using disjunctions. The first is
 bumping the version of a random node, the second is select a pair of nodes to
 gossip. Note the \textit{existential qualifier} on both, which basically states
 there exists a node n in nodes, or there exists a pair of nodes n, o in nodes,
-respectively.\newline
-
-Finally, the actual spec definition:
-\begin{tla}
-    Spec == /\ Init
-            /\ [][Next]_counter  
-\end{tla}
-\begin{tlatex}
-\@x{\@s{16.4} Spec \.{\defeq} \.{\land} Init}%
-\@x{\@s{54.76} \.{\land} {\Box} [ Next ]_{ counter}}%
-\end{tlatex}
-
-The second conjunction formula is a \textbf{Box-Action Formula}, where
-\textit{Next} is an action and \textit{counter} is a state function. The formula
-is true iff every successive pair of steps in behaviour is a $[Next]_{counter}$.
-The spec defines a temporal theorem that is \textit{always true}. 
+respectively.
 
 \subsection{Finitized}
 
@@ -863,17 +855,8 @@ $SetMin(s)$ implements standard TLA+ semantics to retrieve the minimum element
 in the set. The definition can be read as \textit{choose an $e$ from $S$ such
 that for every $o$ in $S$, $o$ is equal or bigger than $e$}. $Transpose$ is then
 subsequently defined as the minimum value exist in counter. Finally, $counter'$
-is updated such that \textit{every} elements substracts $Transpose$.
-
-
-% The $CHOOSE$ operator is described in \textit{Specifying
-% Systems} 16.1.2 and takes the following form: 
-%     \begin{equation}
-%         CHOOSE\ x \in S : p
-%     \end{equation}
-% The chosen $x$ has to satisfy condition $p$. 
-
-The increment function is now updated to: 
+is updated such that \textit{every} elements substracts $Transpose$. The
+increment function is now updated to: \newline
 \begin{tla}
     Increment(n) ==
         /\ ~converge
@@ -890,7 +873,7 @@ The increment function is now updated to:
 \end{tlatex}
 
 The conjunction $counter[n][n] < Divergence$ limits the maximum counter value.
-Finally, the Next action is updated to the follow:
+Finally, the Next action is updated to the follow:\newline
 
 \begin{tla}
     Next ==
@@ -908,7 +891,7 @@ Finally, the Next action is updated to the follow:
 \end{tlatex}
 
 Note $GarbageCollect$ is a now part of possible state transition. We will
-discuss $Converge$ later, as it is related to liveness check. Lastly: 
+discuss $Converge$ later, as it is related to liveness check. Lastly:\newline
 
 \begin{tla}
     Fairness == \A n, o \in Node : WF_vars(Gossip(n, o))
@@ -926,7 +909,7 @@ discuss $Converge$ later, as it is related to liveness check. Lastly:
 \@x{\@s{32.8} \.{\land} Fairness}%
 \end{tlatex}
 
-The $Fairness$ conjunction ensures Gossip runs between every pair of n and o. 
+The $Fairness$ formula ensures Gossip runs between every pair of n and o. 
 
 \chapter{Raft Consensus Protocol}
 
@@ -941,10 +924,10 @@ This section will provide a brief description of the protocol, enough to enable
 discussion of the TLA+ protocol. For a full description of the the Raft
 protocol, please refer to the sentinal paper \cite{raft}.\newline
 
-The Raft protocol implements a few key tenent principles. Here we refer the cluster 
-of nodes as the \textit{system}:
+The Raft protocol implements a few key tenent principles:
 \begin{itemize}
-    \item A Raft cluster have N nodes 
+    \item A Raft cluster have N nodes, the cluster work collective as a
+    \textit{system} to offer some service
     \item Each node can be in one of three possible states: Follower, Candidate, Leader
     \item During normal operations, a cluster of N nodes have a single leader
     and N-1 followers.
@@ -956,7 +939,7 @@ of nodes as the \textit{system}:
     the majority nodes have processed the request, the request is now considered
     \textit{committed to the system}. 
     \item Once a request is \textit{committed}, the protocol gaurantees the
-    \textit{system} will persist (and possibly correct and re-replicate) all
+    \textit{system} will persist (possibly correct and re-replicate) all
     records across the cluster under \textit{all} circumstance, including: 
     \begin{itemize}
         \item One or more server lost packet due to unfavourable network condition 
@@ -966,7 +949,21 @@ of nodes as the \textit{system}:
     \end{itemize}
     \item If a follower cannot detect heartbeat from the leader, it will
     transition to become a candidate, vote for itself, and campaign for leader.
+    \item A candidate collect the majority of the vote becomes the leader
+    \item A newly elected leader will send a heartbeat to other nodes
+    (irrespective to their state, leader, follower or candidate).
 \end{itemize}
+There are a lot of details omitted here, such as:
+\begin{itemize}
+    \item How a node determine if it should vote for candidate
+    \item How a node knows it's leadership status expired
+    \item How a newly elected leader syncs its logs with the follower
+    \item ... and more
+\end{itemize}
+
+Note all N nodes in the cluster operate \textit{independently} following the
+above hueristics. Hopefully this highlights the complexity around verifying the 
+the correctness of the protocol.
 
 \chapter{Simple Scheduler}
 
@@ -1533,9 +1530,60 @@ k == c \ d              \* \{0, 1, 3, 4\} - c substracts d
 
 \section{Tuple}
 
+\begin{tla}
+A == <<0, 1, 2>>                    
+B == <<2, 3, 4>>
+C == A \o B                         \* tuple: 0, 1, 2, 2, 3, 4
+D == Len(C)                         \* 6
+E == \A x \in 1..Len(C) : C[x] # 10 \* TRUE - every C[x] is not 10
+                                    \* First tuple element is at index 1 (not 0)
+F == \E x \in 1..Len(C) : C[x] = 2  \* TRUE - there exists a C[x] that is 2
+G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
+\end{tla}
+\begin{tlatex}
+\@x{ A\@s{1.17} \.{\defeq} {\langle} 0 ,\, 1 ,\, 2 {\rangle}}%
+\@x{ B\@s{0.54} \.{\defeq} {\langle} 2 ,\, 3 ,\, 4 {\rangle}}%
+\@x{ C \.{\defeq} A \.{\circ} B\@s{104.04}}%
+\@y{%
+  tuple: 0, 1, 2, 2, 3, 4
+}%
+\@xx{}%
+\@x{ D\@s{0.11} \.{\defeq} Len ( C )\@s{95.84}}%
+\@y{%
+  6
+}%
+\@xx{}%
+ \@x{ E\@s{0.62} \.{\defeq} \A\, x \.{\in} 1 \.{\dotdot} Len ( C ) \.{:} C [ x
+ ] \.{\neq} 10}%
+\@y{%
+  TRUE - every C[x] is not 10
+}%
+\@xx{}%
+\@x{\@s{158.36}}%
+\@y{%
+  First tuple element is at index 1 (not 0)
+}%
+\@xx{}%
+ \@x{ F\@s{0.75} \.{\defeq} \E\, x \.{\in} 1 \.{\dotdot} Len ( C ) \.{:} C [ x
+ ] \.{=} 2\@s{6.87}}%
+\@y{%
+  TRUE - there exists a C[x] that is 2
+}%
+\@xx{}%
+ \@x{ G \.{\defeq} \{ x \.{\in} 1 \.{\dotdot} Len ( C ) \.{:} C [ x ] \.{=} 2
+ \}\@s{2.22}}%
+\@y{%
+  \{3, 4\} - when index is 3 or 4, C[x] = 2
+}%
+\@xx{}%
+\end{tlatex}
+
 \chapter{Idiom}
 
 \chapter{Liveness Revisited}
+
+Admittedly, I also found liveness to be very confusing. To understanding
+liveness we need to gain a better understanding of temporal logic.
 
 \chapter{Reference}
 
