@@ -8,6 +8,7 @@
 \usepackage{fancyhdr}
 \usepackage{amssymb}
 \usepackage{inputenc}
+\usepackage{svg}
 
 % !TeX spellcheck = en_GB 
 
@@ -965,6 +966,410 @@ Note all N nodes in the cluster operate \textit{independently} following the
 above hueristics. Hopefully this highlights the complexity around verifying the 
 the correctness of the protocol.
 
+\section{Spec}
+
+The Raft protocol inventor open sourced a full TLA+ spec for the protocol
+\cite{raft_tla}. Since the focus of the book is learning TLA+, we will implement
+only a portion of the spec, namely the leader election. As usual, let's look at the 
+init definition:\newline
+
+\begin{tla}
+------- MODULE raft ------- 
+InitHistoryVars == /\ elections = {}
+                   /\ allLogs   = {}
+                   /\ voterLog  = [i \in Server |-> [j \in {} |-> <<>>]]
+InitServerVars == /\ currentTerm = [i \in Server |-> 1]
+                  /\ state       = [i \in Server |-> Follower]
+                  /\ votedFor    = [i \in Server |-> Nil]
+InitCandidateVars == /\ votesResponded = [i \in Server |-> {}]
+                     /\ votesGranted   = [i \in Server |-> {}]
+\* The values nextIndex[i][i] and matchIndex[i][i] are never read, since the
+\* leader does not send itself messages. It's still easier to include these
+\* in the functions.
+InitLeaderVars == /\ nextIndex  = [i \in Server |-> [j \in Server |-> 1]]
+                  /\ matchIndex = [i \in Server |-> [j \in Server |-> 0]]
+InitLogVars == /\ log          = [i \in Server |-> << >>]
+               /\ commitIndex  = [i \in Server |-> 0]
+Init == /\ messages = [m \in {} |-> 0]
+        /\ InitHistoryVars
+        /\ InitServerVars
+        /\ InitCandidateVars
+        /\ InitLeaderVars
+        /\ InitLogVars
+========
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
+\@x{ InitHistoryVars \.{\defeq} \.{\land} elections \.{=} \{ \}}%
+\@x{\@s{87.75} \.{\land} allLogs\@s{11.19} \.{=} \{ \}}%
+ \@x{\@s{87.75} \.{\land} voterLog\@s{0.18} \.{=} [ i \.{\in} Server
+ \.{\mapsto} [ j \.{\in} \{ \} \.{\mapsto} {\langle} {\rangle} ] ]}%
+ \@x{ InitServerVars \.{\defeq} \.{\land} currentTerm \.{=} [ i \.{\in} Server
+ \.{\mapsto} 1 ]}%
+ \@x{\@s{83.51} \.{\land} state\@s{34.38} \.{=} [ i \.{\in} Server \.{\mapsto}
+ Follower ]}%
+ \@x{\@s{83.51} \.{\land} votedFor\@s{17.18} \.{=} [ i \.{\in} Server
+ \.{\mapsto} Nil ]}%
+ \@x{ InitCandidateVars \.{\defeq} \.{\land} votesResponded \.{=} [ i \.{\in}
+ Server \.{\mapsto} \{ \} ]}%
+ \@x{\@s{99.87} \.{\land} votesGranted\@s{10.41} \.{=} [ i \.{\in} Server
+ \.{\mapsto} \{ \} ]}%
+\@x{}%
+\@y{%
+  The values nextIndex[i][i] and matchIndex[i][i] are never read, since the
+}%
+\@xx{}%
+\@x{}%
+\@y{%
+  leader does not send itself messages. It's still easier to include these
+}%
+\@xx{}%
+\@x{}%
+\@y{%
+  in the functions.
+}%
+\@xx{}%
+ \@x{ InitLeaderVars \.{\defeq} \.{\land} nextIndex\@s{8.13} \.{=} [ i \.{\in}
+ Server \.{\mapsto} [ j \.{\in} Server \.{\mapsto} 1 ] ]}%
+ \@x{\@s{84.54} \.{\land} matchIndex \.{=} [ i \.{\in} Server \.{\mapsto} [ j
+ \.{\in} Server \.{\mapsto} 0 ] ]}%
+ \@x{ InitLogVars \.{\defeq} \.{\land} log\@s{48.43} \.{=} [ i \.{\in} Server
+ \.{\mapsto} {\langle} {\rangle} ]}%
+ \@x{\@s{70.62} \.{\land} commitIndex\@s{4.10} \.{=} [ i \.{\in} Server
+ \.{\mapsto} 0 ]}%
+ \@x{ Init \.{\defeq} \.{\land} messages \.{=} [ m \.{\in} \{ \} \.{\mapsto} 0
+ ]}%
+\@x{\@s{35.70} \.{\land} InitHistoryVars}%
+\@x{\@s{35.70} \.{\land} InitServerVars}%
+\@x{\@s{35.70} \.{\land} InitCandidateVars}%
+\@x{\@s{35.70} \.{\land} InitLeaderVars}%
+\@x{\@s{35.70} \.{\land} InitLogVars}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+\begin{itemize}
+    \item Servers are defined as a set in this protocol, so \textit{function
+    mapping} are used to represent various server state information
+    \item $log$ is set to a \textit{function mapping} for all the servers, and each
+    server is initialized as an ordered tuple
+    \item $commitIndex$ is initialized to empty ordered tuple for every server
+    \item $nextIndex$ and $matchIndex$ are initialized to a \textit{function
+    mappping of function mapping of integers}, to represent every server keeps a
+    counter for all other servers. 
+    \item $voteResponded$ and $voteGranted$ are represented as a set for every server
+    \item $currentTerm$, $state$, and $votedFor$ are represented as a mapping
+    function for every server. 
+    \item $message$ is defined to be an empty set, but each key in the set has
+    an associated count value (similar to C++ standard map with value tracking
+    the key count). 
+\end{itemize}
+
+The following is the state transition definition:
+
+\begin{tla}
+------- MODULE raft ------- 
+Next == /\ \/ \E i \in Server : Restart(i)
+           \/ \E i \in Server : Timeout(i)
+           \/ \E i,j \in Server : RequestVote(i, j)
+           \/ \E i \in Server : BecomeLeader(i)
+           \/ \E i \in Server, v \in Value : ClientRequest(i, v)
+           \/ \E i \in Server : AdvanceCommitIndex(i)
+           \/ \E i,j \in Server : AppendEntries(i, j)
+           \/ \E m \in DOMAIN messages : Receive(m)
+           \/ \E m \in DOMAIN messages : DuplicateMessage(m)
+           \/ \E m \in DOMAIN messages : DropMessage(m)
+=================== 
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
+ \@x{ Next \.{\defeq} \.{\land} \.{\lor} \E\, i \.{\in} Server \.{:} Restart (
+ i )}%
+\@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server \.{:} Timeout ( i )}%
+ \@x{\@s{50.94} \.{\lor} \E\, i ,\, j \.{\in} Server \.{:} RequestVote ( i ,\,
+ j )}%
+\@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server \.{:} BecomeLeader ( i )}%
+ \@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server ,\, v \.{\in} Value \.{:}
+ ClientRequest ( i ,\, v )}%
+\@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server \.{:} AdvanceCommitIndex ( i )}%
+ \@x{\@s{50.94} \.{\lor} \E\, i ,\, j \.{\in} Server \.{:} AppendEntries ( i
+ ,\, j )}%
+ \@x{\@s{50.94} \.{\lor} \E\, m \.{\in} {\DOMAIN} messages \.{:} Receive ( m
+ )}%
+ \@x{\@s{50.94} \.{\lor} \E\, m \.{\in} {\DOMAIN} messages \.{:}
+ DuplicateMessage ( m )}%
+ \@x{\@s{50.94} \.{\lor} \E\, m \.{\in} {\DOMAIN} messages \.{:} DropMessage (
+ m )}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+\newline
+
+The spec uses \textit{there exists} qualifier to pick a server to perform an
+action. The possible actions are concatenated with $\lor$ to indicate any of
+them can take. Some of these actions are state specific (eg. $RequestVote$ or
+$BecomeLeader$). The state check are applied within the macro definition itself 
+(eg. $RequestVote$ checks server is in $Candidate$ state). Let's take a closer
+look at \textit{RequestVote}:\newline
+\begin{tla}
+------- MODULE raft ------- 
+\* Helper for Send and Reply. Given a message m and bag of messages, return a
+\* new bag of messages with one more m in it.
+WithMessage(m, msgs) ==
+    IF m \in DOMAIN msgs THEN
+        [msgs EXCEPT ![m] = msgs[m] + 1]
+    ELSE
+        msgs @@ (m :> 1)
+
+\* Add a message to the bag of messages.
+Send(m) == messages' = WithMessage(m, messages)
+
+RequestVote(i, j) ==
+    /\ state[i] = Candidate
+    /\ j \notin votesResponded[i]
+    /\ Send([mtype         |-> RequestVoteRequest,
+             mterm         |-> currentTerm[i],
+             mlastLogTerm  |-> LastTerm(log[i]),
+             mlastLogIndex |-> Len(log[i]),
+             msource       |-> i,
+             mdest         |-> j])
+    /\ UNCHANGED <<serverVars, candidateVars, leaderVars, logVars>> 
+=================== 
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
+\@x{}%
+\@y{%
+  Helper for Send and Reply. Given a message m and bag of messages, return a
+}%
+\@xx{}%
+\@x{}%
+\@y{%
+  new bag of messages with one more m in it.
+}%
+\@xx{}%
+\@x{ WithMessage ( m ,\, msgs ) \.{\defeq}}%
+\@x{\@s{16.4} {\IF} m \.{\in} {\DOMAIN} msgs \.{\THEN}}%
+\@x{\@s{32.65} [ msgs {\EXCEPT} {\bang} [ m ] \.{=} msgs [ m ] \.{+} 1 ]}%
+\@x{\@s{16.4} \.{\ELSE}}%
+\@x{\@s{32.8} msgs \.{\,@@\,} ( m \.{\colongt} 1 )}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  Add a message to the bag of messages.
+}%
+\@xx{}%
+ \@x{ Send ( m ) \.{\defeq} messages \.{'} \.{=} WithMessage ( m ,\, messages
+ )}%
+\@pvspace{8.0pt}%
+\@x{ RequestVote ( i ,\, j ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} state [ i ] \.{=} Candidate}%
+\@x{\@s{16.4} \.{\land} j \.{\notin} votesResponded [ i ]}%
+ \@x{\@s{16.4} \.{\land} Send ( [ mtype\@s{36.94} \.{\mapsto}
+ RequestVoteRequest ,\,}%
+\@x{\@s{56.16} mterm\@s{33.98} \.{\mapsto} currentTerm [ i ] ,\,}%
+\@x{\@s{56.16} mlastLogTerm\@s{0.88} \.{\mapsto} LastTerm ( log [ i ] ) ,\,}%
+\@x{\@s{56.16} mlastLogIndex \.{\mapsto} Len ( log [ i ] ) ,\,}%
+\@x{\@s{56.16} msource\@s{27.35} \.{\mapsto} i ,\,}%
+\@x{\@s{56.16} mdest\@s{36.99} \.{\mapsto} j ] )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} serverVars ,\, candidateVars
+ ,\, leaderVars ,\, logVars {\rangle}}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+\begin{itemize}
+    \item i and j are reciever and sender, respectively
+    \item Send request only if receiver is a candidate
+    \item Send request only if j isn't part of i's votesResponded set
+    \item A \textit{message} is defined as a \textit{function} with a collection
+    of keys and values. 
+    \item \textit{Send} calls \textit{WithMessage}
+    \item \textit{WithMessage} increments the count (value) if the message (key) already exists
+    \item \textit{WithMessage} insert the message (key) with count of 1 (value) 
+    \begin{itemize}
+        \item $@@$ combines two functions
+        \item $m :> 1$ creates a function with message and a count of 1
+    \end{itemize}
+\end{itemize}
+
+In short, the \textit{RequestVote} function inserts a message into a ddictionary
+and track the number of times it has been inserted. Let's take a look at how the
+message is processed:
+
+\begin{tla}
+------- MODULE raft ---- 
+WithoutMessage(m, msgs) ==
+    IF m \in DOMAIN msgs THEN
+        IF msgs[m] <= 1 THEN [i \in DOMAIN msgs \ {m} |-> msgs[i]]
+        ELSE [msgs EXCEPT ![m] = msgs[m] - 1]
+    ELSE
+        msgs
+
+Reply(response, request) ==
+    messages' = WithoutMessage(request, WithMessage(response, messages))
+
+HandleRequestVoteRequest(i, j, m) ==
+    LET logOk == \/ m.mlastLogTerm > LastTerm(log[i])
+                 \/ /\ m.mlastLogTerm = LastTerm(log[i])
+                    /\ m.mlastLogIndex >= Len(log[i])
+        grant == /\ m.mterm = currentTerm[i]
+                 /\ logOk
+                 /\ votedFor[i] \in {Nil, j}
+    IN /\ m.mterm <= currentTerm[i]
+       /\ \/ grant  /\ votedFor' = [votedFor EXCEPT ![i] = j]
+          \/ ~grant /\ UNCHANGED votedFor
+       /\ Reply([mtype        |-> RequestVoteResponse,
+                 mterm        |-> currentTerm[i],
+                 mvoteGranted |-> grant,
+                 \* mlog is used just for the `elections' history variable for
+                 \* the proof. It would not exist in a real implementation.
+                 mlog         |-> log[i],
+                 msource      |-> i,
+                 mdest        |-> j],
+                 m)
+       /\ UNCHANGED <<state, currentTerm, candidateVars, leaderVars, logVars>>
+
+UpdateTerm(i, j, m) ==
+    /\ m.mterm > currentTerm[i]
+    /\ currentTerm'    = [currentTerm EXCEPT ![i] = m.mterm]
+    /\ state'          = [state       EXCEPT ![i] = Follower]
+    /\ votedFor'       = [votedFor    EXCEPT ![i] = Nil]
+       \* messages is unchanged so m can be processed further.
+    /\ UNCHANGED <<messages, candidateVars, leaderVars, logVars>>
+
+Receive(m) ==
+    LET i == m.mdest
+        j == m.msource
+    IN \* Any RPC with a newer term causes the recipient to advance
+       \* its term first. Responses with stale terms are ignored.
+       \/ UpdateTerm(i, j, m)
+       \/ /\ m.mtype = RequestVoteRequest
+          /\ HandleRequestVoteRequest(i, j, m)
+       \/ /\ m.mtype = RequestVoteResponse
+          /\ \/ DropStaleResponse(i, j, m)
+             \/ HandleRequestVoteResponse(i, j, m)
+       \/ /\ m.mtype = AppendEntriesRequest
+          /\ HandleAppendEntriesRequest(i, j, m)
+       \/ /\ m.mtype = AppendEntriesResponse
+          /\ \/ DropStaleResponse(i, j, m)
+             \/ HandleAppendEntriesResponse(i, j, m)
+------- MODULE raft ---- 
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
+\@x{ WithoutMessage ( m ,\, msgs ) \.{\defeq}}%
+\@x{\@s{16.4} {\IF} m \.{\in} {\DOMAIN} msgs \.{\THEN}}%
+ \@x{\@s{32.65} {\IF} msgs [ m ] \.{\leq} 1 \.{\THEN} [ i \.{\in} {\DOMAIN}
+ msgs \.{\,\backslash\,} \{ m \} \.{\mapsto} msgs [ i ] ]}%
+ \@x{\@s{32.65} \.{\ELSE} [ msgs {\EXCEPT} {\bang} [ m ] \.{=} msgs [ m ]
+ \.{-} 1 ]}%
+\@x{\@s{16.4} \.{\ELSE}}%
+\@x{\@s{32.8} msgs}%
+\@pvspace{8.0pt}%
+\@x{ Reply ( response ,\, request ) \.{\defeq}}%
+ \@x{\@s{16.4} messages \.{'} \.{=} WithoutMessage ( request ,\, WithMessage (
+ response ,\, messages ) )}%
+\@pvspace{8.0pt}%
+\@x{ HandleRequestVoteRequest ( i ,\, j ,\, m ) \.{\defeq}}%
+ \@x{\@s{16.4} \.{\LET} logOk \.{\defeq} \.{\lor} m . mlastLogTerm \.{>}
+ LastTerm ( log [ i ] )}%
+ \@x{\@s{80.78} \.{\lor} \.{\land} m . mlastLogTerm \.{=} LastTerm ( log [ i ]
+ )}%
+\@x{\@s{91.89} \.{\land} m . mlastLogIndex \.{\geq} Len ( log [ i ] )}%
+ \@x{\@s{36.79} grant\@s{1.78} \.{\defeq} \.{\land} m . mterm \.{=}
+ currentTerm [ i ]}%
+\@x{\@s{80.78} \.{\land} logOk}%
+\@x{\@s{80.78} \.{\land} votedFor [ i ] \.{\in} \{ Nil ,\, j \}}%
+\@x{\@s{16.4} \.{\IN} \.{\land} m . mterm \.{\leq} currentTerm [ i ]}%
+ \@x{\@s{36.79} \.{\land} \.{\lor} grant\@s{6.66} \.{\land} votedFor \.{'}
+ \.{=} [ votedFor {\EXCEPT} {\bang} [ i ] \.{=} j ]}%
+\@x{\@s{47.91} \.{\lor} {\lnot} grant \.{\land} {\UNCHANGED} votedFor}%
+ \@x{\@s{36.79} \.{\land} Reply ( [ mtype\@s{35.23} \.{\mapsto}
+ RequestVoteResponse ,\,}%
+\@x{\@s{79.36} mterm\@s{32.27} \.{\mapsto} currentTerm [ i ] ,\,}%
+\@x{\@s{79.36} mvoteGranted \.{\mapsto} grant ,\,}%
+\@x{\@s{79.36}}%
+\@y{%
+  mlog is used just for the `elections' history variable for
+}%
+\@xx{}%
+\@x{\@s{79.36}}%
+\@y{%
+  the proof. It would not exist in a real implementation.
+}%
+\@xx{}%
+\@x{\@s{79.36} mlog\@s{35.57} \.{\mapsto} log [ i ] ,\,}%
+\@x{\@s{79.36} msource\@s{20.5} \.{\mapsto} i ,\,}%
+\@x{\@s{79.36} mdest\@s{30.14} \.{\mapsto} j ] ,\,}%
+\@x{\@s{79.36} m )}%
+ \@x{\@s{36.79} \.{\land} {\UNCHANGED} {\langle} state ,\, currentTerm ,\,
+ candidateVars ,\, leaderVars ,\, logVars {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ UpdateTerm ( i ,\, j ,\, m ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} m . mterm \.{>} currentTerm [ i ]}%
+ \@x{\@s{16.4} \.{\land} currentTerm \.{'}\@s{12.29} \.{=} [ currentTerm
+ {\EXCEPT} {\bang} [ i ] \.{=} m . mterm ]}%
+ \@x{\@s{16.4} \.{\land} state \.{'}\@s{46.68} \.{=} [ state\@s{24.59}
+ {\EXCEPT} {\bang} [ i ]\@s{9.78} \.{=} Follower ]}%
+ \@x{\@s{16.4} \.{\land} votedFor \.{'}\@s{29.48} \.{=} [ votedFor\@s{12.29}
+ {\EXCEPT} {\bang} [ i ]\@s{4.88} \.{=} Nil ]}%
+\@x{\@s{27.51}}%
+\@y{%
+  messages is unchanged so m can be processed further.
+}%
+\@xx{}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} messages ,\, candidateVars ,\,
+ leaderVars ,\, logVars {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ Receive ( m ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET} i\@s{0.42} \.{\defeq} m . mdest}%
+\@x{\@s{36.79} j \.{\defeq} m . msource}%
+\@x{\@s{16.4} \.{\IN}}%
+\@y{%
+  Any RPC with a newer term causes the recipient to advance
+}%
+\@xx{}%
+\@x{\@s{36.79}}%
+\@y{%
+  its term first. Responses with stale terms are ignored.
+}%
+\@xx{}%
+\@x{\@s{36.79} \.{\lor} UpdateTerm ( i ,\, j ,\, m )}%
+\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} RequestVoteRequest}%
+\@x{\@s{47.91} \.{\land} HandleRequestVoteRequest ( i ,\, j ,\, m )}%
+\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} RequestVoteResponse}%
+\@x{\@s{47.91} \.{\land} \.{\lor} DropStaleResponse ( i ,\, j ,\, m )}%
+\@x{\@s{59.02} \.{\lor} HandleRequestVoteResponse ( i ,\, j ,\, m )}%
+\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} AppendEntriesRequest}%
+\@x{\@s{47.91} \.{\land} HandleAppendEntriesRequest ( i ,\, j ,\, m )}%
+\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} AppendEntriesResponse}%
+\@x{\@s{47.91} \.{\land} \.{\lor} DropStaleResponse ( i ,\, j ,\, m )}%
+\@x{\@s{59.02} \.{\lor} HandleAppendEntriesResponse ( i ,\, j ,\, m )}%
+\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
+\end{tlatex}
+
+\begin{itemize}
+    \item \textit{Next} randomly picks a message received. This simulates
+    network reordering effect
+    \item Per Raft protocol definition: \textit{UpdateTerm} checks if
+    \textit{message} has higher term. If so, the current server transitions back
+    to \textit{Follower} with grantVote cleared.
+    \item \textit{HandleRequestVoteRequest} defines two local variables:
+    \begin{itemize}
+        \item \textit{logOk} represents requester log's recency per protocol spec 
+        \item \textit{grant} represents if vote is granted per protocol spec. Note it's possible 
+    \end{itemize}
+    \item \textit{Reply} adds the replay to messages and removes the request
+    \item In \textit{WithoutMessage}, return a new function if message count is one: 
+    \begin{itemize}
+        \item $msgs \symbol{92} \{m\}$ is all msgs excluding m
+        \item For all $i$ in this reduced msgs functions, set value to key i as
+        msgs[i]. This effectively copies the entire msgs excluding key m
+    \end{itemize}
+\end{itemize}
+
+If receiver is stale (eg. lower term), it will \textbf{not} grant the vote.
+This wasn't explicitly stated in the protocol spec. At the same time, the
+receiver should eventually call \textit{UpdateTerm} to get updated term. 
+
 \chapter{Simple Scheduler}
 
 \section{Requirement}
@@ -1457,6 +1862,10 @@ Unused index 0 becomes used, used index 0 becomes unused.
 
 \chapter{Data Structure}
 
+% \includesvg[width=0.8\textwidth]{dummy} % Replace 'example' with the path to your .svg file without the extension
+
+
+
 Like other languages, TLA+ provides its data structure. I assume the readers are
 already familiar with common data structure, and this chapter will only focus on
 the TLA+ language semantics. 
@@ -1603,6 +2012,9 @@ Richard M. Murray, Nok Wongpiromsarn
 
 \bibitem{raft}
 \textit{https://raft.github.io/raft.pdf}
+
+\bibitem{raft_tla}
+\textit{https://github.com/ongardie/raft.tla}
 
 \end{thebibliography}
 
