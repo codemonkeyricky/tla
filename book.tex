@@ -1991,7 +1991,45 @@ G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
 
 \chapter{Fairness and Liveness}
 
-\section{Weak Fairness}
+\section{Liveness}
+
+\begin{tla}
+--------------------------- MODULE liveness ----------------------------
+EXTENDS Naturals
+VARIABLES c
+vars == <<c>>
+Liveness == 
+    /\ c[1] = 0 ~> c[1] = 1
+Init ==
+    /\ c = [i \in 1..2|-> 0] 
+BumpOne == 
+    /\ c' = [c EXCEPT ![1] = (c[1] + 1) % 2]
+Next == 
+    \/ BumpOne
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+=============================================================================
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} liveness}\moduleRightDash\@xx{}%
+\@x{ {\EXTENDS} Naturals}%
+\@x{ {\VARIABLES} c}%
+\@x{ vars \.{\defeq} {\langle} c {\rangle}}%
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} c [ 1 ] \.{=} 0 \.{\leadsto} c [ 1 ] \.{=} 1}%
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} c \.{=} [ i \.{\in} 1 \.{\dotdot} 2 \.{\mapsto} 0 ]}%
+\@x{ BumpOne \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ c {\EXCEPT} {\bang} [ 1 ] \.{=} ( c [
+ 1 ] \.{+} 1 ) \.{\%} 2 ]}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} BumpOne}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
 
 For rigorous definition and proof, please refer to (TODO: citations). In this
 book, we will focus on the application portion of it.\newline
