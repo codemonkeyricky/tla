@@ -2000,20 +2000,56 @@ Weak fairness is defined as:\newline
 \begin{equation} 
 \Diamond\Box(ENABLED\langle A \rangle _v) \implies \Box\Diamond\langle A \rangle _v
 \end{equation}
-$ENABLED\langle A \rangle$ is defined to be the the predicate that is true iff 
-action A is enabled. This can be roughly interpreted as if condition in $A$ is
-eventually always true, then A will always eventually happen. To understand what
-this means, let's start with an example:\newline
+The above roughly translates to: if conditions required for step A to occur is
+always true, then step A will eventually occur. $ENABLED\langle A \rangle$ is
+the TLA+ syntax to represent \textit{conditions required for step A}.\newline
 
-A behaviour is described as a series of state transition:\newline
-\begin{equation}
-    s_0 \rightarrow s_1 \rightarrow s_2 \rightarrow \dots \rightarrow s_n
-\end{equation}
+Consider the following example:
+\begin{tla}
+--------------------------- MODULE weak ----------------------------
+EXTENDS Naturals
 
-A behaviour can permit self transition:
-\begin{equation}
-    s_0 \rightarrow s_1 \rightarrow s_1 \rightarrow s_1 \dots
-\end{equation}
+VARIABLES c
+vars == <<c>>
+
+Liveness == 
+    /\ c[0] = 0 ~> c[0] = 1
+
+Init ==
+    /\ c = [i \in 0..1|-> 0] 
+
+MoveOne == 
+    /\ c' = [c EXCEPT ![1] = (c[1] + 1) % 2]
+
+MoveBoth ==
+    /\ c' = [i \in 0..1 |-> (c[i] + 1) % 2]
+
+=============================================================================
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} weak}\moduleRightDash\@xx{}%
+\@x{ {\EXTENDS} Naturals}%
+\@pvspace{8.0pt}%
+\@x{ {\VARIABLES} c}%
+\@x{ vars \.{\defeq} {\langle} c {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} c [ 0 ] \.{=} 0 \.{\leadsto} c [ 0 ] \.{=} 1}%
+\@pvspace{8.0pt}%
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} c \.{=} [ i \.{\in} 0 \.{\dotdot} 1 \.{\mapsto} 0 ]}%
+\@pvspace{8.0pt}%
+\@x{ MoveOne \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ c {\EXCEPT} {\bang} [ 1 ] \.{=} ( c [
+ 1 ] \.{+} 1 ) \.{\%} 2 ]}%
+\@pvspace{8.0pt}%
+\@x{ MoveBoth \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ i \.{\in} 0 \.{\dotdot} 1 \.{\mapsto}
+ ( c [ i ] \.{+} 1 ) \.{\%} 2 ]}%
+\@pvspace{8.0pt}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
 
 
 \chapter{Reference}

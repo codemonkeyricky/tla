@@ -1,25 +1,28 @@
 --------------------------- MODULE weak ----------------------------
-
 EXTENDS Naturals
 
-VARIABLES s
-vars == <<s>>
+VARIABLES c
+vars == <<c>>
+
+Liveness == 
+    /\ c[0] = 0 ~> c[0] = 1
 
 Init ==
-    /\ s = 0
+    /\ c = [i \in 0..1|-> 0] 
 
-Move == 
-    /\ s' = (s + 1) % 8
+MoveOne == 
+    /\ c' = [c EXCEPT ![1] = (c[1] + 1) % 2]
 
-Stay == 
-    /\ UNCHANGED s 
+MoveBoth ==
+    /\ c' = [i \in 0..1 |-> (c[i] + 1) % 2]
 
 Next == 
-    \/ Move 
-    \/ Stay 
+    \/ MoveOne
+    \/ MoveBoth
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
+\*   /\ WF_vars(MoveBoth)
 =============================================================================
