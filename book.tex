@@ -1991,8 +1991,12 @@ G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
 
 \chapter{Fairness and Liveness}
 
+For rigorous definition and proof, please refer to (TODO: citations). In this
+book, we will focus on the application portion of it.
+
 \section{Liveness}
 
+Consider the following \textit{Spec}, where c[1] toggles between 0 and 1:
 \begin{tla}
 --------------------------- MODULE liveness ----------------------------
 EXTENDS Naturals
@@ -2031,8 +2035,43 @@ Spec ==
 \@x{}\bottombar\@xx{}%
 \end{tlatex}
 
-For rigorous definition and proof, please refer to (TODO: citations). In this
-book, we will focus on the application portion of it.\newline
+The \textit{Liveness} property of the \textit{Spec} confirms c[1] is at least
+bumped once. Running TLC against the \textit{Spec} as is passes, but reports
+violation when the \textit{Liveness} property is enabled:
+
+\begin{verbatim}
+Error: Temporal properties were violated.
+Error: The following behavior constitutes a counter-example:
+State 1: <Initial predicate>
+c = <<0, 0>>
+State 2: Stuttering
+\end{verbatim}
+
+Since the \textit{Spec} permits \textit{suttering}, the state machine is allowed
+to perpetually stay in the initial state, and \textit{never} advances to the
+next state. This violates the \textit{Liveness} property c[1]
+\textit{eventually} becomes 1. To fix this, we need to add fairness description 
+to the spec:\newline
+
+\begin{tla}
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+\end{tla}
+\begin{tlatex}
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ vars} ( Next )}%
+\end{tlatex}
+\newline
+
+The added line added \textit{weak fairness} to \textit{Next}, roughly indicating
+actions descrbied by \textit{Next} must happen if conditions in \textit{Next}
+are met. 
+
+\section{Weak Fairness}
 
 Weak fairness is defined as:\newline
 \begin{equation} 
