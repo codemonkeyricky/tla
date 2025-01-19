@@ -1,28 +1,24 @@
 --------------------------- MODULE weak ----------------------------
 EXTENDS Naturals
-
-VARIABLES c
-vars == <<c>>
-
+VARIABLES a, b
+vars == <<a, b>>
 Liveness == 
-    /\ c[0] = 0 ~> c[0] = 1
-
+    /\ a = 0 ~> a = 1
 Init ==
-    /\ c = [i \in 0..1|-> 0] 
-
-MoveOne == 
-    /\ c' = [c EXCEPT ![1] = (c[1] + 1) % 2]
-
-MoveBoth ==
-    /\ c' = [i \in 0..1 |-> (c[i] + 1) % 2]
-
+    /\ a = 0
+    /\ b = 0
+BumpA == 
+    /\ a' = (a + 1) % 2
+    /\ UNCHANGED b
+BumpB ==
+    /\ b' = (b + 1) % 2
+    /\ UNCHANGED a
 Next == 
-    \/ MoveOne
-    \/ MoveBoth
-
+    \/ BumpA
+    \/ BumpB
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-\*   /\ WF_vars(MoveBoth)
+\*   /\ WF_vars(BumpA)
 =============================================================================

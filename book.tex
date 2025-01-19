@@ -2085,61 +2085,47 @@ Consider the following example:
 \begin{tla}
 --------------------------- MODULE weak ----------------------------
 EXTENDS Naturals
-
 VARIABLES c
 vars == <<c>>
-
 Liveness == 
-    /\ c[0] = 0 ~> c[0] = 1
-
+    /\ c[1] = 0 ~> c[1] = 1
 Init ==
-    /\ c = [i \in 0..1|-> 0] 
-
-MoveOne == 
+    /\ c = [i \in 1..2|-> 0] 
+BumpOne == 
     /\ c' = [c EXCEPT ![1] = (c[1] + 1) % 2]
-
-MoveBoth ==
-    /\ c' = [i \in 0..1 |-> (c[i] + 1) % 2]
-
+BumpTwo ==
+    /\ c' = [c EXCEPT ![2] = (c[2] + 1) % 2]
 Next == 
-    \/ MoveOne
-    \/ MoveBoth
+    \/ BumpOne
+    \/ BumpTwo
 Spec ==
-  /\ Init
-  /\ [][Next]_vars
-  /\ WF_vars(Next)
-
+    /\ Init
+    /\ [][Next]_vars
+    /\ WF_vars(Next)
 =============================================================================
 \end{tla}
 \begin{tlatex}
 \@x{}\moduleLeftDash\@xx{ {\MODULE} weak}\moduleRightDash\@xx{}%
 \@x{ {\EXTENDS} Naturals}%
-\@pvspace{8.0pt}%
 \@x{ {\VARIABLES} c}%
 \@x{ vars \.{\defeq} {\langle} c {\rangle}}%
-\@pvspace{8.0pt}%
 \@x{ Liveness \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} c [ 0 ] \.{=} 0 \.{\leadsto} c [ 0 ] \.{=} 1}%
-\@pvspace{8.0pt}%
+\@x{\@s{16.4} \.{\land} c [ 1 ] \.{=} 0 \.{\leadsto} c [ 1 ] \.{=} 1}%
 \@x{ Init \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} c \.{=} [ i \.{\in} 0 \.{\dotdot} 1 \.{\mapsto} 0 ]}%
-\@pvspace{8.0pt}%
-\@x{ MoveOne \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} c \.{=} [ i \.{\in} 1 \.{\dotdot} 2 \.{\mapsto} 0 ]}%
+\@x{ BumpOne \.{\defeq}}%
  \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ c {\EXCEPT} {\bang} [ 1 ] \.{=} ( c [
  1 ] \.{+} 1 ) \.{\%} 2 ]}%
-\@pvspace{8.0pt}%
-\@x{ MoveBoth \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ i \.{\in} 0 \.{\dotdot} 1 \.{\mapsto}
- ( c [ i ] \.{+} 1 ) \.{\%} 2 ]}%
-\@pvspace{8.0pt}%
+\@x{ BumpTwo \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ c {\EXCEPT} {\bang} [ 2 ] \.{=} ( c [
+ 2 ] \.{+} 1 ) \.{\%} 2 ]}%
 \@x{ Next \.{\defeq}}%
-\@x{\@s{16.4} \.{\lor} MoveOne}%
-\@x{\@s{16.4} \.{\lor} MoveBoth}%
+\@x{\@s{16.4} \.{\lor} BumpOne}%
+\@x{\@s{16.4} \.{\lor} BumpTwo}%
 \@x{ Spec \.{\defeq}}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ vars} ( Next )}%
-\@pvspace{8.0pt}%
+\@x{\@s{16.4} \.{\land} Init}%
+\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{16.4} \.{\land} {\WF}_{ vars} ( Next )}%
 \@x{}\bottombar\@xx{}%
 \end{tlatex}
 
