@@ -1989,10 +1989,32 @@ G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
 
 \chapter{Idiom}
 
-\chapter{Liveness Revisited}
+\chapter{Fairness and Liveness}
 
-Admittedly, I also found liveness to be very confusing. To understanding
-liveness we need to gain a better understanding of temporal logic.
+\section{Weak Fairness}
+
+For rigorous definition and proof, please refer to (TODO: citations). In this
+book, we will focus on the application portion of it.\newline
+
+Weak fairness is defined as:\newline
+\begin{equation} 
+\Diamond\Box(ENABLED\langle A \rangle _v) \implies \Box\Diamond\langle A \rangle _v
+\end{equation}
+$ENABLED\langle A \rangle$ is defined to be the the predicate that is true iff 
+action A is enabled. This can be roughly interpreted as if condition in $A$ is
+eventually always true, then A will always eventually happen. To understand what
+this means, let's start with an example:\newline
+
+A behaviour is described as a series of state transition:\newline
+\begin{equation}
+    s_0 \rightarrow s_1 \rightarrow s_2 \rightarrow \dots \rightarrow s_n
+\end{equation}
+
+A behaviour can permit self transition:
+\begin{equation}
+    s_0 \rightarrow s_1 \rightarrow s_1 \rightarrow s_1 \dots
+\end{equation}
+
 
 \chapter{Reference}
 
