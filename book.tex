@@ -2173,12 +2173,14 @@ Spec ==
 
 With this change, the spec passes TLC again.
 
-\section{Additional Note}
+\section{Spec Subtlties}
 
-I initially defined Up and Down symmetrically, but SF on up didn't have the
-expected side effect. I assume this is because TLC processes the actions quite
-literally and only account for condition if they were explicitly listed. 
-
+I initially defined Up and Down symmetrically, but SF on Up didn't have the
+expected side effect. Thinking about this more I believe it's because the
+condition to Up is a not equal to 3, or a equals to 1 or 2. Strong fairness
+trips the action when the condition is true, but in the case of a not equal to
+3, it's possible the action takes when a = 1 (but never 2), which fulfills the 
+strong fairness requirement.
 
 \chapter{Reference}
 
