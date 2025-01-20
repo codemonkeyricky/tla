@@ -2003,20 +2003,19 @@ Consider the following elevator \textit{Spec}:
 EXTENDS Integers
 VARIABLES a
 vars == <<a>>
+TOP     == 4
+BOTTOM  == 1
 Init ==
-    /\ a = 1
-ToTwo == 
-    /\ a = 1
-    /\ a' = a + 1
-ToThree == 
-    /\ a = 2
+    /\ a = BOTTOM
+Up == 
+    /\ a # TOP
     /\ a' = a + 1
 Down == 
-    /\ a # 1
+    /\ a # BOTTOM
     /\ a' = a - 1
 Spec ==
   /\ Init
-  /\ [][ToTwo \/ ToThree \/ Down]_a
+  /\ [][Up \/ Down]_a
 =============================================================================
 \end{tla}
 \begin{tlatex}
@@ -2024,28 +2023,25 @@ Spec ==
 \@x{ {\EXTENDS} Integers}%
 \@x{ {\VARIABLES} a}%
 \@x{ vars \.{\defeq} {\langle} a {\rangle}}%
-\@x{ Init\@s{2.02} \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} a \.{=} 1}%
-\@x{ ToTwo \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} a \.{=} 1}%
-\@x{\@s{16.4} \.{\land} a \.{'} \.{=} a \.{+} 1}%
-\@x{ ToThree \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} a \.{=} 2}%
-\@x{\@s{16.4} \.{\land} a \.{'} \.{=} a \.{+} 1}%
+\@x{ TOP\@s{28.75} \.{\defeq} 4}%
+\@x{ BOTTOM\@s{4.10} \.{\defeq} 1}%
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} a \.{=} BOTTOM}%
+\@x{ Up \.{\defeq}}%
+\@x{\@s{17.27} \.{\land} a \.{\neq} TOP}%
+\@x{\@s{17.27} \.{\land} a \.{'} \.{=} a \.{+} 1}%
 \@x{ Down \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} a \.{\neq} 1}%
+\@x{\@s{16.4} \.{\land} a \.{\neq} BOTTOM}%
 \@x{\@s{16.4} \.{\land} a \.{'} \.{=} a \.{-} 1}%
 \@x{ Spec \.{\defeq}}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
- \@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ ToTwo \.{\lor} ToThree \.{\lor} Down
- ]_{ a}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Up \.{\lor} Down ]_{ a}}%
 \@x{}\bottombar\@xx{}%
 \end{tlatex}
 
-The building has 3 floors and the elevator can go either up or down. The
+The building has a set of floors and the elevator can go either up or down. The
 elevator keeps going up until it's the top floor, or keep going down until it's
-the bottom floor. Running TLC against the spec will pass with 3 distinct
-state.\newline
+the bottom floor. TLC will pass the \textit{Spec} as is.\newline
 
 Let's introduce a liveness property. The elevator should always at least go 
 to the second floor:\newline
@@ -2059,7 +2055,7 @@ Liveness ==
 \end{tlatex}
 \newline
 
-However, TLC reports a violation with this property:
+Running the \textit{Spec} against TLC will report a violation:
 
 \begin{verbatim}
 Error: Temporal properties were violated.
@@ -2070,9 +2066,8 @@ State 2: Stuttering
 \end{verbatim}
 
 Since the \textit{Spec} permits \textit{suttering}, the state machine is allowed
-to perpetually stay on 1F, and \textit{never} advances to the next state. This
-violates the \textit{Liveness} property. This can be fixed by introduce fairness
-description.
+to perpetually stay on 1F and \textit{never} go to 2F. This can be fixed by
+introduce fairness description.
 
 \section{Weak Fairness}
 
@@ -2081,44 +2076,42 @@ Weak fairness is defined as:\newline
 \Diamond\Box(ENABLED\langle A \rangle _v) \implies \Box\Diamond\langle A \rangle _v
 \end{equation}
 $ENABLED\langle A \rangle$ is the TLA+ syntax to represent \textit{conditions
-required for step A}. The above translates to: if conditions required for step A
-to occur is always true, then step A will eventually occur. In the example from
-earlier section without weak fairness defined, the elevator may \textit{stutter}
-at floor 1 and never advance to floor 2. Weak fairness states that if the
-condition for an action is met repeatedly (ie. every step elevator stays at
-floor 1 but \textit{can} go up), the elevator must \textit{eventually} go
+required for action A}. The above translates to: if conditions required for
+action A to occur is always true, then action A will eventually occur. In the
+example from earlier section without weak fairness defined, the elevator may
+\textit{stutter} at floor 1 and never go to floor 2. Weak fairness states that
+if the condition of an action is met repeatedly (ie. elevator decides to stay on
+1F but but \textit{can} go up), the elevator must \textit{eventually} go
 up.\newline
 
 \begin{tla}
 Spec ==
   /\ Init
-  /\ [][ToTwo \/ ToThree \/ Down]_a
+  /\ [][Down \/ Up]_a
   /\ WF_a(Down)
-  /\ WF_a(ToTwo)
-  /\ WF_a(ToThree)
+  /\ WF_a(Up)
 \end{tla}
 \begin{tlatex}
 \@x{ Spec \.{\defeq}}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
- \@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ ToTwo \.{\lor} ToThree \.{\lor} Down
- ]_{ a}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Down \.{\lor} Up ]_{ a}}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( Down )}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( ToTwo )}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( ToThree )}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( Up )}%
 \end{tlatex}
 \newline
 
-Running the spec against TLC passes again.\newline
-
-Let's modify the Liveness property again:\newline
+Running the spec against TLC passes again. But we want to verify the elevator
+eventually goes to the top, not just to 2F. Let's modify the Liveness property
+again:\newline
 \begin{tla}
 Liveness == 
-    /\ a = 1 ~> a = 3
+    /\ a = BOTTOM ~> a = TOP
 \end{tla}
 \begin{tlatex}
 \@x{ Liveness \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} a \.{=} 1 \.{\leadsto} a \.{=} 3}%
+\@x{\@s{16.4} \.{\land} a \.{=} BOTTOM \.{\leadsto} a \.{=} TOP}%
 \end{tlatex}
+\newline
 
 TLC now reports the following violation: 
 \begin{verbatim}
@@ -2131,10 +2124,10 @@ a = 2
 Back to state 1: <Down line 13, col 5 to line 14, col 17 of module elevator>
 \end{verbatim}
 
-In short, TLC identified a case where the elevator is perpetually stuck going
-between 1F and 2F, but never go to 3F. Weak fairness is no longer enough,
-because the the elevator is not stuck on 2F repeatedly, but stuck going between 
-1F and 2F. This is where we need strong fairness.
+TLC identified a case where the elevator is perpetually stuck going between 1F
+and 2F, but never go to 3F. Weak fairness is no longer enough, because the the
+elevator is not stuck on 2F repeatedly, but stuck going between 1F and 2F. This
+is where we need strong fairness.
 
 \section{Strong Fairness}
 
@@ -2147,40 +2140,57 @@ always} vs. \textit{always eventually}. \newline
 
 In weak fairness, once the state machine is stuck in a state in perpetuity, the
 state machine always transition to a possible next state permitted by the spec
-(eg. if the elevator is stuck on 1F but can go to 2F, it will). \newline 
-
-In strong fairness, the elevator doesn't need to be stuck on 2F to go to 3F. If
-the elevator ever makes it to 2F, it \textit{can} go to 3F. To enable strong
+(eg. if the elevator is stuck on 1F but can go to 2F, it will). In strong
+fairness, the elevator doesn't need to be stuck on 2F to go to 3F. If the
+elevator ever makes it to 2F, it \textit{can} go to 3F. To enable strong
 fairness, we need to update the spec definition like so:\newline
 \begin{tla}
 Spec ==
   /\ Init
-  /\ [][ToTwo \/ ToThree \/ Down]_a
+  /\ [][Up \/ Down]_a
   /\ WF_a(Down)
-  /\ WF_a(ToTwo)
-  /\ SF_a(ToThree)
+  /\ SF_a(UP)
 \end{tla}
 \begin{tlatex}
 \@x{ Spec \.{\defeq}}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
- \@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ ToTwo \.{\lor} ToThree \.{\lor} Down
- ]_{ a}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Up \.{\lor} Down ]_{ a}}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( Down )}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( ToTwo )}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\SF}_{ a} ( ToThree )}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\SF}_{ a} ( UP )}%
 \end{tlatex}
 \newline 
 
-With this change, the spec passes TLC again.
+However, TLC \textit{still} reports the same failure. What's going on?\newline
 
-\section{Spec Subtlties}
+If we take a closer look at the enabling condition for Up, it only requires
+current floor to not equal TOP! This means TLC considers Up to be called if it
+is called on \textit{any} floor. If the elevator going between 1F and 2F
+indefinitely, TLC assumes strong fairness on up is satisfied, because Up is
+called going from 1F to 2F, even though the elevator never moves past 2F. What
+we really want is strong fairness on Up for \textit{every floor}. So if elevator
+makes to 2F once, it will eventaully go to 3F. If elevator makes to 3F once, it
+will eventaully go to 4F, etc. The following is the change required:\newline
 
-I initially defined Up and Down symmetrically, but SF on Up didn't have the
-expected side effect. Thinking about this more I believe it's because the
-condition to Up is a not equal to 3, or a equals to 1 or 2. Strong fairness
-trips the action when the condition is true, but in the case of a not equal to
-3, it's possible the action takes when a = 1 (but never 2), which fulfills the 
-strong fairness requirement.
+\begin{tla}
+Spec ==
+  /\ Init
+  /\ [][Up \/ Down]_a
+  /\ WF_a(Down)
+  /\ \A f \in BOTTOM..TOP-1: 
+    /\ WF_a(Up /\ f = a)
+\end{tla}
+\begin{tlatex}
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Up \.{\lor} Down ]_{ a}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( Down )}%
+ \@x{\@s{8.2} \.{\land}\@s{0.16} \A\, f \.{\in} BOTTOM \.{\dotdot} TOP \.{-} 1
+ \.{:}}%
+\@x{\@s{16.4} \.{\land} {\WF}_{ a} ( Up \.{\land} f \.{=} a )}%
+\end{tlatex}
+\newline
+
+Once again with this change TLC will pass.
 
 \chapter{Reference}
 
