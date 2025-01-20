@@ -1991,85 +1991,88 @@ G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
 
 \chapter{Fairness and Liveness}
 
-For rigorous definition and proof, please refer to (TODO: citations). In this
-book, we will focus on the application portion of it.
+For rigorous definition and proof, please refer to (TODO: citations). This
+chapter focus on the application aspect of liveness and fairness and define an elevator 
+spec that goes up and down. 
 
 \section{Liveness}
 
-Consider the following \textit{Spec}, where c[1] toggles between 0 and 1:
+Consider the following elevator \textit{Spec}:
 \begin{tla}
---------------------------- MODULE liveness ----------------------------
-EXTENDS Naturals
-VARIABLES c
-vars == <<c>>
-Liveness == 
-    /\ c[1] = 0 ~> c[1] = 1
+--------------------------- MODULE elevator ----------------------------
+EXTENDS Integers
+VARIABLES a
+vars == <<a>>
 Init ==
-    /\ c = [i \in 1..2|-> 0] 
-BumpOne == 
-    /\ c' = [c EXCEPT ![1] = (c[1] + 1) % 2]
-Next == 
-    \/ BumpOne
+    /\ a = 1
+ToTwo == 
+    /\ a = 1
+    /\ a' = a + 1
+ToThree == 
+    /\ a = 2
+    /\ a' = a + 1
+Down == 
+    /\ a # 1
+    /\ a' = a - 1
 Spec ==
   /\ Init
-  /\ [][Next]_vars
+  /\ [][ToTwo \/ ToThree \/ Down]_a
 =============================================================================
 \end{tla}
 \begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} liveness}\moduleRightDash\@xx{}%
-\@x{ {\EXTENDS} Naturals}%
-\@x{ {\VARIABLES} c}%
-\@x{ vars \.{\defeq} {\langle} c {\rangle}}%
-\@x{ Liveness \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} c [ 1 ] \.{=} 0 \.{\leadsto} c [ 1 ] \.{=} 1}%
-\@x{ Init \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} c \.{=} [ i \.{\in} 1 \.{\dotdot} 2 \.{\mapsto} 0 ]}%
-\@x{ BumpOne \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ c {\EXCEPT} {\bang} [ 1 ] \.{=} ( c [
- 1 ] \.{+} 1 ) \.{\%} 2 ]}%
-\@x{ Next \.{\defeq}}%
-\@x{\@s{16.4} \.{\lor} BumpOne}%
+\@x{}\moduleLeftDash\@xx{ {\MODULE} elevator}\moduleRightDash\@xx{}%
+\@x{ {\EXTENDS} Integers}%
+\@x{ {\VARIABLES} a}%
+\@x{ vars \.{\defeq} {\langle} a {\rangle}}%
+\@x{ Init\@s{2.02} \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} a \.{=} 1}%
+\@x{ ToTwo \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} a \.{=} 1}%
+\@x{\@s{16.4} \.{\land} a \.{'} \.{=} a \.{+} 1}%
+\@x{ ToThree \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} a \.{=} 2}%
+\@x{\@s{16.4} \.{\land} a \.{'} \.{=} a \.{+} 1}%
+\@x{ Down \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} a \.{\neq} 1}%
+\@x{\@s{16.4} \.{\land} a \.{'} \.{=} a \.{-} 1}%
 \@x{ Spec \.{\defeq}}%
 \@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+ \@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ ToTwo \.{\lor} ToThree \.{\lor} Down
+ ]_{ a}}%
 \@x{}\bottombar\@xx{}%
 \end{tlatex}
 
-The \textit{Liveness} property of the \textit{Spec} confirms c[1] is at least
-bumped once. Running TLC against the \textit{Spec} as is passes, but reports
-violation when the \textit{Liveness} property is enabled:
+The building has 3 floors and the elevator can go either up or down. The
+elevator keeps going up until it's the top floor, or keep going down until it's
+the bottom floor. Running TLC against the spec will pass with 3 distinct
+state.\newline
+
+Let's introduce a liveness property. The elevator should always at least go 
+to the second floor:\newline
+\begin{tla}
+Liveness == 
+    /\ a = 1 ~> a = 2
+\end{tla}
+\begin{tlatex}
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} a \.{=} 1 \.{\leadsto} a \.{=} 2}%
+\end{tlatex}
+\newline
+
+However, TLC reports a violation with this property:
 
 \begin{verbatim}
 Error: Temporal properties were violated.
 Error: The following behavior constitutes a counter-example:
 State 1: <Initial predicate>
-c = <<0, 0>>
+a = 1
 State 2: Stuttering
 \end{verbatim}
 
 Since the \textit{Spec} permits \textit{suttering}, the state machine is allowed
-to perpetually stay in the initial state, and \textit{never} advances to the
-next state. This violates the \textit{Liveness} property c[1]
-\textit{eventually} becomes 1. To fix this, we need to add fairness description 
-to the spec:\newline
-
-\begin{tla}
-Spec ==
-  /\ Init
-  /\ [][Next]_vars
-  /\ WF_vars(Next)
-\end{tla}
-\begin{tlatex}
-\@x{ Spec \.{\defeq}}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
-\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ vars} ( Next )}%
-\end{tlatex}
-\newline
-
-The added line added \textit{weak fairness} to \textit{Next}, roughly indicating
-actions descrbied by \textit{Next} must happen if conditions in \textit{Next}
-are met. 
+to perpetually stay on 1F, and \textit{never} advances to the next state. This
+violates the \textit{Liveness} property. This can be fixed by introduce fairness
+description.
 
 \section{Weak Fairness}
 
@@ -2077,58 +2080,104 @@ Weak fairness is defined as:\newline
 \begin{equation} 
 \Diamond\Box(ENABLED\langle A \rangle _v) \implies \Box\Diamond\langle A \rangle _v
 \end{equation}
-The above roughly translates to: if conditions required for step A to occur is
-always true, then step A will eventually occur. $ENABLED\langle A \rangle$ is
-the TLA+ syntax to represent \textit{conditions required for step A}.\newline
+$ENABLED\langle A \rangle$ is the TLA+ syntax to represent \textit{conditions
+required for step A}. The above translates to: if conditions required for step A
+to occur is always true, then step A will eventually occur. In the example from
+earlier section without weak fairness defined, the elevator may \textit{stutter}
+at floor 1 and never advance to floor 2. Weak fairness states that if the
+condition for an action is met repeatedly (ie. every step elevator stays at
+floor 1 but \textit{can} go up), the elevator must \textit{eventually} go
+up.\newline
 
-Consider the following example:
 \begin{tla}
---------------------------- MODULE weak ----------------------------
-EXTENDS Naturals
-VARIABLES c
-vars == <<c>>
-Liveness == 
-    /\ c[1] = 0 ~> c[1] = 1
-Init ==
-    /\ c = [i \in 1..2|-> 0] 
-BumpOne == 
-    /\ c' = [c EXCEPT ![1] = (c[1] + 1) % 2]
-BumpTwo ==
-    /\ c' = [c EXCEPT ![2] = (c[2] + 1) % 2]
-Next == 
-    \/ BumpOne
-    \/ BumpTwo
 Spec ==
-    /\ Init
-    /\ [][Next]_vars
-    /\ WF_vars(Next)
-=============================================================================
+  /\ Init
+  /\ [][ToTwo \/ ToThree \/ Down]_a
+  /\ WF_a(Down)
+  /\ WF_a(ToTwo)
+  /\ WF_a(ToThree)
 \end{tla}
 \begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} weak}\moduleRightDash\@xx{}%
-\@x{ {\EXTENDS} Naturals}%
-\@x{ {\VARIABLES} c}%
-\@x{ vars \.{\defeq} {\langle} c {\rangle}}%
-\@x{ Liveness \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} c [ 1 ] \.{=} 0 \.{\leadsto} c [ 1 ] \.{=} 1}%
-\@x{ Init \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} c \.{=} [ i \.{\in} 1 \.{\dotdot} 2 \.{\mapsto} 0 ]}%
-\@x{ BumpOne \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ c {\EXCEPT} {\bang} [ 1 ] \.{=} ( c [
- 1 ] \.{+} 1 ) \.{\%} 2 ]}%
-\@x{ BumpTwo \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} c \.{'} \.{=} [ c {\EXCEPT} {\bang} [ 2 ] \.{=} ( c [
- 2 ] \.{+} 1 ) \.{\%} 2 ]}%
-\@x{ Next \.{\defeq}}%
-\@x{\@s{16.4} \.{\lor} BumpOne}%
-\@x{\@s{16.4} \.{\lor} BumpTwo}%
 \@x{ Spec \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} Init}%
-\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
-\@x{\@s{16.4} \.{\land} {\WF}_{ vars} ( Next )}%
-\@x{}\bottombar\@xx{}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+ \@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ ToTwo \.{\lor} ToThree \.{\lor} Down
+ ]_{ a}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( Down )}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( ToTwo )}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( ToThree )}%
+\end{tlatex}
+\newline
+
+Running the spec against TLC passes again.\newline
+
+Let's modify the Liveness property again:\newline
+\begin{tla}
+Liveness == 
+    /\ a = 1 ~> a = 3
+\end{tla}
+\begin{tlatex}
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} a \.{=} 1 \.{\leadsto} a \.{=} 3}%
 \end{tlatex}
 
+TLC now reports the following violation: 
+\begin{verbatim}
+Error: Temporal properties were violated.
+Error: The following behavior constitutes a counter-example:
+State 1: <Initial predicate>
+a = 1
+State 2: <Up line 10, col 5 to line 11, col 17 of module elevator>
+a = 2
+Back to state 1: <Down line 13, col 5 to line 14, col 17 of module elevator>
+\end{verbatim}
+
+In short, TLC identified a case where the elevator is perpetually stuck going
+between 1F and 2F, but never go to 3F. Weak fairness is no longer enough,
+because the the elevator is not stuck on 2F repeatedly, but stuck going between 
+1F and 2F. This is where we need strong fairness.
+
+\section{Strong Fairness}
+
+Strong fairness is defined as:\newline
+\begin{equation} 
+\Box\Diamond(ENABLED\langle A \rangle _v) \implies \Box\Diamond\langle A \rangle _v
+\end{equation}
+The difference between weak and strong fairness is the \textit{eventually
+always} vs. \textit{always eventually}. \newline 
+
+In weak fairness, once the state machine is stuck in a state in perpetuity, the
+state machine always transition to a possible next state permitted by the spec
+(eg. if the elevator is stuck on 1F but can go to 2F, it will). \newline 
+
+In strong fairness, the elevator doesn't need to be stuck on 2F to go to 3F. If
+the elevator ever makes it to 2F, it \textit{can} go to 3F. To enable strong
+fairness, we need to update the spec definition like so:\newline
+\begin{tla}
+Spec ==
+  /\ Init
+  /\ [][ToTwo \/ ToThree \/ Down]_a
+  /\ WF_a(Down)
+  /\ WF_a(ToTwo)
+  /\ SF_a(ToThree)
+\end{tla}
+\begin{tlatex}
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+ \@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ ToTwo \.{\lor} ToThree \.{\lor} Down
+ ]_{ a}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( Down )}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ a} ( ToTwo )}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\SF}_{ a} ( ToThree )}%
+\end{tlatex}
+\newline 
+
+With this change, the spec passes TLC again.
+
+\section{Additional Note}
+
+I initially defined Up and Down symmetrically, but SF on up didn't have the
+expected side effect. I assume this is because TLC processes the actions quite
+literally and only account for condition if they were explicitly listed. 
 
 
 \chapter{Reference}
