@@ -2194,12 +2194,13 @@ Spec ==
 However, TLC \textit{still} reports the same violation. What's going on?\newline
 
 If we take a closer look at the enabling condition for \textit{Up}, it only
-requires current floor to be not TOP. Up is \textit{always eventually} called 
-even if elevator goes between 1F and 2F indefinitely (because 1F is not TOP).
-What we really want is strong fairness on \textit{Up} for \textit{every floor}.
-So if elevator makes to 2F once, it will eventaully go to 3F. If elevator makes
-to 3F once, it will eventaully go to 4F, etc. The following is the change
-required:\newline
+requires current floor to be not the \textit{top floor}. When the elevator is
+stuck in a loop going Up and Down between 1F and 2F indefinitely, strong
+fairness for Up is \textit{already satisfied}. What we really want is strong
+fairness on \textit{Up} for \textit{every floor}, instead of \textit{any floor
+except top floor}. So if elevator makes to 2F once, it will \textit{always
+eventaully} go to 3F. If elevator makes to 3F once, it will \textit{always
+eventaully} go to 4F, etc. The following is the change required:\newline
 
 \begin{tla}
 Spec ==
