@@ -50,29 +50,29 @@
 \section{Catching Problems Early}
 
 Years ago, I worked on a propietary low power processor in an embedded system.
-The processor ran microcode featuring a custom instruction set. To enter (or
-exit) a low power state, a set of (possibly hundreds) instructions were
-executed. These instructions progressively puts the system in lower power state.
-For example: turn off IP A, then turn off IP B, then turn off the power island to
-the IPs, etc. To save cost and power, the low power processor had very limited
-debuggability support.\newline
+The processor ran microcode featuring a custom instruction set. To enter a low
+power state, a set of (possibly hundreds) instructions were executed. These
+instructions progressively puts the system in lower power state. For example:
+turn off IP A, then turn off IP B, then turn off the power island to the IPs. To
+save cost and power, the low power processor had very limited debuggability
+support.\newline
 
 An experienced reader may start to notice some redflags.\newline
 
-When the system enters a low power state, it executes possibly hundreds of
-instruction.  If the microcode attempts to access the memory interface when the
-power island has been shut off, the system would hang. Since the power island
-has been shut off, the JTAG port is also shut off, leaving the developer with
-\textit{no way} of live debugging related problem. At this point the developer
-needs to siphon through (possibly hundreds) of instructions to catch invariant
-violation \textit{manually}.\newline
+If the microcode attempts to access the memory interface when the power island
+has been shut off, processor would hang. Since the power island has been shut
+off, the physical hardware debug port is also shut off, leaving the developer
+with \textit{no way} of live debugging related problem. At this point the
+developer needs to siphon through (possibly hundreds) of instructions to catch
+invariant violation \textit{manually}.\newline
 
-As one can imagine, maintaining the microcode was very expensive. Fortunately,
-the propietary low power processor only had a handful of instructions, I was
-able to reduce the maintenance cost by creating an emulator to verify the
-microcode prior to deploying it on target. The emulator tracks the system state
-on every command execution and confirm every step along the way none of the
-system invariants have been violated. This included stuff such as: 
+As one can imagine, maintaining the microcode was very expensive for the team.
+Fortunately, the propietary low power processor only had a handful of
+instructions, I created an emulator for this propietary processor to verify the
+microcode prior to deploying it on target. The emulator models the processor
+states as a state graph, with executed instruction transitions the state machine
+to to the next state. At every state all the invariants are evaluated to ensure
+none have been violated. Examples of invariants included:
 \begin{itemize}
     \item Accessing memory interface after power off leads to a hang
     \item Accessing certain register in certain chip revision leads to a hang 
@@ -86,12 +86,13 @@ target.\newline
 This was a very enlighting experience. To generalize, there are a class of
 problem where the solution has high \textit{failure cost}. Solution such as
 lockless or waitfree data structure, distributed algorithms, OS scheduler are
-typically hard to reason about correctness, and tend to have high failure cost
-because related issues are difficult to reproduce and hard to debug. Good software
+typically hard to reason about correctness because all the possible states
+existed during execution. These solutions tend to have high failure cost because
+related issues are difficult to reproduce and hard to debug. Good software
 engineering practice suggest we need to implement tests, but tests do not cover
-the entire solution space exhaustively.\newline 
+the entire state graph of the solution space exhaustively.\newline 
 
-\textit{How do we ensure the solution is correct by design?}
+\textit{So, how do we ensure the solution is correct by design?}
 
 \section{The Generalized Problem}
 
@@ -104,11 +105,11 @@ and the problem complexity finally caught up in the past decade or so to allow
 TLA+ to visibly demonstrate its strength.\newline
 
 We are also at a point in the technology curve where vertical scaling is no
-longer practical, with CPU speed has plateau in the past decade or so. The
+longer practical, with CPU speed plateau'd in the past decade or so. The
 industry is exploring horizontal scaling solution, such as hardware vendor
 focusing adding more CPU cores, or software vendors buying many low end hardware
 instead of a few high end hardware. This shifts the technology complexity from
-hardware to software, demanding concurrent software solution to maximize
+hardware to software, demanding software solution to maximize concurrent
 hardware resource utilization. \newline
 
 One slight problem: \textit{human are bad at concurrent reasoning.}\newline
@@ -128,14 +129,16 @@ reserve an index in the queue in certain order, but may release them in differen
 What if one reader is really slow, and another reader is super fast and possibly 
 lapse the slow reader? \newline
 
-Consider a OS scheduler with locks. Assume all the processes have the same
-priority - can a process starve the other processes by repeatedly acquire and release 
-the lock?\newline
+Consider an OS scheduler with locks. Assume all the processes have the same
+priority. Can a process starve the other processes by repeatedly acquire and
+release the lock? How do we ensure scheduling is fair?\newline
 
-The usual anti-pattern is to keep bandaiding the solution until bugs stop
-comming in - but how does anyone know if the solution is actually
-\textit{correct by design}? To solve this problem, we must rely on tools to do
-the reasoning \textit{for us}.
+The usual \textit{anti-pattern} is to keep bandaiding the design until bugs stop
+comming. This is never ideal. Per Murphy's law, anything that can go wrong will
+go wrong, and a hard to reproduce bug will come in at the most inconvinient
+time. How do we make sure the solution is actually \textit{correct by design}?
+To solve this problem, we must rely on tools to do the reasoning \textit{for
+us}.
 
 \section{TLA+}
 
@@ -150,9 +153,18 @@ breath-first-search) to ensure certain properties are held through out the
 entire state space (either per state or a sequence of states).\newline
 
 \section{Target Audience}
-TODO: describe target audience 
 
-\section{Prerequisite}
+The intent for the book is to teach reader how to write TLA+ spec for their
+design to provide confidence in \textit{design correctness}. The content to this
+book is appropriate for software designer, hardware designer, system architect,
+and such.\newline 
+
+As for the readers: some computing science knowledge is required. One doesn't
+need to be expert at a particular language to understand this book; TLA+ is
+effectively its own language. This book is example driven and will go through
+designs such as lockless queue, simple task scheduler, consensus algorithm, etc.
+Reader will likely enjoy a deeper insight if she has some familiarity with these
+topics.
 
 \section{Book Layout}
 
@@ -1605,11 +1617,6 @@ Spec ==
 \newline
 
 Fairness ensures that we are never stuck in a repeated state.
-
-
-\chapter{Simple Elevator}
-
-https://surfingcomplexity.blog/2024/10/16/a-liveness-example-in-tla/
 
 \chapter{Miscellaneous}
 
