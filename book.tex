@@ -73,7 +73,6 @@ system invariants have been violated. This included stuff such as:
     \item Accessing memory interface after power off leads to a hang
     \item Accessing certain register in certain chip revision leads to a hang 
     \item Verify IPs are shut off in the allowed order
-    \item ... etc
 \end{itemize}
 
 The verification algorithm was implemented using a \textit{depth-first search}
@@ -81,36 +80,32 @@ algorithm, providing \textit{100\%} microcode coverage before deploy on
 target.\newline
 
 This was a very enlighting experience. To generalize, there are a class of
-problem in the industry where the solution space with very high \textit{failure
-cost}.  Solutions such as lockless/waitfree data structure, distributed
-algorithms, OS scheduler, etc tend to have high failure cost because they are
-possibly extremely difficult to debug or reproduce. \newline 
+problem where the solution has high \textit{failure cost}. Solution such as
+lockless or waitfree data structure, distributed algorithms, OS scheduler are
+typically hard to reason about correctness, and tend to have high failure cost
+because related issues are difficult to reproduce and hard to debug. Good software
+engineering practice suggest we need to implement tests, but tests do not cover
+the entire solution space exhaustively.\newline 
 
-\textit{There's gotta be a better way to solve these problems.}. 
-
-\section{Target Audience}
-
-TODO: describe target audience 
-
-\section{Prerequisite}
+\textit{How do we ensure the solution is correct by design?}
 
 \section{The Generalized Problem}
 
-Fast forward to now: I stumbled across TLA+ as I was learning about distributed
-algorithms.  A formalized solution of what I was looking for.\newline
+Fast forward to now: I stumbled across TLA+, a formalized solution of what I was
+looking for.\newline
 
-Leslie Lamport invented the TLA+ 1999, but didn't appear to have caught on until
-the 2010's. I'm of the opinion that TLA+ was invented ahead of its time, and
-recently the problem complexity finally caught up to allow the tool to more
-visibly demonstrate its strength.\newline
+Leslie Lamport invented the TLA+ 1999, but TLA+ didn't appear to have caught on
+until the 2010's. My personal opinion is TLA+ was invented ahead of its time,
+and the problem complexity finally caught up in the past decade or so to allow
+TLA+ to visibly demonstrate its strength.\newline
 
 We are also at a point in the technology curve where vertical scaling is no
-longer physically practical, and the industry is exploring horizontal scaling
-solution. This is apparent in a few regards: CPU speed has plateau in the past
-decade or so. Hardware vendor focuses on scaling horizontally by adding more
-cores. Software vendors finds it more financially attractive to buy two of the
-same machine than buying the same machine with twice the capability, etc. All of
-these motivates software or hardware solution in the horizontal scaling space.\newline
+longer practical, with CPU speed has plateau in the past decade or so. The
+industry is exploring horizontal scaling solution, such as hardware vendor
+focusing adding more CPU cores, or software vendors buying many low end hardware
+instead of a few high end hardware. This shifts the technology complexity from
+hardware to software, demanding concurrent software solution to maximize
+hardware resource utilization. \newline
 
 One slight problem: \textit{human are bad at concurrent reasoning.}\newline
 
@@ -133,22 +128,27 @@ Consider a OS scheduler with locks. Assume all the processes have the same
 priority - can a process starve the other processes by repeatedly acquire and release 
 the lock?\newline
 
-\section{TLA+}
-
-The usual anti-pattern is to keep bandaiding the solution until bug reports stop
+The usual anti-pattern is to keep bandaiding the solution until bugs stop
 comming in - but how does anyone know if the solution is actually
-\textit{correct by design}? To solve this problem, we then must rely on tools to
-do the reasoning \textit{for us}.\newline 
+\textit{correct by design}? To solve this problem, we must rely on tools to do
+the reasoning \textit{for us}.
+
+\section{TLA+}
 
 TLA+ is a \textit{system specification language}, with the intent to describe
 the system with implementation details removed. TLA+ allows designer to describe
-the system as a sequence of states.  The designer can expresses transition
+the system as a sequence of states. The designer can expresses transition
 condition from one state to another, describe invariants that must hold true in
 every state and liveness properties that the overall system should converge to.
 The key innovation of TLA+ is once the system is modeled as a finite state
 machine, the states can be \textit{exhaustively} explored (via
 breath-first-search) to ensure certain properties are held through out the
 entire state space (either per state or a sequence of states).\newline
+
+\section{Target Audience}
+TODO: describe target audience 
+
+\section{Prerequisite}
 
 \section{Book Layout}
 
@@ -2160,16 +2160,17 @@ Spec ==
 \end{tlatex}
 \newline 
 
-However, TLC \textit{still} reports the same failure. What's going on?\newline
+However, TLC \textit{still} reports the same violation. What's going on?\newline
 
 If we take a closer look at the enabling condition for Up, it only requires
 current floor to not equal TOP! This means TLC considers Up to be called if it
 is called on \textit{any} floor. If the elevator going between 1F and 2F
-indefinitely, TLC assumes strong fairness on up is satisfied, because Up is
-called going from 1F to 2F, even though the elevator never moves past 2F. What
-we really want is strong fairness on Up for \textit{every floor}. So if elevator
-makes to 2F once, it will eventaully go to 3F. If elevator makes to 3F once, it
-will eventaully go to 4F, etc. The following is the change required:\newline
+indefinitely, TLC assumes strong fairness on \textit{Up} is satisfied, because
+it is called going from 1F to 2F, even though the elevator never moves past 2F.
+What we really want is strong fairness on \textit{Up} for \textit{every floor}.
+So if elevator makes to 2F once, it will eventaully go to 3F. If elevator makes
+to 3F once, it will eventaully go to 4F, etc. The following is the change
+required:\newline
 
 \begin{tla}
 Spec ==
