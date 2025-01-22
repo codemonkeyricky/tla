@@ -32,7 +32,7 @@ Tx(msg) == messages' = AddMessage(msg, messages)
 
 Rx(msg) == messages' = RemoveMessage(msg, messages)
 
-LeaderKeepAlive(i, j) == 
+KeepAlive(i, j) == 
     /\ state[i] = Leader
     /\ Tx([fSrc |-> i,
            fDst |-> j,
@@ -127,12 +127,23 @@ Receive(msg) ==
             \*     /\ TRUE
             \* \/ type = "RequestVoteResp"
             \*     /\ TRUE
+LeaderProc(i) == 
+    /\ state[i] = Leader
+        \/ \E j \in Servers \ {i}: KeepAlive(i, j)
+
+CandidateProc(i) == 
+    /\ state[i] = Candidate
+        \/ \A j \in Servers \ {i}: Campaign(i, j)
+
+FollowerProc(i) == 
+    /\ state[i] = Follower
+        \/ Timeout(i)
 
 Next == 
-    \/ \E i, j \in Servers : LeaderKeepAlive(i, j)
-    \/ \E i \in Servers : Timeout(i)
-    \/ \E i \in Servers : CandidateCampaign(i)
-    \/ \E msg \in DOMAIN messages : Receive(msg)
+    \/ \E i \in Servers : LeaderProc(i)
+    \/ \E i \in Servers : CandidateProc(i)
+    \/ \E i \in Servers : FollowerProc(i)
+    \* \/ \E msg \in DOMAIN messages : Receive(msg)
 
 Spec ==
   /\ Init
