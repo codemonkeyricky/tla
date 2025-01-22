@@ -1,7 +1,7 @@
 --------------------------- MODULE raft_vote ----------------------------
 EXTENDS Integers, FiniteSets, TLC
 VARIABLES state, messages, voted_for, term
-vars == <<state, messages, voted_for>>
+vars == <<state, messages, voted_for, term>>
 
 Follower == 0 
 Candidate == 1
@@ -34,7 +34,7 @@ LeaderKeepAlive(i, j) ==
 Timeout(i) == 
     /\ state[i] # Leader 
     /\ state' = [state EXCEPT ![i] = Candidate]
-    /\ voted_for[i] = i
+    /\ UNCHANGED <<messages, voted_for, term>>
 
 CandidateCampaign(i) == 
     /\ state[i] = Candidate 
@@ -47,16 +47,21 @@ CandidateCampaign(i) ==
                fType |-> "RequestVoteReq", 
                fTerm |-> term[i]])
 
+UpdateTerm(i, t) ==
+    TRUE
+
 Receive(msg) == 
     LET 
         i == msg.fSrc
         j == msg.fDst
         type == msg.fType
+        t == msg.fTerm
     IN 
-        CASE type = "AppendEntryReq" -> TRUE
-        [] type = "AppendEntryResp" -> TRUE
-        [] type = "RequestVoteReq" -> TRUE
-        [] type = "RequestVoteResp" -> TRUE
+        \/ UpdateTerm(i, t)
+        \/ CASE type = "AppendEntryReq" -> TRUE
+             [] type = "AppendEntryResp" -> TRUE
+             [] type = "RequestVoteReq" -> TRUE
+             [] type = "RequestVoteResp" -> TRUE
 
 Next == 
     \/ \E i, j \in Servers : LeaderKeepAlive(i, j)
