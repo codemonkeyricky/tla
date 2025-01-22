@@ -15,13 +15,22 @@ Init ==
     /\ voted_for = [s \in Servers |-> ""]
     /\ term = [s \in Servers |-> 0]
 
-AddMessage(to_add) == 
-    IF to_add \in DOMAIN messages THEN 
-        [messages EXCEPT ![to_add] = @ + 1]
+AddMessage(to_add, msgs) == 
+    IF to_add \in DOMAIN msgs THEN 
+        [msgs EXCEPT ![to_add] = @ + 1]
     ELSE 
-        messages @@ (to_add :> 1)
+        msgs @@ (to_add :> 1)
 
-Tx(msg) == messages' = AddMessage(msg)
+RemoveMessage(to_remove, msgs) ==
+    IF to_remove \in DOMAIN msgs THEN                                                                                                                                                                 
+        IF msgs[to_remove] <= 1 THEN [i \in DOMAIN msgs \ {to_remove} |-> msgs[i]]                                                                                                                            
+        ELSE [msgs EXCEPT ![to_remove] = msgs[to_remove] - 1]                                                                                                                                                 
+    ELSE                                                                                                                                                                                      
+        msgs    
+
+Tx(msg) == messages' = AddMessage(msg, messages)
+
+Rx(msg) == messages' = RemoveMessage(msg, messages)
 
 LeaderKeepAlive(i, j) == 
     /\ state[i] = Leader
@@ -47,21 +56,55 @@ CandidateCampaign(i) ==
                fType |-> "RequestVoteReq", 
                fTerm |-> term[i]])
 
-UpdateTerm(i, t) ==
-    TRUE
-
-Receive(msg) == 
+AppendEntryReqProc(msg) == 
     LET 
-        i == msg.fSrc
-        j == msg.fDst
+        i == msg.fDst
+        j == msg.fSrc
         type == msg.fType
         t == msg.fTerm
     IN 
-        \/ UpdateTerm(i, t)
-        \/ CASE type = "AppendEntryReq" -> TRUE
-             [] type = "AppendEntryResp" -> TRUE
-             [] type = "RequestVoteReq" -> TRUE
-             [] type = "RequestVoteResp" -> TRUE
+        \/ t = term[i]
+        \/ t < term[i]
+        \* revert back to follower
+        \/  /\ t > term[i]
+            /\ state' = [state EXCEPT ![i] = Follower]
+            /\ term' = [term EXCEPT ![i] = t]
+            /\ voted_for' = [voted_for EXCEPT ![i] = j]
+            /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "AppendEntryResp",
+                                        fTerm |-> t, 
+                                        success |-> 1],
+                                        RemoveMessage(msg, messages))
+
+AppendEntryRespProc(msg) ==
+    TRUE 
+
+RequestVoteReqProc(msg) == 
+    TRUE 
+
+RequestVoteReplyProc(msg) == 
+    TRUE
+
+Receive(msg) == 
+    \/ AppendEntryReqProc(msg) 
+    \/ AppendEntryRespProc(msg) 
+    \/ RequestVoteReqProc(msg) 
+    \/ RequestVoteReplyProc(msg) 
+        \* \/ t = term[i] 
+        \*     \/  /\ type = "AppendEntryReq"
+        \*         /\ Tx([ fSrc |-> i,
+        \*                 fDst |-> j, 
+        \*                 fType |-> "AppendEntryResp",
+        \*                 fTerm |-> t, 
+        \*                 fSuccess |-> 1])
+        \*         /\ Remove(msg)
+            \* \/ type = "AppendEntryResp"
+            \*     /\ TRUE
+            \* \/ type = "RequestVoteReq"
+            \*     /\ TRUE
+            \* \/ type = "RequestVoteResp"
+            \*     /\ TRUE
 
 Next == 
     \/ \E i, j \in Servers : LeaderKeepAlive(i, j)
