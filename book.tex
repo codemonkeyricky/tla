@@ -724,7 +724,7 @@ together to offer the service in a geo diverse fashion to be immnue to partial
 outage.  The nodes often have requirements to know about each other. In the
 context of distributed database, a node may need to know the key range another
 of its peers. The cluster needs a way to communicate this information. One such
-mechanism is the gossip protocol.
+mechanism is the gossip protocol.\newline
 
 Gossip protocols are used to communicate cluster information in a distributed
 fashion, (unsurprisingly) in a distributed system. Without gossip protocol, 
@@ -751,11 +751,8 @@ Now let's look at how a simple gossip protocol can be described by TLA+.
 
 \section{Spec}
 
-\subsection{Base}
-
-In gossip protocol, every node needs to remember every other node's current
-state. In programming language this is typically described as counter[][]. The following is
-the equivalent in TLA+: 
+In gossip protocol, every node needs to remember all its peers current
+version. This can be represented as a two dimension array:\newline
 \begin{tla}
     Init == counter = [n \in Node |-> [o \in Node |-> 0]] 
 \end{tla}
@@ -763,11 +760,10 @@ the equivalent in TLA+:
  \@x{\@s{16.4} Init \.{\defeq} counter \.{=} [ n \.{\in} Node \.{\mapsto} [ o
  \.{\in} Node \.{\mapsto} 0 ] ]}%
 \end{tlatex}
+\newline
 
 This defines counter a collection of nodes, where each node also contains a
-collection of nodes initialized to 0.\newline
-
-The nodes can move to a new version: 
+collection of nodes initialized to 0. The nodes can bump to a new version:\newline
 \begin{tla}
     Increment(n) == counter' = [counter EXCEPT ![n][n] = @ + 1]
 \end{tla}
@@ -775,9 +771,10 @@ The nodes can move to a new version:
  \@x{\@s{16.4} Increment ( n ) \.{\defeq} counter \.{'} \.{=} [ counter
  {\EXCEPT} {\bang} [ n ] [ n ] \.{=} @ \.{+} 1 ]}%
 \end{tlatex}
- \newline\newline
-Note only the n's version is incremented. Communicating the update is done by
-the gossip action defined below:\newline
+\newline
+
+Notice increment only bumps node's version. This change needs to be gossiped 
+across the cluster:\newline
 \begin{tla}
 Gossip(n, o) ==                  
     LET Max(a, b) == IF a > b THEN a ELSE b 
@@ -826,20 +823,19 @@ Finally, the actual spec: \newline
  n )}%
 \@x{\@s{56.23} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
 \end{tlatex}
+\newline
 
 Next supports two possible next steps describe using disjunctions. The first is
 bumping the version of a random node, the second is select a pair of nodes to
 gossip. Note the \textit{existential qualifier} on both, which basically states
 there exists a node n in nodes, or there exists a pair of nodes n, o in nodes,
-respectively.
-
-\subsection{Finitized}
+respectively.\newline
 
 There's a minor problem with the definition above. Gossip protocol, like many
 converging protocols, have a \textit{monotonic increasing} requirement. On
 failures, the protocol bumps the version, which increases monotonically. Since
 TLA+ spec models the system as a graph, a monotonic increasing version number
-means the graph is \textit{infinitely large}. To put the specification back into
+means the state graph is \textit{infinitely large}. To put the specification back into
 finite space, we can normalize the state:\newline
 
 \begin{tla}
@@ -867,66 +863,118 @@ GarbageCollect ==
 \@x{\@s{44.99} ]}%
 \@x{\@s{36.79} \.{\land} {\UNCHANGED} converge}%
 \end{tlatex}
+\newline
 
-$SetMin(s)$ implements standard TLA+ semantics to retrieve the minimum element
-in the set. The definition can be read as \textit{choose an $e$ from $S$ such
-that for every $o$ in $S$, $o$ is equal or bigger than $e$}. $Transpose$ is then
-subsequently defined as the minimum value exist in counter. Finally, $counter'$
-is updated such that \textit{every} elements substracts $Transpose$. The
-increment function is now updated to: \newline
+\textit{GarbageCollect} substracts every version value with set minimum. To
+limit range of version value, the increment function is now updated to: \newline
 \begin{tla}
-    Increment(n) ==
-        /\ ~converge
-        /\ counter[n][n] < Divergence
-        /\ S!Increment(n)
-        /\ UNCHANGED converge
+Increment(n) ==
+    /\ ~converge
+    /\ counter[n][n] < Divergence
+    /\ S!Increment(n)
+    /\ UNCHANGED converge
 \end{tla}
 \begin{tlatex}
-\@x{\@s{16.4} Increment ( n ) \.{\defeq}}%
-\@x{\@s{32.8} \.{\land} {\lnot} converge}%
-\@x{\@s{32.8} \.{\land} counter [ n ] [ n ] \.{<} Divergence}%
-\@x{\@s{32.8} \.{\land} S {\bang} Increment ( n )}%
-\@x{\@s{32.8} \.{\land} {\UNCHANGED} converge}%
+\@x{ Increment ( n ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} {\lnot} converge}%
+\@x{\@s{16.4} \.{\land} counter [ n ] [ n ] \.{<} Divergence}%
+\@x{\@s{16.4} \.{\land} S {\bang} Increment ( n )}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} converge}%
 \end{tlatex}
+\newline
 
-The conjunction $counter[n][n] < Divergence$ limits the maximum counter value.
-Finally, the Next action is updated to the follow:\newline
+Finally, the \textit{Next} is updated to the follow:\newline
 
 \begin{tla}
-    Next ==
-        \/ \E n \in Node : Increment(n)
-        \/ \E n, o \in Node : Gossip(n, o)
-        \/ Converge
-        \/ GarbageCollect
+Next ==
+    \/ \E n \in Node : Increment(n)
+    \/ \E n, o \in Node : Gossip(n, o)
+    \/ Converge
+    \/ GarbageCollect
 \end{tla}
 \begin{tlatex}
-\@x{\@s{16.4} Next \.{\defeq}}%
-\@x{\@s{32.8} \.{\lor} \E\, n \.{\in} Node \.{:} Increment ( n )}%
-\@x{\@s{32.8} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
-\@x{\@s{32.8} \.{\lor} Converge}%
-\@x{\@s{32.8} \.{\lor} GarbageCollect}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \E\, n \.{\in} Node \.{:} Increment ( n )}%
+\@x{\@s{16.4} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
+\@x{\@s{16.4} \.{\lor} Converge}%
+\@x{\@s{16.4} \.{\lor} GarbageCollect}%
 \end{tlatex}
 
 Note $GarbageCollect$ is a now part of possible state transition. We will
 discuss $Converge$ later, as it is related to liveness check. Lastly:\newline
 
 \begin{tla}
-    Fairness == \A n, o \in Node : WF_vars(Gossip(n, o))
-    Spec ==
-        /\ Init
-        /\ [][Next]_vars
-        /\ Fairness
+Fairness == \A n, o \in Node : WF_vars(Gossip(n, o))
+Spec ==
+    /\ Init
+    /\ [][Next]_vars
+    /\ Fairness
 \end{tla}
 \begin{tlatex}
- \@x{\@s{16.4} Fairness \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} {\WF}_{
- vars} ( Gossip ( n ,\, o ) )}%
-\@x{\@s{16.4} Spec \.{\defeq}}%
-\@x{\@s{32.8} \.{\land} Init}%
-\@x{\@s{32.8} \.{\land} {\Box} [ Next ]_{ vars}}%
-\@x{\@s{32.8} \.{\land} Fairness}%
+ \@x{ Fairness \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} {\WF}_{ vars} (
+ Gossip ( n ,\, o ) )}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} Init}%
+\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{16.4} \.{\land} Fairness}%
+\end{tlatex}
+\newline
+
+The \textit{Fairness} definition ensures Gossip runs between every pair of nodes
+gossip.
+
+\section{Safety}
+
+In every state, counter[n][o] next must be larger than counter[n][o] current:\newline
+
+\begin{tla}
+Monotonic == \A n, o \in Node : counter'[n][o] >= counter[n][o] 
+Monotonicity == [][
+    \/ S!Monotonic
+    \/ \A a, b, c, d \in Node :
+        (counter'[a][b] - counter[a][b]) = (counter'[c][d] - counter[c][d])
+]_vars
+\end{tla}
+\begin{tlatex}
+ \@x{ Monotonic \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} counter \.{'} [ n ]
+ [ o ] \.{\geq} counter [ n ] [ o ]}%
+\@x{ Monotonicity \.{\defeq} {\Box} [}%
+\@x{\@s{16.4} \.{\lor} S {\bang} Monotonic}%
+\@x{\@s{16.4} \.{\lor} \A\, a ,\, b ,\, c ,\, d \.{\in} Node \.{:}}%
+ \@x{\@s{31.61} ( counter \.{'} [ a ] [ b ] \.{-} counter [ a ] [ b ] ) \.{=}
+ ( counter \.{'} [ c ] [ d ] \.{-} counter [ c ] [ d ] )}%
+\@x{ ]_{ vars}}%
 \end{tlatex}
 
-The $Fairness$ formula ensures Gossip runs between every pair of n and o. 
+\section{Liveness}
+
+For liveness we want to check the version value across all nodes eventually
+converge. \textit{Next} is updated to set Converge to true, which triggers the
+liveness condition and ensure all pair of nodes eventually have the same
+information. \newline
+
+\begin{tla}
+Convergence == \A n, o \in Node : counter[n] = counter[o]
+Liveness == converge ~> S!Convergence
+Converge ==
+    /\ converge' = TRUE
+    /\ UNCHANGED counter  
+Next ==
+  \/ \E n \in Node : Increment(n)
+  \/ \E n, o \in Node : Gossip(n, o)
+  \/ Converge
+  \/ GarbageCollect
+\end{tla}
+\begin{tlatex}
+ \@x{ Convergence \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} counter [ n ]
+ \.{=} counter [ o ]}%
+ \@x{ Liveness\@s{2.98} \.{\defeq} converge \.{\leadsto} S {\bang}
+ Convergence}%
+\@x{ Converge \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} converge \.{'} \.{=} {\TRUE}}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} counter}%
+\end{tlatex}
+
 
 \chapter{Raft Consensus Protocol}
 
@@ -1390,131 +1438,6 @@ receiver should eventually call \textit{UpdateTerm} to get updated term.
 
 % \include{nano}
 
-\chapter{Nano}
-
-TODO: add this to reference\newline
-https://content.nano.org/whitepaper/Nano\_Whitepaper\_en.pdf
-
-\section{Requirement}
-
-\section{Spec}
-
-\begin{tla}
-Init ==
-    /\ lastHash = NoHash
-    /\ distributedLedger = [n \in Node |-> [h \in Hash |-> NoBlock]]
-    /\ received = [n \in Node |-> {}]
-\end{tla}
-\begin{tlatex}
-\@x{ Init \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} lastHash \.{=} NoHash}%
- \@x{\@s{16.4} \.{\land} distributedLedger \.{=} [ n \.{\in} Node \.{\mapsto}
- [ h \.{\in} Hash \.{\mapsto} NoBlock ] ]}%
-\@x{\@s{16.4} \.{\land} received \.{=} [ n \.{\in} Node \.{\mapsto} \{ \} ]}%
-\end{tlatex}
-
-\begin{itemize}
-    \item Every node is a ledger in this system, initialized to NoBlock
-    \item Every node's received set is initialized to empty set
-\end{itemize}
-
-\begin{tla}
-Next ==
-    \/ \E account \in PrivateKey : CreateGenesisBlock(account)
-    \/ \E node \in Node : CreateBlock(node)
-    \/ \E node \in Node : ProcessBlock(node)
-\end{tla}
-\begin{tlatex}
-\@x{ Next \.{\defeq}}%
- \@x{\@s{16.4} \.{\lor} \E\, account \.{\in} PrivateKey \.{:}
- CreateGenesisBlock ( account )}%
-\@x{\@s{16.4} \.{\lor} \E\, node \.{\in} Node \.{:} CreateBlock ( node )}%
-\@x{\@s{16.4} \.{\lor} \E\, node \.{\in} Node \.{:} ProcessBlock ( node )}%
-\end{tlatex}
-\newline
-
-PrivateKey represents the identity of the account, create the genesis block for
-every account. Let us look at how a genesis block is created:\newline
-
-\begin{tla}
-HashOf(block) ==
-  IF \E hash \in Hash : hashFunction[hash] = block
-  THEN CHOOSE hash \in Hash : hashFunction[hash] = block
-  ELSE CHOOSE hash \in Hash : hashFunction[hash] = N!NoBlock
-
-CalculateHashImpl(block, oldLastHash, newLastHash) ==
-  LET hash == HashOf(block) IN
-  /\ newLastHash = hash
-  /\ hashFunction' = [hashFunction EXCEPT ![hash] = block]
-
-CreateGenesisBlock(privateKey) ==
-    LET
-        publicKey == KeyPair[privateKey]
-        genesisBlock ==
-            [type   |-> "genesis",
-            account |-> publicKey,
-            balance |-> GenesisBalance]
-    IN
-    /\ ~GenesisBlockExists
-    /\ CalculateHash(genesisBlock, lastHash, lastHash')
-    /\ distributedLedger' =
-        LET signedGenesisBlock ==
-            [block |-> genesisBlock,
-            signature |-> SignHash(lastHash', privateKey)]
-        IN
-        [n \in Node |->
-            [distributedLedger[n] EXCEPT
-                ![lastHash'] = signedGenesisBlock]]
-    /\ UNCHANGED received
-\end{tla}
-\begin{tlatex}
-\@x{ HashOf ( block ) \.{\defeq}}%
- \@x{\@s{8.2} {\IF} \E\, hash \.{\in} Hash \.{:} hashFunction [ hash ] \.{=}
- block}%
- \@x{\@s{8.2} \.{\THEN} {\CHOOSE} hash \.{\in} Hash \.{:} hashFunction [ hash
- ] \.{=} block}%
- \@x{\@s{8.2} \.{\ELSE} {\CHOOSE} hash \.{\in} Hash \.{:} hashFunction [ hash
- ] \.{=} N {\bang} NoBlock}%
-\@pvspace{8.0pt}%
-\@x{ CalculateHashImpl ( block ,\, oldLastHash ,\, newLastHash ) \.{\defeq}}%
-\@x{\@s{8.2} \.{\LET} hash \.{\defeq} HashOf ( block ) \.{\IN}}%
-\@x{\@s{8.2} \.{\land} newLastHash \.{=} hash}%
- \@x{\@s{8.2} \.{\land} hashFunction \.{'} \.{=} [ hashFunction {\EXCEPT}
- {\bang} [ hash ] \.{=} block ]}%
-\@pvspace{8.0pt}%
-\@x{ CreateGenesisBlock ( privateKey ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\LET}}%
-\@x{\@s{32.8} publicKey \.{\defeq} KeyPair [ privateKey ]}%
-\@x{\@s{32.8} genesisBlock \.{\defeq}}%
-\@x{\@s{49.19} [ type\@s{12.75} \.{\mapsto}\@w{genesis} ,\,}%
-\@x{\@s{49.19} account \.{\mapsto} publicKey ,\,}%
-\@x{\@s{49.19} balance\@s{1.73} \.{\mapsto} GenesisBalance ]}%
-\@x{\@s{16.4} \.{\IN}}%
-\@x{\@s{16.4} \.{\land} {\lnot} GenesisBlockExists}%
- \@x{\@s{16.4} \.{\land} CalculateHash ( genesisBlock ,\, lastHash ,\,
- lastHash \.{'} )}%
-\@x{\@s{16.4} \.{\land} distributedLedger \.{'} \.{=}}%
-\@x{\@s{31.61} \.{\LET} signedGenesisBlock \.{\defeq}}%
-\@x{\@s{52.01} [ block \.{\mapsto} genesisBlock ,\,}%
- \@x{\@s{52.01} signature \.{\mapsto} SignHash ( lastHash \.{'} ,\, privateKey
- ) ]}%
-\@x{\@s{31.61} \.{\IN}}%
-\@x{\@s{31.61} [ n \.{\in} Node \.{\mapsto}}%
-\@x{\@s{44.87} [ distributedLedger [ n ] {\EXCEPT}}%
-\@x{\@s{59.95} {\bang} [ lastHash \.{'} ] \.{=} signedGenesisBlock ] ]}%
-\@x{\@s{16.4} \.{\land} {\UNCHANGED} received}%
-\end{tlatex}
-\newline
-
-Every account maintains its own chain of blocks. The first block in the account
-chain is the genesis block. The genesis block contains the type, account name,
-and genesis balance. The genesis block is then hashed and signed.
-
-
-% \chapter{Nano Blockchain}
-
-TODO: add this to reference\newline
-https://content.nano.org/whitepaper/Nano\_Whitepaper\_en.pdf
 
 \section{Requirement}
 
@@ -1920,6 +1843,19 @@ G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
 
 \chapter{Idiom}
 
+Finding minimum in set:\newline
+\begin{tla}
+    Min(S) == CHOOSE x \in S : \A y \in S : x <= y
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Min ( S ) \.{\defeq} {\CHOOSE} x \.{\in} S \.{:} \A\, y \.{\in}
+ S \.{:} x \.{\leq} y}%
+\end{tlatex}
+\newline
+
+Choose a x in set S such that for every Y in S x is smaller than y.
+
+
 \chapter{Fairness and Liveness}
 
 For rigorous definition and proof, please refer to (TODO: citations). This
@@ -2169,5 +2105,131 @@ Richard M. Murray, Nok Wongpiromsarn
 
 \end{thebibliography}
 
-\end{document}
+\chapter{Nano}
 
+TODO: add this to reference\newline
+https://content.nano.org/whitepaper/Nano\_Whitepaper\_en.pdf
+
+\section{Requirement}
+
+\section{Spec}
+
+\begin{tla}
+Init ==
+    /\ lastHash = NoHash
+    /\ distributedLedger = [n \in Node |-> [h \in Hash |-> NoBlock]]
+    /\ received = [n \in Node |-> {}]
+\end{tla}
+\begin{tlatex}
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} lastHash \.{=} NoHash}%
+ \@x{\@s{16.4} \.{\land} distributedLedger \.{=} [ n \.{\in} Node \.{\mapsto}
+ [ h \.{\in} Hash \.{\mapsto} NoBlock ] ]}%
+\@x{\@s{16.4} \.{\land} received \.{=} [ n \.{\in} Node \.{\mapsto} \{ \} ]}%
+\end{tlatex}
+
+\begin{itemize}
+    \item Every node is a ledger in this system, initialized to NoBlock
+    \item Every node's received set is initialized to empty set
+\end{itemize}
+
+\begin{tla}
+Next ==
+    \/ \E account \in PrivateKey : CreateGenesisBlock(account)
+    \/ \E node \in Node : CreateBlock(node)
+    \/ \E node \in Node : ProcessBlock(node)
+\end{tla}
+\begin{tlatex}
+\@x{ Next \.{\defeq}}%
+ \@x{\@s{16.4} \.{\lor} \E\, account \.{\in} PrivateKey \.{:}
+ CreateGenesisBlock ( account )}%
+\@x{\@s{16.4} \.{\lor} \E\, node \.{\in} Node \.{:} CreateBlock ( node )}%
+\@x{\@s{16.4} \.{\lor} \E\, node \.{\in} Node \.{:} ProcessBlock ( node )}%
+\end{tlatex}
+\newline
+
+PrivateKey represents the identity of the account, create the genesis block for
+every account. Let us look at how a genesis block is created:\newline
+
+\begin{tla}
+HashOf(block) ==
+  IF \E hash \in Hash : hashFunction[hash] = block
+  THEN CHOOSE hash \in Hash : hashFunction[hash] = block
+  ELSE CHOOSE hash \in Hash : hashFunction[hash] = N!NoBlock
+
+CalculateHashImpl(block, oldLastHash, newLastHash) ==
+  LET hash == HashOf(block) IN
+  /\ newLastHash = hash
+  /\ hashFunction' = [hashFunction EXCEPT ![hash] = block]
+
+CreateGenesisBlock(privateKey) ==
+    LET
+        publicKey == KeyPair[privateKey]
+        genesisBlock ==
+            [type   |-> "genesis",
+            account |-> publicKey,
+            balance |-> GenesisBalance]
+    IN
+    /\ ~GenesisBlockExists
+    /\ CalculateHash(genesisBlock, lastHash, lastHash')
+    /\ distributedLedger' =
+        LET signedGenesisBlock ==
+            [block |-> genesisBlock,
+            signature |-> SignHash(lastHash', privateKey)]
+        IN
+        [n \in Node |->
+            [distributedLedger[n] EXCEPT
+                ![lastHash'] = signedGenesisBlock]]
+    /\ UNCHANGED received
+\end{tla}
+\begin{tlatex}
+\@x{ HashOf ( block ) \.{\defeq}}%
+ \@x{\@s{8.2} {\IF} \E\, hash \.{\in} Hash \.{:} hashFunction [ hash ] \.{=}
+ block}%
+ \@x{\@s{8.2} \.{\THEN} {\CHOOSE} hash \.{\in} Hash \.{:} hashFunction [ hash
+ ] \.{=} block}%
+ \@x{\@s{8.2} \.{\ELSE} {\CHOOSE} hash \.{\in} Hash \.{:} hashFunction [ hash
+ ] \.{=} N {\bang} NoBlock}%
+\@pvspace{8.0pt}%
+\@x{ CalculateHashImpl ( block ,\, oldLastHash ,\, newLastHash ) \.{\defeq}}%
+\@x{\@s{8.2} \.{\LET} hash \.{\defeq} HashOf ( block ) \.{\IN}}%
+\@x{\@s{8.2} \.{\land} newLastHash \.{=} hash}%
+ \@x{\@s{8.2} \.{\land} hashFunction \.{'} \.{=} [ hashFunction {\EXCEPT}
+ {\bang} [ hash ] \.{=} block ]}%
+\@pvspace{8.0pt}%
+\@x{ CreateGenesisBlock ( privateKey ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} publicKey \.{\defeq} KeyPair [ privateKey ]}%
+\@x{\@s{32.8} genesisBlock \.{\defeq}}%
+\@x{\@s{49.19} [ type\@s{12.75} \.{\mapsto}\@w{genesis} ,\,}%
+\@x{\@s{49.19} account \.{\mapsto} publicKey ,\,}%
+\@x{\@s{49.19} balance\@s{1.73} \.{\mapsto} GenesisBalance ]}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{16.4} \.{\land} {\lnot} GenesisBlockExists}%
+ \@x{\@s{16.4} \.{\land} CalculateHash ( genesisBlock ,\, lastHash ,\,
+ lastHash \.{'} )}%
+\@x{\@s{16.4} \.{\land} distributedLedger \.{'} \.{=}}%
+\@x{\@s{31.61} \.{\LET} signedGenesisBlock \.{\defeq}}%
+\@x{\@s{52.01} [ block \.{\mapsto} genesisBlock ,\,}%
+ \@x{\@s{52.01} signature \.{\mapsto} SignHash ( lastHash \.{'} ,\, privateKey
+ ) ]}%
+\@x{\@s{31.61} \.{\IN}}%
+\@x{\@s{31.61} [ n \.{\in} Node \.{\mapsto}}%
+\@x{\@s{44.87} [ distributedLedger [ n ] {\EXCEPT}}%
+\@x{\@s{59.95} {\bang} [ lastHash \.{'} ] \.{=} signedGenesisBlock ] ]}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} received}%
+\end{tlatex}
+\newline
+
+Every account maintains its own chain of blocks. The first block in the account
+chain is the genesis block. The genesis block contains the type, account name,
+and genesis balance. The genesis block is then hashed and signed.
+
+
+% \chapter{Nano Blockchain}
+
+TODO: add this to reference\newline
+https://content.nano.org/whitepaper/Nano\_Whitepaper\_en.pdf
+
+
+\end{document}
