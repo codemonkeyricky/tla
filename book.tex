@@ -1843,6 +1843,7 @@ G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
 
 \chapter{Idiom}
 
+Choose a x in set S such that for every Y in S x is smaller than y.
 Finding minimum in set:\newline
 \begin{tla}
     Min(S) == CHOOSE x \in S : \A y \in S : x <= y
@@ -1853,7 +1854,11 @@ Finding minimum in set:\newline
 \end{tlatex}
 \newline
 
-Choose a x in set S such that for every Y in S x is smaller than y.
+messages is an unordered map with untyped key and integer value:\newline
+
+\begin{tla}
+messages = [m \in {} |-> 0]
+\end{tla}
 
 
 \chapter{Fairness and Liveness}

@@ -1,7 +1,7 @@
 --------------------------- MODULE raft_vote ----------------------------
 EXTENDS Integers
-VARIABLES state
-vars == <<state>>
+VARIABLES state, messages
+vars == <<state, messages>>
 
 Follower == 0 
 Candidate == 1
@@ -11,9 +11,10 @@ Servers == {"s0", "s1", "s2"}
 
 Init ==
     /\ state = [s \in Servers |-> Follower]
+    /\ messages = [m \in {} |-> 0]
 
 KeepAlive(i, j) == 
-    /\ TRUE
+    /\ state[i] = Leader
     /\ UNCHANGED <<vars>>
 
 Next == 
