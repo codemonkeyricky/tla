@@ -64,7 +64,29 @@ AppendEntryReqProc(msg) ==
         t == msg.fTerm
     IN 
         \/ t = term[i]
+            \* not yet voted for re-request
+            \/ /\ voted_for[i] = j \/ voted_for[i] = ""
+               /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "AppendEntryResp",
+                                        fTerm |-> t, 
+                                        success |-> 1],
+                                        RemoveMessage(msg, messages))
+            \* voted for someone else 
+            \/ /\ voted_for[i] # j
+               /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "AppendEntryResp",
+                                        fTerm |-> t, 
+                                        success |-> 0],
+                                        RemoveMessage(msg, messages))
         \/ t < term[i]
+            /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "AppendEntryResp",
+                                        fTerm |-> term[i], 
+                                        success |-> 0],
+                                        RemoveMessage(msg, messages))
         \* revert back to follower
         \/  /\ t > term[i]
             /\ state' = [state EXCEPT ![i] = Follower]
