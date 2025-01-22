@@ -34,10 +34,10 @@ Rx(msg) == messages' = RemoveMessage(msg, messages)
 
 KeepAlive(i, j) == 
     /\ state[i] = Leader
-    /\ Tx([fSrc |-> i,
+    /\ messages' = AddMessage([fSrc |-> i,
            fDst |-> j,
            fType |-> "AppendEntryReq",
-           fTerm |-> term[i]])
+           fTerm |-> term[i]], messages)
     /\ UNCHANGED <<vars>>
 
 Timeout(i) == 
@@ -45,16 +45,16 @@ Timeout(i) ==
     /\ state' = [state EXCEPT ![i] = Candidate]
     /\ UNCHANGED <<messages, voted_for, term>>
 
-CandidateCampaign(i) == 
+Campaign(i) == 
     /\ state[i] = Candidate 
     /\ voted_for[i] = ""
     /\ voted_for = [voted_for EXCEPT ![i] = i]
     /\ \A j \in Servers : 
         /\ j # i
-        /\ Tx([fSrc |-> i, 
+        /\ messages' = AddMessage([fSrc |-> i, 
                fDst |-> j, 
                fType |-> "RequestVoteReq", 
-               fTerm |-> term[i]])
+               fTerm |-> term[i]], messages)
 
 AppendEntryReqProc(msg) == 
     LET 
@@ -113,37 +113,26 @@ Receive(msg) ==
     \/ AppendEntryRespProc(msg) 
     \/ RequestVoteReqProc(msg) 
     \/ RequestVoteReplyProc(msg) 
-        \* \/ t = term[i] 
-        \*     \/  /\ type = "AppendEntryReq"
-        \*         /\ Tx([ fSrc |-> i,
-        \*                 fDst |-> j, 
-        \*                 fType |-> "AppendEntryResp",
-        \*                 fTerm |-> t, 
-        \*                 fSuccess |-> 1])
-        \*         /\ Remove(msg)
-            \* \/ type = "AppendEntryResp"
-            \*     /\ TRUE
-            \* \/ type = "RequestVoteReq"
-            \*     /\ TRUE
-            \* \/ type = "RequestVoteResp"
-            \*     /\ TRUE
+
 LeaderProc(i) == 
     /\ state[i] = Leader
         \/ \E j \in Servers \ {i}: KeepAlive(i, j)
+        \/ \E msg \in DOMAIN messages : Receive(msg)
 
 CandidateProc(i) == 
     /\ state[i] = Candidate
-        \/ \A j \in Servers \ {i}: Campaign(i, j)
+        \/ /\ voted_for[i] = ""
+           /\ Campaign(i)
+        \/ \E msg \in DOMAIN messages : Receive(msg)
 
 FollowerProc(i) == 
     /\ state[i] = Follower
         \/ Timeout(i)
-
+        \/ \E msg \in DOMAIN messages : Receive(msg)
 Next == 
     \/ \E i \in Servers : LeaderProc(i)
     \/ \E i \in Servers : CandidateProc(i)
     \/ \E i \in Servers : FollowerProc(i)
-    \* \/ \E msg \in DOMAIN messages : Receive(msg)
 
 Spec ==
   /\ Init
