@@ -221,7 +221,7 @@ Next ==
 \* Multiple leaders are "allowed" but only if they are on different terms 
 \* this can happen due to unfavourable network condition
 \*
-OneTrueLeader ==
+LeaderUniqueTerm ==
     \A s1, s2 \in Servers :
         (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
 
