@@ -1,5 +1,5 @@
 --------------------------- MODULE raft_vote ----------------------------
-EXTENDS Integers, FiniteSets, TLC
+EXTENDS Integers, FiniteSets, TLC, Sequences
 VARIABLES state, messages, voted_for, vote_granted, vote_received, term
 vars == <<state, messages, voted_for, term, vote_granted, vote_received>>
 
@@ -207,9 +207,20 @@ Candidate(i) ==
     \/ /\ state[i] = "Candidate"
        /\ BecomeLeader(i)
 
+Constrain(i) == 
+    LET 
+        values == {term[s] : s \in Servers}
+        max_v == CHOOSE x \in values : \A y \in values : x >= y
+        min_v == CHOOSE x \in values : \A y \in values : x <= y
+    IN 
+        \/ term[i] # max_v
+        \/ /\ term[i] = max_v 
+           /\ term[i] - min_v < 2
+
 Follower(i) == 
     /\ state[i] = "Follower"
     /\ Timeout(i)
+    /\ Constrain(i)
 
 Next == 
     \/ \E i \in Servers : Leader(i)
