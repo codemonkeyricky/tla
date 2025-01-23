@@ -116,12 +116,12 @@ RequestVoteRespProc(msg) ==
         type == msg.fType
         t == msg.fTerm
     IN 
-        \/ t = term[i]
-            /\ Assert(0, "")
-        \/ t < term[i]
-            /\ Assert(0, "")
-        \/ t > term[i]
-            /\ Assert(0, "")
+        \/ /\ t = term[i]
+           /\ Assert(0, "")
+        \/ /\ t < term[i]
+           /\ Assert(0, "")
+        \/ /\ t > term[i]
+           /\ Assert(0, "")
 
 Receive(msg) == 
     \* \/ AppendEntryReqProc(msg) 
