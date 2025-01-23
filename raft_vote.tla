@@ -64,17 +64,20 @@ RequestVoteReq(msg) ==
     IN 
         \* haven't voted, or whom we voted re-requested
         \/ /\ t = term[i]
-           /\ voted_for[i] = j \/ voted_for[i] = ""
+           /\ \/ voted_for[i] = j 
+              \/ voted_for[i] = ""
+           /\ voted_for' = [voted_for EXCEPT ![i] = j]
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
                                         fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
-           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
+           /\ UNCHANGED <<state, term, vote_granted, vote_received>>
         \* already voted someone else
         \/ /\ t = term[i]
-           /\ voted_for[i] # j
+           /\ voted_for[i] # j 
+           /\ voted_for[i] # ""
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
@@ -94,7 +97,7 @@ RequestVoteReq(msg) ==
         \/  /\ t > term[i]
             /\ state' = [state EXCEPT ![i] = "Follower"]
             /\ term' = [term EXCEPT ![i] = t]
-            /\ voted_for' = [voted_for EXCEPT ![i] = ""]
+            /\ voted_for' = [voted_for EXCEPT ![i] = j]
             /\ vote_received' = [vote_received EXCEPT ![i] = {}]
             /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
             /\ messages' = AddMessage([fSrc |-> i, 
@@ -138,12 +141,14 @@ RequestVoteResp(msg) ==
            /\ s = 1
            /\ vote_granted' = [vote_granted EXCEPT ![i] = @ \cup {j}]
            /\ vote_received' = [vote_received EXCEPT ![i] = @ \cup {j}]
-           /\ UNCHANGED <<state, voted_for, term, messages>> 
+           /\ messages' = RemoveMessage(msg, messages)
+           /\ UNCHANGED <<state, voted_for, term >> 
         \* same term unsuccess 
         \/ /\ t = term[i]
            /\ s = 0
            /\ vote_received' = [vote_received EXCEPT ![i] = @ \cup {j}]
-           /\ UNCHANGED <<state, voted_for, term, vote_granted, messages>> 
+           /\ messages' = RemoveMessage(msg, messages)
+           /\ UNCHANGED <<state, voted_for, term, vote_granted>> 
         \* response has smaller term - ignore
         \/ /\ t < term[i]
            /\ messages' = RemoveMessage(msg, messages)
@@ -166,7 +171,10 @@ AppendEntryReq(msg) ==
     IN 
         \/ /\ t >= term[i]
            /\ state' = [state EXCEPT ![i] = "Follower"]
-           /\ voted_for' = [voted_for EXCEPT ![i] = ""]
+           /\ \/ /\ t > term[i] 
+                 /\ voted_for' = [voted_for EXCEPT ![i] = ""]
+              \/ /\ t = term[i] 
+                 /\ UNCHANGED voted_for
            /\ vote_received' = [vote_received EXCEPT ![i] = {i}]
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {i}]
            /\ messages' = AddMessage([fSrc |-> i, 
@@ -176,7 +184,6 @@ AppendEntryReq(msg) ==
                                         fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
            /\ term' = [term EXCEPT ![i] = t]    \* update term 
-        \*    /\ UNCHANGED <<voted_for, vote_granted, vote_received>> 
         \/ /\ t < term[i]
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
