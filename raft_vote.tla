@@ -48,12 +48,11 @@ Timeout(i) ==
 
 Campaign(i, j) == 
     /\ j \notin vote_received[i]
-    /\ voted_for' = [voted_for EXCEPT ![i] = i]
     /\ messages' = AddMessage([fSrc |-> i, 
                                 fDst |-> j, 
                                 fType |-> "RequestVoteReq", 
                                 fTerm |-> term[i]], messages)
-    /\ UNCHANGED <<state, term, vote_granted, vote_received>>
+    /\ UNCHANGED <<state, term, vote_granted, vote_received, voted_for>>
 
 RequestVoteReqProc(msg) == 
     LET 
@@ -69,7 +68,7 @@ RequestVoteReqProc(msg) ==
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
-                                        success |-> 1],
+                                        fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
         \* already voted someone else
@@ -79,7 +78,7 @@ RequestVoteReqProc(msg) ==
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
-                                        success |-> 0],
+                                        fSuccess |-> 0],
                                         RemoveMessage(msg, messages))
             /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
         \/  /\ t < term[i]
@@ -87,7 +86,7 @@ RequestVoteReqProc(msg) ==
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> term[i], 
-                                        success |-> 0],
+                                        fSuccess |-> 0],
                                         RemoveMessage(msg, messages))
             /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
         \* revert back to follower
@@ -99,7 +98,7 @@ RequestVoteReqProc(msg) ==
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
-                                        success |-> 1],
+                                        fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
             /\ UNCHANGED <<vote_granted, vote_received>>
 
@@ -115,11 +114,24 @@ RequestVoteRespProc(msg) ==
         j == msg.fSrc
         type == msg.fType
         t == msg.fTerm
+        s == msg.fSuccess
     IN 
+        \* same term success 
         \/ /\ t = term[i]
-           /\ Assert(0, "")
+           /\ s = 1
+           /\ vote_granted' = [vote_granted EXCEPT ![i] = @ \cup {j}]
+           /\ vote_received' = [vote_received EXCEPT ![i] = @ \cup {j}]
+           /\ UNCHANGED <<state, voted_for, term, messages>> 
+        \* same term unsuccess 
+        \/ /\ t = term[i]
+           /\ s = 0
+           /\ vote_received' = [vote_received EXCEPT ![i] = @ \cup {j}]
+           /\ UNCHANGED <<state, voted_for, term, vote_granted, messages>> 
+        \* response has smaller term - ignore
         \/ /\ t < term[i]
-           /\ Assert(0, "")
+           /\ messages' = RemoveMessage(msg, messages)
+           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
+        \* response has higher term - become follower
         \/ /\ t > term[i]
            /\ Assert(0, "")
 
