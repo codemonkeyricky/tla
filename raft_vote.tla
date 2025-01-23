@@ -148,7 +148,7 @@ Receive(msg) ==
     \/ /\ msg.fType = "RequestVoteResp"
        /\ RequestVoteRespProc(msg) 
 
-LeaderProc(i) == 
+Leader(i) == 
     /\ state[i] = "Leader"
     /\ \E j \in Servers \ {i}: KeepAlive(i, j)
     /\ UNCHANGED vars
@@ -158,20 +158,20 @@ BecomeLeader(i) ==
     /\ state' = [state EXCEPT ![i] = "Leader"]
     /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_received>>
 
-CandidateProc(i) == 
+Candidate(i) == 
     \/ /\ state[i] = "Candidate"
        /\ \E j \in Servers: Campaign(i, j)
     \/ /\ state[i] = "Candidate"
        /\ BecomeLeader(i)
 
-FollowerProc(i) == 
+Follower(i) == 
     /\ state[i] = "Follower"
     /\ Timeout(i)
 
 Next == 
-    \/ \E i \in Servers : LeaderProc(i)
-    \/ \E i \in Servers : CandidateProc(i)
-    \/ \E i \in Servers : FollowerProc(i)
+    \/ \E i \in Servers : Leader(i)
+    \/ \E i \in Servers : Candidate(i)
+    \/ \E i \in Servers : Follower(i)
     \/ \E msg \in DOMAIN messages : Receive(msg)
 
 Spec ==
