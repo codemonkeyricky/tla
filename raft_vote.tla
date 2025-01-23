@@ -62,27 +62,27 @@ RequestVoteReqProc(msg) ==
         type == msg.fType
         t == msg.fTerm
     IN 
-        \/ t = term[i]
-            \* not yet voted for re-request
-            \/ /\ voted_for[i] = j \/ voted_for[i] = ""
-               /\ messages' = AddMessage([fSrc |-> i, 
+        \* haven't voted, or whom we voted re-requested
+        \/ /\ t = term[i]
+           /\ voted_for[i] = j \/ voted_for[i] = ""
+           /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
                                         success |-> 1],
                                         RemoveMessage(msg, messages))
-               /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
-            \* already voted for someone else 
-            \/ /\ voted_for[i] # j
-               /\ messages' = AddMessage([fSrc |-> i, 
+           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
+        \* already voted someone else
+        \/ /\ t = term[i]
+           /\ voted_for[i] # j
+           /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
                                         success |-> 0],
                                         RemoveMessage(msg, messages))
-               /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
-            \/ UNCHANGED <<vars>>
-        \/ t < term[i]
+            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
+        \/  /\ t < term[i]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
@@ -102,7 +102,6 @@ RequestVoteReqProc(msg) ==
                                         success |-> 1],
                                         RemoveMessage(msg, messages))
             /\ UNCHANGED <<vote_granted, vote_received>>
-        \/ UNCHANGED <<vars>>
 
 AppendEntryRespProc(msg) ==
     TRUE 
@@ -127,20 +126,25 @@ RequestVoteRespProc(msg) ==
 Receive(msg) == 
     \* \/ AppendEntryReqProc(msg) 
     \* \/ AppendEntryRespProc(msg) 
-    \/ /\ msg.fType = "AppendEntryReq"
+    \/ /\ msg.fType = "RequestVoteReq"
        /\ RequestVoteReqProc(msg) 
-    \/ /\ msg.fType = "AppendEntryResp"
+    \/ /\ msg.fType = "RequestVoteResp"
        /\ RequestVoteRespProc(msg) 
 
 LeaderProc(i) == 
     /\ state[i] = "Leader"
-        \/ \E j \in Servers \ {i}: KeepAlive(i, j)
-        \/ \E msg \in DOMAIN messages : Receive(msg)
+    /\ \E j \in Servers \ {i}: KeepAlive(i, j)
     /\ UNCHANGED vars
 
+BecomeLeader(i) ==
+    /\ Cardinality(vote_received[i]) > Cardinality(Servers) \div 2
+    /\ state' = [state EXCEPT ![i] = "Leader"]
+
 CandidateProc(i) == 
-    /\ state[i] = "Candidate"
-    /\ \E j \in Servers: Campaign(i, j)
+    \/ /\ state[i] = "Candidate"
+       /\ \E j \in Servers: Campaign(i, j)
+    \/ /\ state[i] = "Candidate"
+       /\ BecomeLeader(i)
 
 FollowerProc(i) == 
     /\ state[i] = "Follower"
