@@ -151,6 +151,7 @@ LeaderProc(i) ==
 BecomeLeader(i) ==
     /\ Cardinality(vote_received[i]) > Cardinality(Servers) \div 2
     /\ state' = [state EXCEPT ![i] = "Leader"]
+    /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_received>>
 
 CandidateProc(i) == 
     \/ /\ state[i] = "Candidate"
