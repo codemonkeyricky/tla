@@ -226,7 +226,7 @@ LeaderUniqueTerm ==
         (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
 
 Converge ==
-    /\ term["s0"] = 0 ~> term["s0"] = 1
+    /\ term["s0"] = 0 ~> term["s0"] = 3
 
 \* WF_vars(Next) ==
 \*     WF_vars(\E i \in Servers : Leader(i)) \/
