@@ -31,11 +31,12 @@ RemoveMessage(to_remove, msgs) ==
         msgs    
 
 KeepAlive(i, j) == 
-    /\ messages' = AddMessage([fSrc |-> i,
-           fDst |-> j,
-           fType |-> "AppendEntryReq",
-           fTerm |-> term[i]], messages)
-    /\ UNCHANGED <<vars>>
+    /\ messages' = AddMessage([ fSrc |-> i,
+                                fDst |-> j,
+                                fType |-> "AppendEntryReq",
+                                fTerm |-> term[i]], 
+                    messages)
+    /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
 
 Timeout(i) == 
     /\ state' = [state EXCEPT ![i] = "Candidate"]
