@@ -103,8 +103,26 @@ RequestVoteReq(msg) ==
                                         RemoveMessage(msg, messages))
             /\ UNCHANGED <<vote_granted, vote_received>>
 
-AppendEntryRespProc(msg) ==
-    TRUE 
+AppendEntryResp(msg) ==
+    LET 
+        i == msg.fDst
+        j == msg.fSrc
+        type == msg.fType
+        t == msg.fTerm
+        s == msg.fSuccess
+    IN 
+        \* become follower
+        \/ /\ t > term[i]
+           /\ messages' = RemoveMessage(msg, messages)
+           /\ state' = [state EXCEPT ![i] = "Follower"]
+           /\ voted_for' = [voted_for EXCEPT ![i] = ""]
+           /\ vote_received' = [vote_received EXCEPT ![i] = {}]
+           /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
+           /\ term' = [term EXCEPT ![i] = t]
+        \* discard 
+        \/ /\ t <= term[i]
+           /\ messages' = RemoveMessage(msg, messages)
+           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
 
 RequestVoteResp(msg) == 
     LET 
@@ -167,8 +185,8 @@ AppendEntryReq(msg) ==
 Receive(msg) == 
     \/ /\ msg.fType = "AppendEntryReq"
        /\ AppendEntryReq(msg) 
-    \* \/ /\ msg.fType = "AppendEntryResp"
-    \*    /\ AppendEntryRespProc(msg) 
+    \/ /\ msg.fType = "AppendEntryResp"
+       /\ AppendEntryResp(msg) 
     \/ /\ msg.fType = "RequestVoteReq"
        /\ RequestVoteReq(msg) 
     \/ /\ msg.fType = "RequestVoteResp"
