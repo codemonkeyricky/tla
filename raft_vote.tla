@@ -197,7 +197,7 @@ Leader(i) ==
     /\ \E j \in Servers \ {i}: KeepAlive(i, j)
 
 BecomeLeader(i) ==
-    /\ Cardinality(vote_received[i]) > Cardinality(Servers) \div 2
+    /\ Cardinality(vote_granted[i]) > Cardinality(Servers) \div 2
     /\ state' = [state EXCEPT ![i] = "Leader"]
     /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_received>>
 
@@ -216,6 +216,14 @@ Next ==
     \/ \E i \in Servers : Candidate(i)
     \/ \E i \in Servers : Follower(i)
     \/ \E msg \in DOMAIN messages : Receive(msg)
+
+\* 
+\* Multiple leaders are "allowed" but only if they are on different terms 
+\* this can happen due to unfavourable network condition
+\*
+OneTrueLeader ==
+    \A s1, s2 \in Servers :
+        (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
 
 Spec ==
   /\ Init
