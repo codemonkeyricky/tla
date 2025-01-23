@@ -67,7 +67,7 @@ RequestVoteReqProc(msg) ==
             \/ /\ voted_for[i] = j \/ voted_for[i] = ""
                /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
-                                        fType |-> "AppendEntryResp",
+                                        fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
                                         success |-> 1],
                                         RemoveMessage(msg, messages))
@@ -76,7 +76,7 @@ RequestVoteReqProc(msg) ==
             \/ /\ voted_for[i] # j
                /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
-                                        fType |-> "AppendEntryResp",
+                                        fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
                                         success |-> 0],
                                         RemoveMessage(msg, messages))
@@ -85,7 +85,7 @@ RequestVoteReqProc(msg) ==
         \/ t < term[i]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
-                                        fType |-> "AppendEntryResp",
+                                        fType |-> "RequestVoteResp",
                                         fTerm |-> term[i], 
                                         success |-> 0],
                                         RemoveMessage(msg, messages))
@@ -97,7 +97,7 @@ RequestVoteReqProc(msg) ==
             /\ voted_for' = [voted_for EXCEPT ![i] = j]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
-                                        fType |-> "AppendEntryResp",
+                                        fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
                                         success |-> 1],
                                         RemoveMessage(msg, messages))
@@ -110,15 +110,27 @@ AppendEntryRespProc(msg) ==
 RequestVoteReplyProc(msg) == 
     TRUE
 
-\* RequestVoteReqProc(msg) == 
-\*     TRUE 
+RequestVoteRespProc(msg) == 
+    LET 
+        i == msg.fDst
+        j == msg.fSrc
+        type == msg.fType
+        t == msg.fTerm
+    IN 
+        \/ t = term[i]
+            /\ Assert(0, "")
+        \/ t < term[i]
+            /\ Assert(0, "")
+        \/ t > term[i]
+            /\ Assert(0, "")
 
 Receive(msg) == 
     \* \/ AppendEntryReqProc(msg) 
     \* \/ AppendEntryRespProc(msg) 
     \/ /\ msg.fType = "AppendEntryReq"
        /\ RequestVoteReqProc(msg) 
-    \* \/ RequestVoteReplyProc(msg) 
+    \/ /\ msg.fType = "AppendEntryResp"
+       /\ RequestVoteRespProc(msg) 
 
 LeaderProc(i) == 
     /\ state[i] = "Leader"
