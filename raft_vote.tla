@@ -225,7 +225,25 @@ LeaderUniqueTerm ==
     \A s1, s2 \in Servers :
         (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
 
+Converge ==
+    /\ term["s0"] = 0 ~> term["s0"] = 1
+
+\* WF_vars(Next) ==
+\*     WF_vars(\E i \in Servers : Leader(i)) \/
+\*     WF_vars(\E i \in Servers : Candidate(i)) \/
+\*     WF_vars(\E i \in Servers : Follower(i)) \/
+\*     WF_vars(\E msg \in DOMAIN messages : Receive(msg))
+
+\* Liveness description to ensure no server is stuttering
+Liveness == 
+    \A i \in Servers : 
+        /\ WF_vars(Leader(i))
+        /\ WF_vars(Candidate(i))
+        /\ WF_vars(Follower(i))
+
 Spec ==
   /\ Init
   /\ [][Next]_vars
+\*   /\ WF_vars(Next)
+  /\ Liveness
 =============================================================================
