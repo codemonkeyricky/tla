@@ -152,7 +152,6 @@ Receive(msg) ==
 Leader(i) == 
     /\ state[i] = "Leader"
     /\ \E j \in Servers \ {i}: KeepAlive(i, j)
-    /\ UNCHANGED vars
 
 BecomeLeader(i) ==
     /\ Cardinality(vote_received[i]) > Cardinality(Servers) \div 2
