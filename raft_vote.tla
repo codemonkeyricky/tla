@@ -133,7 +133,12 @@ RequestVoteRespProc(msg) ==
            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received>>
         \* response has higher term - become follower
         \/ /\ t > term[i]
-           /\ Assert(0, "")
+           /\ messages' = RemoveMessage(msg, messages)
+           /\ state' = [state EXCEPT ![i] = "Follower"]
+           /\ voted_for' = [voted_for EXCEPT ![i] = ""]
+           /\ vote_received' = [vote_received EXCEPT ![i] = {}]
+           /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
+           /\ term' = [term EXCEPT ![i] = t]
 
 Receive(msg) == 
     \* \/ AppendEntryReqProc(msg) 
