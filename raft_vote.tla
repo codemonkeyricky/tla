@@ -55,7 +55,7 @@ Campaign(i, j) ==
                                 fTerm |-> term[i]], messages)
     /\ UNCHANGED <<state, term, vote_granted, vote_received>>
 
-AppendEntryReqProc(msg) == 
+RequestVoteReqProc(msg) == 
     LET 
         i == msg.fDst
         j == msg.fSrc
@@ -107,16 +107,17 @@ AppendEntryReqProc(msg) ==
 AppendEntryRespProc(msg) ==
     TRUE 
 
-RequestVoteReqProc(msg) == 
-    TRUE 
-
 RequestVoteReplyProc(msg) == 
     TRUE
 
+\* RequestVoteReqProc(msg) == 
+\*     TRUE 
+
 Receive(msg) == 
-    \/ AppendEntryReqProc(msg) 
+    \* \/ AppendEntryReqProc(msg) 
     \* \/ AppendEntryRespProc(msg) 
-    \* \/ RequestVoteReqProc(msg) 
+    \/ /\ msg.fType = "AppendEntryReq"
+       /\ RequestVoteReqProc(msg) 
     \* \/ RequestVoteReplyProc(msg) 
 
 LeaderProc(i) == 
