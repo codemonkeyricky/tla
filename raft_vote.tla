@@ -207,26 +207,42 @@ Candidate(i) ==
     \/ /\ state[i] = "Candidate"
        /\ BecomeLeader(i)
 
+MaxDiff == 2
+MaxTerm == 4
+
 Constrain(i) == 
     LET 
         values == {term[s] : s \in Servers}
         max_v == CHOOSE x \in values : \A y \in values : x >= y
         min_v == CHOOSE x \in values : \A y \in values : x <= y
     IN 
-        \/ term[i] # max_v
+        \/ \/ term[i] # max_v
         \/ /\ term[i] = max_v 
-           /\ term[i] - min_v < 2
+           /\ term[i] - min_v < MaxDiff
 
 Follower(i) == 
     /\ state[i] = "Follower"
     /\ Timeout(i)
+
+    /\ term[i] < MaxTerm
     /\ Constrain(i)
+
+Normalize == 
+    LET 
+        values == {term[s] : s \in Servers}
+        max_v == CHOOSE x \in values : \A y \in values : x >= y
+        min_v == CHOOSE x \in values : \A y \in values : x <= y
+    IN 
+        /\ max_v = MaxTerm
+        /\ term' = [s \in Servers |-> term[s] - min_v]
+        /\ UNCHANGED <<state, messages, voted_for, vote_granted, vote_received>>
 
 Next == 
     \/ \E i \in Servers : Leader(i)
     \/ \E i \in Servers : Candidate(i)
     \/ \E i \in Servers : Follower(i)
     \/ \E msg \in DOMAIN messages : Receive(msg)
+    \/ Normalize
 
 \* 
 \* Multiple leaders are permitted but only if they are on different terms 
