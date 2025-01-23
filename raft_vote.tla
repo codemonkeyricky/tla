@@ -218,7 +218,7 @@ Next ==
     \/ \E msg \in DOMAIN messages : Receive(msg)
 
 \* 
-\* Multiple leaders are "allowed" but only if they are on different terms 
+\* Multiple leaders are permitted but only if they are on different terms 
 \* this can happen due to unfavourable network condition
 \*
 LeaderUniqueTerm ==
