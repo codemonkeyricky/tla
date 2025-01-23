@@ -94,14 +94,15 @@ RequestVoteReq(msg) ==
         \/  /\ t > term[i]
             /\ state' = [state EXCEPT ![i] = "Follower"]
             /\ term' = [term EXCEPT ![i] = t]
-            /\ voted_for' = [voted_for EXCEPT ![i] = j]
+            /\ voted_for' = [voted_for EXCEPT ![i] = ""]
+            /\ vote_received' = [vote_received EXCEPT ![i] = {}]
+            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
                                         fTerm |-> t, 
                                         fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
-            /\ UNCHANGED <<vote_granted, vote_received>>
 
 AppendEntryResp(msg) ==
     LET 
@@ -165,6 +166,9 @@ AppendEntryReq(msg) ==
     IN 
         \/ /\ t >= term[i]
            /\ state' = [state EXCEPT ![i] = "Follower"]
+           /\ voted_for' = [voted_for EXCEPT ![i] = ""]
+           /\ vote_received' = [vote_received EXCEPT ![i] = {i}]
+           /\ vote_granted' = [vote_granted EXCEPT ![i] = {i}]
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "AppendEntryResp",
@@ -172,7 +176,7 @@ AppendEntryReq(msg) ==
                                         fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
            /\ term' = [term EXCEPT ![i] = t]    \* update term 
-           /\ UNCHANGED <<voted_for, vote_granted, vote_received>> 
+        \*    /\ UNCHANGED <<voted_for, vote_granted, vote_received>> 
         \/ /\ t < term[i]
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
@@ -208,7 +212,7 @@ Candidate(i) ==
        /\ BecomeLeader(i)
 
 MaxDiff == 2
-MaxTerm == 4
+MaxTerm == 1
 
 Constrain(i) == 
     LET 
