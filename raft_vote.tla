@@ -19,7 +19,11 @@ Init ==
 
 AddMessage(to_add, msgs) == 
     IF to_add \in DOMAIN msgs THEN 
-        [msgs EXCEPT ![to_add] = @ + 1]
+        \* TLC Constrain
+        IF msgs[to_add] < 2 THEN
+            [msgs EXCEPT ![to_add] = @ + 1]
+        ELSE 
+            msgs 
     ELSE 
         msgs @@ (to_add :> 1)
 
@@ -139,15 +143,15 @@ RequestVoteResp(msg) ==
         \* same term success 
         \/ /\ t = term[i]
            /\ s = 1
+           /\ messages' = RemoveMessage(msg, messages)
            /\ vote_granted' = [vote_granted EXCEPT ![i] = @ \cup {j}]
            /\ vote_received' = [vote_received EXCEPT ![i] = @ \cup {j}]
-           /\ messages' = RemoveMessage(msg, messages)
            /\ UNCHANGED <<state, voted_for, term >> 
         \* same term unsuccess 
         \/ /\ t = term[i]
            /\ s = 0
-           /\ vote_received' = [vote_received EXCEPT ![i] = @ \cup {j}]
            /\ messages' = RemoveMessage(msg, messages)
+           /\ vote_received' = [vote_received EXCEPT ![i] = @ \cup {j}]
            /\ UNCHANGED <<state, voted_for, term, vote_granted>> 
         \* response has smaller term - ignore
         \/ /\ t < term[i]
@@ -221,6 +225,7 @@ Candidate(i) ==
 MaxDiff == 2
 MaxTerm == 1
 
+\* TLC Constrain
 Constrain(i) == 
     LET 
         values == {term[s] : s \in Servers}
