@@ -55,7 +55,7 @@ Campaign(i, j) ==
                                 fTerm |-> term[i]], messages)
     /\ UNCHANGED <<state, term, vote_granted, vote_received, voted_for>>
 
-RequestVoteReqProc(msg) == 
+RequestVoteReq(msg) == 
     LET 
         i == msg.fDst
         j == msg.fSrc
@@ -106,10 +106,7 @@ RequestVoteReqProc(msg) ==
 AppendEntryRespProc(msg) ==
     TRUE 
 
-RequestVoteReplyProc(msg) == 
-    TRUE
-
-RequestVoteRespProc(msg) == 
+RequestVoteResp(msg) == 
     LET 
         i == msg.fDst
         j == msg.fSrc
@@ -141,7 +138,7 @@ RequestVoteRespProc(msg) ==
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
            /\ term' = [term EXCEPT ![i] = t]
 
-AppendEntryReqProc(msg) == 
+AppendEntryReq(msg) == 
     LET 
         i == msg.fDst
         j == msg.fSrc
@@ -169,13 +166,13 @@ AppendEntryReqProc(msg) ==
 
 Receive(msg) == 
     \/ /\ msg.fType = "AppendEntryReq"
-       /\ AppendEntryReqProc(msg) 
+       /\ AppendEntryReq(msg) 
     \* \/ /\ msg.fType = "AppendEntryResp"
     \*    /\ AppendEntryRespProc(msg) 
     \/ /\ msg.fType = "RequestVoteReq"
-       /\ RequestVoteReqProc(msg) 
+       /\ RequestVoteReq(msg) 
     \/ /\ msg.fType = "RequestVoteResp"
-       /\ RequestVoteRespProc(msg) 
+       /\ RequestVoteResp(msg) 
 
 Leader(i) == 
     /\ state[i] = "Leader"
