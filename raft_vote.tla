@@ -24,7 +24,7 @@ Init ==
 AddMessage(to_add, msgs) == 
     LET 
         pruned == {msg \in msgs : 
-                    ~(msg.fDst = to_add.fDst /\ msg.fTerm + 1 < to_add.fTerm) }
+                    ~(msg.fDst = to_add.fDst /\ msg.fTerm < to_add.fTerm) }
     IN
         pruned \cup {to_add}
 
@@ -185,12 +185,9 @@ AppendEntryReq(msg) ==
     IN 
         \/ /\ t >= term[i]
            /\ state' = [state EXCEPT ![i] = "Follower"]
-           /\ \/ /\ t > term[i] 
-                 /\ voted_for' = [voted_for EXCEPT ![i] = ""]
-              \/ /\ t = term[i] 
-                 /\ UNCHANGED voted_for
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
            /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
+           /\ voted_for' = [voted_for EXCEPT ![i] = j]
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "AppendEntryResp",
@@ -219,6 +216,7 @@ Receive(msg) ==
 
 Leader(i) == 
     /\ state[i] = "Leader"
+    \* /\ UNCHANGED vars
     /\ \E j \in Servers \ {i}: KeepAlive(i, j)
 
 BecomeLeader(i) ==
