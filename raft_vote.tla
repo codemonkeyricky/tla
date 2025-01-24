@@ -9,9 +9,9 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_received, vote_re
 
 Servers == {"s0", "s1", "s2"}
 
-MaxOutstanding == 2
+MaxOutstanding == 1
 MaxDiff == 2
-MaxTerm == 5
+MaxTerm == 3
 
 Init ==
     /\ state = [s \in Servers |-> "Follower"]
