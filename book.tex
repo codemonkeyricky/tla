@@ -187,19 +187,17 @@ book as a \textit{reference}.
 
 \section{Design Intent}
 
-The key insight into TLA+ is modelling a system as a state machine. A blinking
-LED system can be described using a single variable with two states, LED being
-on or off. A simple digital clock can be represented by two variables, hour and
-minute and the number of possible states in a digital clock is $24 * 60 = 1440$.
-For example, 10:01 is the next state 10:00 can transition to.  Extrapolating
-further, Asssume an arbitrarily system described by N variables, each variable
-having K possible values such arbitrary system can have up to $N^K$
-state.\newline
+The key insight into TLA+ is modelling a system as a state machine. A simple
+digital clock can be represented by two variables, hour and minute and the
+number of possible states in a digital clock is $24 * 60 = 1440$.  For example,
+10:01 is the next state 10:00 can transition to.  Extrapolating further, Asssume
+an arbitrarily system described by N variables, each variable having K possible
+values such arbitrary system can have up to $N^K$ state.\newline
 
 For every specification, designer can specify \textit{safety} proerty (or
 invariants) that must be true in \textit{every} states. For example, in any
 state of the digital clock hour \textit{must} be between 0 to 23, or formally
-described as $hour \in 0..23$.  Similarly, $minute \in 0..59$. More generic
+described as $hour \in 0..23$. Similarly, $minute \in 0..59$. More generic
 invariant examples include: in any state, only one thread has exclusive access
 to a critical region, all variables in the system are within allowable value,
 the resource allocation manager never allocates more than available resources,
@@ -1361,9 +1359,10 @@ voted for the requester prior.
 
 TLC will run the Spec as defined, but due to the expoential growth of states it
 is unlikely to complete in a practical amount of time. We need to simplify the
-model until the model checker completes in a more reasonable time, but possibly
-trades off model correctness. Some thought must go into finding the right
-balance between maximizing model value and minimizing runtime.\newline
+model to allow the model checker completes in a reasonable time, but possibly
+trades off some correctness. Careful consideration must go into finding the
+right balance between maximizing model correctness and minimizing model checker
+runtime.\newline
 
 The main strategy is to \textit{bound} the state graph. The following describe a
 set of optimization applied for this example.
@@ -1596,7 +1595,7 @@ When a node's term advances, it'll discard all messages targeted to it with
 older terms. Keeping messages with stale terms allows the model checker to 
 verify the node correctly discards them, but can exponentially grow the state
 machine. To simplify the model, we can prune stale messages as we add a new 
-message :\newline
+message: \newline
 
 \begin{tla}
 AddMessage(to_add, msgs) == 
@@ -1647,6 +1646,30 @@ For every pair of nodes, they cannot both be Leaders and have the same
 term.
 
 \section{Liveness}
+
+In any failure recovery scenario, the nodes in the cluster converges to a higher
+term value either voluntary or involuntarily. The following is a few ways:
+\begin{itemize}
+    \item A node timed out and starts a new election on a new term 
+    \item A partitioned follower receives heartbeat from a new leader on a new term
+    \item A candidate receiving a request vote from another candidate on a higher term
+\end{itemize}
+
+In any case, a node's term number always increase. This can be described as below:
+\begin{tla}
+Converge ==
+    \A s \in Servers:
+        term[s] = 0 ~> term[s] = MaxTerm - MaxDiff
+\end{tla}
+\begin{tlatex}
+\@x{ Converge \.{\defeq}}%
+\@x{\@s{16.4} \A\, s \.{\in} Servers \.{:}}%
+ \@x{\@s{27.72} term [ s ] \.{=} 0 \.{\leadsto} term [ s ] \.{=} MaxTerm \.{-}
+ MaxDiff}%
+\end{tlatex}
+
+Instead of MaxTerm, we use MaxTerm-MaxDiff to account to ensure the liveness
+property is always held after Normalization.
 
 \include{scheduler}
 
