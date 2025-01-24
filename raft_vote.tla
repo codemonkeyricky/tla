@@ -10,7 +10,7 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_requested>>
 Servers == {"s0", "s1", "s2"}
 
 MaxOutstanding == 1
-MaxDiff == 1
+MaxDiff == 2
 MaxTerm == 3
 
 Init ==
