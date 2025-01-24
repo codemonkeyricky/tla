@@ -219,11 +219,6 @@ Receive(msg) ==
     \/ /\ msg.fType = "RequestVoteResp"
        /\ RequestVoteResp(msg) 
 
-\* [ fSrc |-> i,
-\*                                 fDst |-> j,
-\*                                 fType |-> "AppendEntryReq",
-\*                                 fTerm |-> term[i]
-
 KeepAliveSet(i) == {
     [fSrc |-> i, fDst |-> s, fType |-> "AppendEntryReq", fTerm |-> term[i]] 
         : s \in Servers \ {i}
