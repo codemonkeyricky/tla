@@ -240,12 +240,10 @@ BecomeLeader(i) ==
     /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_received, vote_requested>>
 
 Candidate(i) == 
-    /\ /\ state[i] = "Candidate"
-       /\ \E j \in Servers: Campaign(i, j)
-    \/ /\ state[i] = "Candidate"
-       /\ BecomeLeader(i)
-    \/ /\ state[i] = "Candidate"
-       /\ Timeout(i)
+    /\ state[i] = "Candidate"
+    /\ \/ \E j \in Servers: Campaign(i, j)
+       \/ BecomeLeader(i)
+       \/ Timeout(i)
 
 Follower(i) == 
     /\ state[i] = "Follower"
