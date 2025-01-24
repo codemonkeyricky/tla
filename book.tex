@@ -973,6 +973,12 @@ Next ==
 \@x{ Converge \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} converge \.{'} \.{=} {\TRUE}}%
 \@x{\@s{16.4} \.{\land} {\UNCHANGED} counter}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} \E\, n \.{\in} Node \.{:} Increment ( n )}%
+ \@x{\@s{8.2} \.{\lor}\@s{1.63} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\,
+ o )}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} Converge}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} GarbageCollect}%
 \end{tlatex}
 
 
@@ -1024,94 +1030,93 @@ correctness of the protocol.
 
 \section{Spec}
 
-The Raft protocol inventor open sourced a full TLA+ spec for the protocol
-\cite{raft_tla}. Since the focus of the book is learning TLA+, we will implement
-only a portion of the spec, namely the leader election. As usual, let's look at the 
-init definition:\newline
+The following implements the skeleton portion of the leader election
+protocol:\newline
 
 \begin{tla}
-------- MODULE raft ------- 
-InitHistoryVars == /\ elections = {}
-                   /\ allLogs   = {}
-                   /\ voterLog  = [i \in Server |-> [j \in {} |-> <<>>]]
-InitServerVars == /\ currentTerm = [i \in Server |-> 1]
-                  /\ state       = [i \in Server |-> Follower]
-                  /\ votedFor    = [i \in Server |-> Nil]
-InitCandidateVars == /\ votesResponded = [i \in Server |-> {}]
-                     /\ votesGranted   = [i \in Server |-> {}]
-\* The values nextIndex[i][i] and matchIndex[i][i] are never read, since the
-\* leader does not send itself messages. It's still easier to include these
-\* in the functions.
-InitLeaderVars == /\ nextIndex  = [i \in Server |-> [j \in Server |-> 1]]
-                  /\ matchIndex = [i \in Server |-> [j \in Server |-> 0]]
-InitLogVars == /\ log          = [i \in Server |-> << >>]
-               /\ commitIndex  = [i \in Server |-> 0]
-Init == /\ messages = [m \in {} |-> 0]
-        /\ InitHistoryVars
-        /\ InitServerVars
-        /\ InitCandidateVars
-        /\ InitLeaderVars
-        /\ InitLogVars
-========
+Init ==
+    /\ state = [s \in Servers |-> "Follower"]
+    /\ messages = [m \in {} |-> 0]
+    /\ voted_for = [s \in Servers |-> ""]
+    /\ vote_received = [s \in Servers |-> {}]
+    /\ vote_granted = [s \in Servers |-> {}]
+    /\ vote_requested = [s \in Servers |-> {}]
+    /\ term = [s \in Servers |-> 0]
+
+Leader(i) == 
+    /\ state[i] = "Leader"
+    /\ \E j \in Servers \ {i}: KeepAlive(i, j)
+
+BecomeLeader(i) ==
+    /\ Cardinality(vote_granted[i]) > Cardinality(Servers) \div 2
+    /\ state' = [state EXCEPT ![i] = "Leader"]
+    /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_received, vote_requested>>
+
+Candidate(i) == 
+    /\ state[i] = "Candidate"
+    /\ \/ \E j \in Servers: Campaign(i, j)
+       \/ BecomeLeader(i)
+       \/ Timeout(i)
+
+Follower(i) == 
+    /\ state[i] = "Follower"
+    /\ Timeout(i)
+
+Next == 
+    \E i \in Servers : 
+        \/ Leader(i) 
+        \/ Candidate(i)
+        \/ Follower(i)
 \end{tla}
 \begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
-\@x{ InitHistoryVars \.{\defeq} \.{\land} elections \.{=} \{ \}}%
-\@x{\@s{87.75} \.{\land} allLogs\@s{11.19} \.{=} \{ \}}%
- \@x{\@s{87.75} \.{\land} voterLog\@s{0.18} \.{=} [ i \.{\in} Server
- \.{\mapsto} [ j \.{\in} \{ \} \.{\mapsto} {\langle} {\rangle} ] ]}%
- \@x{ InitServerVars \.{\defeq} \.{\land} currentTerm \.{=} [ i \.{\in} Server
- \.{\mapsto} 1 ]}%
- \@x{\@s{83.51} \.{\land} state\@s{34.38} \.{=} [ i \.{\in} Server \.{\mapsto}
- Follower ]}%
- \@x{\@s{83.51} \.{\land} votedFor\@s{17.18} \.{=} [ i \.{\in} Server
- \.{\mapsto} Nil ]}%
- \@x{ InitCandidateVars \.{\defeq} \.{\land} votesResponded \.{=} [ i \.{\in}
- Server \.{\mapsto} \{ \} ]}%
- \@x{\@s{99.87} \.{\land} votesGranted\@s{10.41} \.{=} [ i \.{\in} Server
- \.{\mapsto} \{ \} ]}%
-\@x{}%
-\@y{%
-  The values nextIndex[i][i] and matchIndex[i][i] are never read, since the
-}%
-\@xx{}%
-\@x{}%
-\@y{%
-  leader does not send itself messages. It's still easier to include these
-}%
-\@xx{}%
-\@x{}%
-\@y{%
-  in the functions.
-}%
-\@xx{}%
- \@x{ InitLeaderVars \.{\defeq} \.{\land} nextIndex\@s{8.13} \.{=} [ i \.{\in}
- Server \.{\mapsto} [ j \.{\in} Server \.{\mapsto} 1 ] ]}%
- \@x{\@s{84.54} \.{\land} matchIndex \.{=} [ i \.{\in} Server \.{\mapsto} [ j
- \.{\in} Server \.{\mapsto} 0 ] ]}%
- \@x{ InitLogVars \.{\defeq} \.{\land} log\@s{48.43} \.{=} [ i \.{\in} Server
- \.{\mapsto} {\langle} {\rangle} ]}%
- \@x{\@s{70.62} \.{\land} commitIndex\@s{4.10} \.{=} [ i \.{\in} Server
- \.{\mapsto} 0 ]}%
- \@x{ Init \.{\defeq} \.{\land} messages \.{=} [ m \.{\in} \{ \} \.{\mapsto} 0
+\@x{ Init \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} state \.{=} [ s \.{\in} Servers
+ \.{\mapsto}\@w{Follower} ]}%
+\@x{\@s{16.4} \.{\land} messages \.{=} [ m \.{\in} \{ \} \.{\mapsto} 0 ]}%
+ \@x{\@s{16.4} \.{\land} voted\_for \.{=} [ s \.{\in} Servers \.{\mapsto}\@w{}
  ]}%
-\@x{\@s{35.70} \.{\land} InitHistoryVars}%
-\@x{\@s{35.70} \.{\land} InitServerVars}%
-\@x{\@s{35.70} \.{\land} InitCandidateVars}%
-\@x{\@s{35.70} \.{\land} InitLeaderVars}%
-\@x{\@s{35.70} \.{\land} InitLogVars}%
-\@x{}\bottombar\@xx{}%
+ \@x{\@s{16.4} \.{\land} vote\_received \.{=} [ s \.{\in} Servers \.{\mapsto}
+ \{ \} ]}%
+ \@x{\@s{16.4} \.{\land} vote\_granted \.{=} [ s \.{\in} Servers \.{\mapsto}
+ \{ \} ]}%
+ \@x{\@s{16.4} \.{\land} vote\_requested \.{=} [ s \.{\in} Servers \.{\mapsto}
+ \{ \} ]}%
+\@x{\@s{16.4} \.{\land} term \.{=} [ s \.{\in} Servers \.{\mapsto} 0 ]}%
+\@pvspace{8.0pt}%
+\@x{ Leader ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Leader}}%
+ \@x{\@s{16.4} \.{\land} \E\, j \.{\in} Servers \.{\,\backslash\,} \{ i \}
+ \.{:} KeepAlive ( i ,\, j )}%
+\@pvspace{8.0pt}%
+\@x{ BecomeLeader ( i ) \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} Cardinality ( vote\_granted [ i ] ) \.{>} Cardinality
+ ( Servers ) \.{\div} 2}%
+ \@x{\@s{16.4} \.{\land} state \.{'} \.{=} [ state {\EXCEPT} {\bang} [ i ]
+ \.{=}\@w{Leader} ]}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} messages ,\, voted\_for ,\,
+ term ,\, vote\_granted ,\, vote\_received ,\, vote\_requested {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ Candidate ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Candidate}}%
+ \@x{\@s{16.4} \.{\land} \.{\lor} \E\, j \.{\in} Servers \.{:} Campaign ( i
+ ,\, j )}%
+\@x{\@s{27.51} \.{\lor} BecomeLeader ( i )}%
+\@x{\@s{27.51} \.{\lor} Timeout ( i )}%
+\@pvspace{8.0pt}%
+\@x{ Follower ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Follower}}%
+\@x{\@s{16.4} \.{\land} Timeout ( i )}%
+\@pvspace{8.0pt}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \E\, i \.{\in} Servers \.{:}}%
+\@x{\@s{27.72} \.{\lor} Leader ( i )}%
+\@x{\@s{27.72} \.{\lor} Candidate ( i )}%
+\@x{\@s{27.72} \.{\lor} Follower ( i )}%
 \end{tlatex}
 
 \begin{itemize}
-    \item Servers are defined as a set in this protocol, so \textit{function
+    \item A server can be in in one of three states, Servers are defined as a set in this protocol, so \textit{function
     mapping} are used to represent various server state information
-    \item $log$ is set to a \textit{function mapping} for all the servers, and each
-    server is initialized as an ordered tuple
-    \item $commitIndex$ is initialized to empty ordered tuple for every server
-    \item $nextIndex$ and $matchIndex$ are initialized to a \textit{function
-    mappping of function mapping of integers}, to represent every server keeps a
-    counter for all other servers. 
     \item $voteResponded$ and $voteGranted$ are represented as a set for every server
     \item $currentTerm$, $state$, and $votedFor$ are represented as a mapping
     function for every server. 
@@ -1851,6 +1856,9 @@ messages is an unordered map with untyped key and integer value:\newline
 \begin{tla}
 messages = [m \in {} |-> 0]
 \end{tla}
+\begin{tlatex}
+\@x{ messages \.{=} [ m \.{\in} \{ \} \.{\mapsto} 0 ]}%
+\end{tlatex}
 
 
 \chapter{Fairness and Liveness}
