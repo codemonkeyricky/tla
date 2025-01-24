@@ -10,8 +10,8 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_requested>>
 Servers == {"s0", "s1", "s2"}
 
 MaxOutstanding == 1
-MaxDiff == 2
-MaxTerm == 3
+MaxDiff == 1
+MaxTerm == 2
 
 Init ==
     /\ state = [s \in Servers |-> "Follower"]
@@ -23,7 +23,7 @@ Init ==
 
 AddMessage(to_add, msgs) == 
     LET 
-        pruned == {msg \in messages : 
+        pruned == {msg \in msgs : 
                     ~(msg.fDst = to_add.fDst /\ msg.fTerm < to_add.fTerm) }
     IN
         pruned \cup {to_add}
