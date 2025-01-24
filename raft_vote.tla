@@ -279,10 +279,6 @@ LeaderUniqueTerm ==
     \A s1, s2 \in Servers :
         (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
 
-Ceiling ==
-    \A s \in Servers :
-        term[s] # MaxTerm
-
 Converge ==
     \A s \in Servers: 
         term[s] = 0 ~> term[s] = MaxTerm - MaxDiff
