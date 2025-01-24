@@ -1557,14 +1557,52 @@ Leader(i) ==
     /\ messages' = messages \cup KeepAliveSet(i) 
     /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
 \end{tla}
+\begin{tlatex}
+\@x{ RequestVoteSet ( i ) \.{\defeq} \{}%
+ \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
+ \.{\mapsto}\@w{RequestVoteReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
+\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{ \}}%
+\@pvspace{8.0pt}%
+\@x{ Campaign ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} vote\_requested [ i ] \.{=} 0}%
+ \@x{\@s{16.4} \.{\land} vote\_requested \.{'} \.{=} [ vote\_requested
+ {\EXCEPT} {\bang} [ i ] \.{=} 1 ]}%
+ \@x{\@s{16.4} \.{\land} messages \.{'} \.{=} messages \.{\cup} RequestVoteSet
+ ( i )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} state ,\, term ,\,
+ vote\_granted ,\, voted\_for ,\, establish\_leadership {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ KeepAliveSet ( i ) \.{\defeq} \{}%
+ \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
+ \.{\mapsto}\@w{AppendEntryReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
+\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{ \}}%
+\@pvspace{8.0pt}%
+\@x{ Leader ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Leader}}%
+\@x{\@s{16.4} \.{\land} establish\_leadership [ i ] \.{=} 0}%
+ \@x{\@s{16.4} \.{\land} establish\_leadership \.{'} \.{=} [
+ establish\_leadership {\EXCEPT} {\bang} [ i ] \.{=} 1 ]}%
+ \@x{\@s{16.4} \.{\land} messages \.{'} \.{=} messages \.{\cup} KeepAliveSet (
+ i )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
+ ,\, vote\_granted ,\, vote\_requested {\rangle}}%
+\end{tlatex}
 
 \subsection{Prune Messages with Stale Terms}
+
+When a node's term advances, it'll discard all messages targeted to it with
+older terms. Keeping messages with stale terms allows the model checker to 
+verify the node correctly discards them, but can exponentially grow the state
+machine. To simplify the model, we can prune stale messages as we add a new 
+message :\newline
 
 \begin{tla}
 AddMessage(to_add, msgs) == 
     LET 
         pruned == {msg \in msgs : 
-                    ~(msg.fDst = to_add.fDst /\ msg.fTerm < to_add.fTerm) }
+                    ~(msg.fDst = to_add.fDst /\ msg.fTerm < to_add.fTerm)}
     IN
         pruned \cup {to_add}
 
@@ -1584,12 +1622,31 @@ RemoveMessage(to_remove, msgs) ==
 
 \section{Safety}
 
+One of the goals for the protocol is to ensure the cluster only have one leader.
+It is possible for the clusters to have mulitple leaders due to unfavourable
+network connections. For example, a leader node is partitioned off and a new
+leader is elected. However, even when the cluster have mutliple leaders, they
+must be on different terms. The leader with the highest term is effectively the
+\textit{true leader}. This invariant can be implemented like so:\newline
+
+\begin{tla}
+LeaderUniqueTerm ==
+    \A s1, s2 \in Servers :
+        (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
+\end{tla}
+\begin{tlatex}
+\@x{ LeaderUniqueTerm \.{\defeq}}%
+\@x{\@s{16.4} \A\, s1 ,\, s2 \.{\in} Servers \.{:}}%
+ \@x{\@s{27.72} ( state [ s1 ] \.{=}\@w{Leader} \.{\land} state [ s2 ]
+ \.{=}\@w{Leader} \.{\land} s1 \.{\neq} s2 ) \.{\implies} ( term [ s1 ]
+ \.{\neq} term [ s2 ] )}%
+\end{tlatex}
+
+
+
 \section{Liveness}
 
 \include{scheduler}
-
-% \include{nano}
-
 
 \section{Requirement}
 
