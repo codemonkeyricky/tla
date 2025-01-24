@@ -219,11 +219,21 @@ Receive(msg) ==
     \/ /\ msg.fType = "RequestVoteResp"
        /\ RequestVoteResp(msg) 
 
+\* [ fSrc |-> i,
+\*                                 fDst |-> j,
+\*                                 fType |-> "AppendEntryReq",
+\*                                 fTerm |-> term[i]
+
+KeepAliveSet(i) == {
+    [fSrc |-> i, fDst |-> s, fType |-> "AppendEntryReq", fTerm |-> term[i]] 
+        : s \in Servers \ {i}
+}
+
 Leader(i) == 
     /\ state[i] = "Leader"
     /\ establish_leadership[i] = 0
     /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 1]
-    /\ \A j \in Servers \ {i}: KeepAlive(i, j)
+    /\ messages' = messages \cup KeepAliveSet(i) 
     /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
 
 BecomeLeader(i) ==
