@@ -1002,20 +1002,20 @@ We will briefly describe Raft and its leader election process below:
     \textit{system} to offer some service
     \item Each node can be in one of three possible states: Follower, Candidate, Leader
     \item During normal operations, a cluster of N nodes have a single leader
-    and N-1 followers.
+    and N-1 followers
     \item The leader handles all the client interactions. Requests sent to followers will be 
-    redirected to the leader. 
+    redirected to the leader
     \item The leader regularly sends heartbeat to the follower, indicate its
-    alive.
+    alive
     \item If a follower fails to receive heartbeat from the leader after
     timeout, it will become a candidate, vote for itself, and campaign to be
-    leader.
+    leader
     \item A candidate collect the majority of the vote becomes the leader
     \item If multiple candidates are campaigning and no one wins the election, 
     candidates will eventually declare election timeout and start new round of
     election
-    \item The cluster should have only one leader, but can have mutliple with
-    different terms 
+    \item The cluster can have multiple leaders due to unfavourable network conditions, 
+    but they must be on different terms 
     \item A newly elected leader will send a heartbeat to other nodes to establish 
     leadership 
     \item All request and responses include the sender's term, allowing the
@@ -1023,10 +1023,27 @@ We will briefly describe Raft and its leader election process below:
 \end{itemize}
 
 The protocol also included description about log synchronization, state
-recovery, and more. These details are omitted for this discussion. Nontheless,
-the N nodes in the cluster operate \textit{independently} following the above
-hueristics. Hopefully this highlights the complexity around verifying the the
-correctness of the protocol.
+recovery, and more. Many details are ommitted in chis chapter to reduce modeling
+cost. The N nodes in the cluster operate \textit{independently} following the
+above hueristics. Hopefully this highlights the complexity around verifying the
+the correctness of the protocol.\newline
+
+The following illustrate the state diagram of one node in the cluster:\newline
+\begin{center}
+\begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=4.5cm]
+  \node[state]  (f)                {Follower};
+  \node[state]  (c) [right of=f]  {Candidate};
+  \node[state]  (l) [right of=c]  {Leader};
+
+  \path[->]          (f)  edge   [bend left=20]   node {Timeout} (c);
+  \path[->]          (c)  edge   [bend left=20]   node {New leader} (f);
+
+  \path[->]          (c)  edge   [bend left=20]   node {Majority Vote} (l);
+  \path[->]          (l)  edge   [bend left=40]   node {New leader} (f);
+  \path[->] (c) edge [loop above] node {Election Timeout} (c);
+
+\end{tikzpicture}
+\end{center}
 
 \section{Spec}
 
@@ -1036,25 +1053,41 @@ protocol:\newline
 \begin{tla}
 Init ==
     /\ state = [s \in Servers |-> "Follower"]
-    /\ messages = [m \in {} |-> 0]
+    /\ messages = {} 
     /\ voted_for = [s \in Servers |-> ""]
-    /\ vote_received = [s \in Servers |-> {}]
     /\ vote_granted = [s \in Servers |-> {}]
-    /\ vote_requested = [s \in Servers |-> {}]
+    /\ vote_requested = [s \in Servers |-> 0]
     /\ term = [s \in Servers |-> 0]
+
+RequestVoteSet(i) == {
+    [fSrc |-> i, fDst |-> s, fType |-> "RequestVoteReq", fTerm |-> term[i]] 
+        : s \in Servers \ {i}
+}
+
+Campaign(i) == 
+    /\ vote_requested[i] = 0
+    /\ vote_requested' = [vote_requested EXCEPT ![i] = 1]
+    /\ messages' = messages \cup RequestVoteSet(i) 
+    /\ UNCHANGED <<state, term, vote_granted, voted_for>>
+
+KeepAliveSet(i) == {
+    [fSrc |-> i, fDst |-> s, fType |-> "AppendEntryReq", fTerm |-> term[i]] 
+        : s \in Servers \ {i}
+}
 
 Leader(i) == 
     /\ state[i] = "Leader"
-    /\ \E j \in Servers \ {i}: KeepAlive(i, j)
+    /\ messages' = messages \cup KeepAliveSet(i) 
+    /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
 
 BecomeLeader(i) ==
     /\ Cardinality(vote_granted[i]) > Cardinality(Servers) \div 2
     /\ state' = [state EXCEPT ![i] = "Leader"]
-    /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_received, vote_requested>>
+    /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_requested>>
 
 Candidate(i) == 
     /\ state[i] = "Candidate"
-    /\ \/ \E j \in Servers: Campaign(i, j)
+    /\ \/ Campaign(i)
        \/ BecomeLeader(i)
        \/ Timeout(i)
 
@@ -1062,31 +1095,63 @@ Follower(i) ==
     /\ state[i] = "Follower"
     /\ Timeout(i)
 
+Receive(msg) == 
+    \/ /\ msg.fType = "AppendEntryReq"
+       /\ AppendEntryReq(msg) 
+    \/ /\ msg.fType = "AppendEntryResp"
+       /\ AppendEntryResp(msg) 
+    \/ /\ msg.fType = "RequestVoteReq"
+       /\ RequestVoteReq(msg) 
+    \/ /\ msg.fType = "RequestVoteResp"
+       /\ RequestVoteResp(msg) 
+
 Next == 
-    \E i \in Servers : 
-        \/ Leader(i) 
-        \/ Candidate(i)
-        \/ Follower(i)
+    \/ \E i \in Servers : 
+          \/ Leader(i) 
+          \/ Candidate(i)
+          \/ Follower(i)
+    \/ \E msg \in messages : Receive(msg)
 \end{tla}
 \begin{tlatex}
 \@x{ Init \.{\defeq}}%
  \@x{\@s{16.4} \.{\land} state \.{=} [ s \.{\in} Servers
  \.{\mapsto}\@w{Follower} ]}%
-\@x{\@s{16.4} \.{\land} messages \.{=} [ m \.{\in} \{ \} \.{\mapsto} 0 ]}%
+\@x{\@s{16.4} \.{\land} messages \.{=} \{ \}}%
  \@x{\@s{16.4} \.{\land} voted\_for \.{=} [ s \.{\in} Servers \.{\mapsto}\@w{}
  ]}%
- \@x{\@s{16.4} \.{\land} vote\_received \.{=} [ s \.{\in} Servers \.{\mapsto}
- \{ \} ]}%
  \@x{\@s{16.4} \.{\land} vote\_granted \.{=} [ s \.{\in} Servers \.{\mapsto}
  \{ \} ]}%
  \@x{\@s{16.4} \.{\land} vote\_requested \.{=} [ s \.{\in} Servers \.{\mapsto}
- \{ \} ]}%
+ 0 ]}%
 \@x{\@s{16.4} \.{\land} term \.{=} [ s \.{\in} Servers \.{\mapsto} 0 ]}%
+\@pvspace{8.0pt}%
+\@x{ RequestVoteSet ( i ) \.{\defeq} \{}%
+ \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
+ \.{\mapsto}\@w{RequestVoteReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
+\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{ \}}%
+\@pvspace{8.0pt}%
+\@x{ Campaign ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} vote\_requested [ i ] \.{=} 0}%
+ \@x{\@s{16.4} \.{\land} vote\_requested \.{'} \.{=} [ vote\_requested
+ {\EXCEPT} {\bang} [ i ] \.{=} 1 ]}%
+ \@x{\@s{16.4} \.{\land} messages \.{'} \.{=} messages \.{\cup} RequestVoteSet
+ ( i )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} state ,\, term ,\,
+ vote\_granted ,\, voted\_for {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ KeepAliveSet ( i ) \.{\defeq} \{}%
+ \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
+ \.{\mapsto}\@w{AppendEntryReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
+\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{ \}}%
 \@pvspace{8.0pt}%
 \@x{ Leader ( i ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Leader}}%
- \@x{\@s{16.4} \.{\land} \E\, j \.{\in} Servers \.{\,\backslash\,} \{ i \}
- \.{:} KeepAlive ( i ,\, j )}%
+ \@x{\@s{16.4} \.{\land} messages \.{'} \.{=} messages \.{\cup} KeepAliveSet (
+ i )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
+ ,\, vote\_granted ,\, vote\_requested {\rangle}}%
 \@pvspace{8.0pt}%
 \@x{ BecomeLeader ( i ) \.{\defeq}}%
  \@x{\@s{16.4} \.{\land} Cardinality ( vote\_granted [ i ] ) \.{>} Cardinality
@@ -1094,12 +1159,11 @@ Next ==
  \@x{\@s{16.4} \.{\land} state \.{'} \.{=} [ state {\EXCEPT} {\bang} [ i ]
  \.{=}\@w{Leader} ]}%
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} messages ,\, voted\_for ,\,
- term ,\, vote\_granted ,\, vote\_received ,\, vote\_requested {\rangle}}%
+ term ,\, vote\_granted ,\, vote\_requested {\rangle}}%
 \@pvspace{8.0pt}%
 \@x{ Candidate ( i ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Candidate}}%
- \@x{\@s{16.4} \.{\land} \.{\lor} \E\, j \.{\in} Servers \.{:} Campaign ( i
- ,\, j )}%
+\@x{\@s{16.4} \.{\land} \.{\lor} Campaign ( i )}%
 \@x{\@s{27.51} \.{\lor} BecomeLeader ( i )}%
 \@x{\@s{27.51} \.{\lor} Timeout ( i )}%
 \@pvspace{8.0pt}%
@@ -1107,329 +1171,420 @@ Next ==
 \@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Follower}}%
 \@x{\@s{16.4} \.{\land} Timeout ( i )}%
 \@pvspace{8.0pt}%
+\@x{ Receive ( msg ) \.{\defeq}}%
+ \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
+ \.{=}\@w{AppendEntryReq}}%
+\@x{\@s{32.57} \.{\land} AppendEntryReq ( msg )}%
+ \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
+ \.{=}\@w{AppendEntryResp}}%
+\@x{\@s{32.57} \.{\land} AppendEntryResp ( msg )}%
+ \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
+ \.{=}\@w{RequestVoteReq}}%
+\@x{\@s{32.57} \.{\land} RequestVoteReq ( msg )}%
+ \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
+ \.{=}\@w{RequestVoteResp}}%
+\@x{\@s{32.57} \.{\land} RequestVoteResp ( msg )}%
+\@pvspace{8.0pt}%
 \@x{ Next \.{\defeq}}%
-\@x{\@s{16.4} \E\, i \.{\in} Servers \.{:}}%
-\@x{\@s{27.72} \.{\lor} Leader ( i )}%
-\@x{\@s{27.72} \.{\lor} Candidate ( i )}%
-\@x{\@s{27.72} \.{\lor} Follower ( i )}%
+\@x{\@s{16.4} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
+\@x{\@s{34.73} \.{\lor} Leader ( i )}%
+\@x{\@s{34.73} \.{\lor} Candidate ( i )}%
+\@x{\@s{34.73} \.{\lor} Follower ( i )}%
+\@x{\@s{16.4} \.{\lor} \E\, msg \.{\in} messages \.{:} Receive ( msg )}%
 \end{tlatex}
 
 \begin{itemize}
-    \item A server can be in in one of three states, Servers are defined as a set in this protocol, so \textit{function
-    mapping} are used to represent various server state information
-    \item $voteResponded$ and $voteGranted$ are represented as a set for every server
-    \item $currentTerm$, $state$, and $votedFor$ are represented as a mapping
-    function for every server. 
-    \item $message$ is defined to be an empty set, but each key in the set has
-    an associated count value (similar to C++ standard map with value tracking
-    the key count). 
+    \item The Spec picks a server to make progress in \textit{Next}, including
+    process messages with \textit{Receive}. \textit{Receive} handling is 
+    state agnostic and implemented as such
+    \item \textit{message} is defined to be a set to hold a collection of functions, where 
+    each function is a message with source, destination, type, and more specified
+    \item \textit{voted\_for} represents who a node has previously voted for. This is to 
+    prevent a node from voting more than once
+    \item \textit{vote\_granted} tracks how many peers have voted for a node
+    \item \textit{vote\_requested} tracks if a node has already issued request vote
+    \item The actions defined for every state reflect description earlier 
+    \item \textit{Follower} either Receive or Timeout and campaign to be a leader
+    \item \textit{Candidate} campaigns to be a leader, and becomes one if it has
+    enough vote. Failing to collect enough votes, \textit{Candidate} start a new
+    term of election. It can also receive a request with a higher term and
+    transition to be a \textit{Follower}.
 \end{itemize}
 
-The following is the state transition definition:
+
+The message processing functions are fairly similar in structure, here we will
+take a look at \textit{RequestVoteReq}:\newline
 
 \begin{tla}
-------- MODULE raft ------- 
-Next == /\ \/ \E i \in Server : Restart(i)
-           \/ \E i \in Server : Timeout(i)
-           \/ \E i,j \in Server : RequestVote(i, j)
-           \/ \E i \in Server : BecomeLeader(i)
-           \/ \E i \in Server, v \in Value : ClientRequest(i, v)
-           \/ \E i \in Server : AdvanceCommitIndex(i)
-           \/ \E i,j \in Server : AppendEntries(i, j)
-           \/ \E m \in DOMAIN messages : Receive(m)
-           \/ \E m \in DOMAIN messages : DuplicateMessage(m)
-           \/ \E m \in DOMAIN messages : DropMessage(m)
-=================== 
+RequestVoteReq(msg) == 
+    LET 
+        i == msg.fDst
+        j == msg.fSrc
+        type == msg.fType
+        t == msg.fTerm
+    IN 
+        \* haven't voted, or whom we voted re-requested
+        \/ /\ t = term[i]
+           /\ \/ voted_for[i] = j 
+              \/ voted_for[i] = ""
+           /\ voted_for' = [voted_for EXCEPT ![i] = j]
+           /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "RequestVoteResp",
+                                        fTerm |-> t, 
+                                        fSuccess |-> 1],
+                                        RemoveMessage(msg, messages))
+           /\ UNCHANGED <<state, term, vote_granted, vote_requested, establish_leadership >>
+        \* already voted someone else
+        \/ /\ t = term[i]
+           /\ voted_for[i] # j 
+           /\ voted_for[i] # ""
+           /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "RequestVoteResp",
+                                        fTerm |-> t, 
+                                        fSuccess |-> 0],
+                                        RemoveMessage(msg, messages))
+            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
+        \/  /\ t < term[i]
+            /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "RequestVoteResp",
+                                        fTerm |-> term[i], 
+                                        fSuccess |-> 0],
+                                        RemoveMessage(msg, messages))
+            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
+        \* revert back to follower
+        \/  /\ t > term[i]
+            /\ state' = [state EXCEPT ![i] = "Follower"]
+            /\ term' = [term EXCEPT ![i] = t]
+            /\ voted_for' = [voted_for EXCEPT ![i] = j]
+            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
+            /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
+            /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 0]
+            /\ messages' = AddMessage([fSrc |-> i, 
+                                        fDst |-> j, 
+                                        fType |-> "RequestVoteResp",
+                                        fTerm |-> t, 
+                                        fSuccess |-> 1],
+                                        RemoveMessage(msg, messages))
 \end{tla}
 \begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
- \@x{ Next \.{\defeq} \.{\land} \.{\lor} \E\, i \.{\in} Server \.{:} Restart (
- i )}%
-\@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server \.{:} Timeout ( i )}%
- \@x{\@s{50.94} \.{\lor} \E\, i ,\, j \.{\in} Server \.{:} RequestVote ( i ,\,
- j )}%
-\@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server \.{:} BecomeLeader ( i )}%
- \@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server ,\, v \.{\in} Value \.{:}
- ClientRequest ( i ,\, v )}%
-\@x{\@s{50.94} \.{\lor} \E\, i \.{\in} Server \.{:} AdvanceCommitIndex ( i )}%
- \@x{\@s{50.94} \.{\lor} \E\, i ,\, j \.{\in} Server \.{:} AppendEntries ( i
- ,\, j )}%
- \@x{\@s{50.94} \.{\lor} \E\, m \.{\in} {\DOMAIN} messages \.{:} Receive ( m
- )}%
- \@x{\@s{50.94} \.{\lor} \E\, m \.{\in} {\DOMAIN} messages \.{:}
- DuplicateMessage ( m )}%
- \@x{\@s{50.94} \.{\lor} \E\, m \.{\in} {\DOMAIN} messages \.{:} DropMessage (
- m )}%
-\@x{}\bottombar\@xx{}%
+\@x{ RequestVoteReq ( msg ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} i\@s{0.42} \.{\defeq} msg . fDst}%
+\@x{\@s{32.8} j \.{\defeq} msg . fSrc}%
+\@x{\@s{32.8} type \.{\defeq} msg . fType}%
+\@x{\@s{32.8} t \.{\defeq} msg . fTerm}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8}}%
+\@y{%
+  haven't voted, or whom we voted re-requested
+}%
+\@xx{}%
+\@x{\@s{32.8} \.{\lor} \.{\land} t \.{=} term [ i ]}%
+\@x{\@s{43.91} \.{\land} \.{\lor} voted\_for [ i ] \.{=} j}%
+\@x{\@s{55.02} \.{\lor} voted\_for [ i ] \.{=}\@w{}}%
+ \@x{\@s{43.91} \.{\land} voted\_for \.{'} \.{=} [ voted\_for {\EXCEPT}
+ {\bang} [ i ] \.{=} j ]}%
+ \@x{\@s{43.91} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+ i ,\,}%
+\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{180.15} fTerm \.{\mapsto} t ,\,}%
+\@x{\@s{180.15} fSuccess \.{\mapsto} 1 ] ,\,}%
+\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
+ \@x{\@s{43.91} \.{\land} {\UNCHANGED} {\langle} state ,\, term ,\,
+ vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@x{\@s{32.8}}%
+\@y{%
+  already voted someone else
+}%
+\@xx{}%
+\@x{\@s{32.8} \.{\lor} \.{\land} t \.{=} term [ i ]}%
+\@x{\@s{43.91} \.{\land} voted\_for [ i ] \.{\neq} j}%
+\@x{\@s{43.91} \.{\land} voted\_for [ i ] \.{\neq}\@w{}}%
+ \@x{\@s{43.91} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+ i ,\,}%
+\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{180.15} fTerm \.{\mapsto} t ,\,}%
+\@x{\@s{180.15} fSuccess \.{\mapsto} 0 ] ,\,}%
+\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
+ \@x{\@s{48.01} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
+ ,\, vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@x{\@s{32.8} \.{\lor}\@s{4.1} \.{\land} t \.{<} term [ i ]}%
+ \@x{\@s{48.01} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+ i ,\,}%
+\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{180.15} fTerm \.{\mapsto} term [ i ] ,\,}%
+\@x{\@s{180.15} fSuccess \.{\mapsto} 0 ] ,\,}%
+\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
+ \@x{\@s{48.01} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
+ ,\, vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@x{\@s{32.8}}%
+\@y{%
+  revert back to follower
+}%
+\@xx{}%
+\@x{\@s{32.8} \.{\lor}\@s{4.1} \.{\land} t \.{>} term [ i ]}%
+ \@x{\@s{48.01} \.{\land} state \.{'} \.{=} [ state {\EXCEPT} {\bang} [ i ]
+ \.{=}\@w{Follower} ]}%
+ \@x{\@s{48.01} \.{\land} term \.{'} \.{=} [ term {\EXCEPT} {\bang} [ i ]
+ \.{=} t ]}%
+ \@x{\@s{48.01} \.{\land} voted\_for \.{'} \.{=} [ voted\_for {\EXCEPT}
+ {\bang} [ i ] \.{=} j ]}%
+ \@x{\@s{48.01} \.{\land} vote\_granted \.{'} \.{=} [ vote\_granted {\EXCEPT}
+ {\bang} [ i ] \.{=} \{ \} ]}%
+ \@x{\@s{48.01} \.{\land} vote\_requested \.{'} \.{=} [ vote\_requested
+ {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
+ \@x{\@s{48.01} \.{\land} establish\_leadership \.{'} \.{=} [
+ establish\_leadership {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
+ \@x{\@s{48.01} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+ i ,\,}%
+\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{180.15} fTerm \.{\mapsto} t ,\,}%
+\@x{\@s{180.15} fSuccess \.{\mapsto} 1 ] ,\,}%
+\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
 \end{tlatex}
 \newline
 
-The spec uses \textit{there exists} qualifier to pick a server to perform an
-action. The possible actions are concatenated with $\lor$ to indicate any of
-them can take. Some of these actions are state specific (eg. $RequestVote$ or
-$BecomeLeader$). The state check are applied within the macro definition itself 
-(eg. $RequestVote$ checks server is in $Candidate$ state). Let's take a closer
-look at \textit{RequestVote}:\newline
+The handling is basically split into three cases. If received request is on a
+higher term, processing node grants vote and becomes a Follower. If received
+request is on a lower term, processing node ignores request. If received request
+is on the same term, then processing node grants vote if it hasn't voted, or had
+voted for the requester prior.
+
+\section{Simplify Model}
+
+TLC will run the Spec as defined, but due to the expoential growth of states it
+is unlikely to complete in a practical amount of time. We need to simplify the
+model until the model checker completes in a more reasonable time, but possibly
+trades off model correctness. Some thought must go into finding the right
+balance between maximizing model value and minimizing runtime.\newline
+
+The main strategy is to \textit{bound} the state graph. The following describe a
+set of optimization applied for this example.
+
+\subsection{Modeling Messages as a Set}
+
+In the original Raft TLA+ Spec \cite{raft_tla}, messages are modelled as an
+\textit{unordered map} to track the count of each message. It is possible for a
+sender to repeatedly send the same message (eg. keepalive), and grows the 
+message count in an unbounded fashion.\newline
+
+\textit{messages} in this example has been implemented as a set so the model 
+checker doesn't go into the weeds as the count of a message grows. It is still 
+possible for messages to grow unboundedly because the message carries a term
+value. Further changes are described below.
+
+\subsection{Limit Term Divergence} 
+
+It is possible for the a node to \textit{never} make progress (eg. one node is
+somehow partitioned off and the rest of the cluster keeps moving onto newer
+terms). While we do want to exercise handling of diverging terms in a cluster,
+limiting the range of terms in the cluster likely doesn't reduce the coverage by
+much.  We can limit divergence by preventing a node with a high term value to go
+into election. This allows the nodes with low term value to catchup. and thus
+reduce the number of states in the graph.\newline
+
+We can include \textit{LimitDivergence} as a conjunction in
+\textit{Timeout}:\newline
 \begin{tla}
-------- MODULE raft ------- 
-\* Helper for Send and Reply. Given a message m and bag of messages, return a
-\* new bag of messages with one more m in it.
-WithMessage(m, msgs) ==
-    IF m \in DOMAIN msgs THEN
-        [msgs EXCEPT ![m] = msgs[m] + 1]
-    ELSE
-        msgs @@ (m :> 1)
+LimitDivergence(i) == 
+    LET 
+        values == {term[s] : s \in Servers}
+        max_v == CHOOSE x \in values : \A y \in values : x >= y
+        min_v == CHOOSE x \in values : \A y \in values : x <= y
+    IN 
+        \/ /\ term[i] # max_v
+        \/ /\ term[i] = max_v 
+           /\ term[i] - min_v < MaxDiff
 
-\* Add a message to the bag of messages.
-Send(m) == messages' = WithMessage(m, messages)
-
-RequestVote(i, j) ==
-    /\ state[i] = Candidate
-    /\ j \notin votesResponded[i]
-    /\ Send([mtype         |-> RequestVoteRequest,
-             mterm         |-> currentTerm[i],
-             mlastLogTerm  |-> LastTerm(log[i]),
-             mlastLogIndex |-> Len(log[i]),
-             msource       |-> i,
-             mdest         |-> j])
-    /\ UNCHANGED <<serverVars, candidateVars, leaderVars, logVars>> 
-=================== 
+Timeout(i) == 
+    /\ LimitDivergence(i)
+    /\ state' = [state EXCEPT ![i] = "Candidate"]
+    /\ voted_for' = [voted_for EXCEPT ![i] = i]             \* voted for myself
+    /\ vote_granted' = [vote_granted EXCEPT ![i] = {i}]
+    /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
+    /\ term' = [term EXCEPT ![i] = @ + 1]                   \* bump term
+    /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 0]
+    /\ UNCHANGED <<messages>>
+    \* /\ PrintT(state')
 \end{tla}
 \begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
-\@x{}%
-\@y{%
-  Helper for Send and Reply. Given a message m and bag of messages, return a
-}%
-\@xx{}%
-\@x{}%
-\@y{%
-  new bag of messages with one more m in it.
-}%
-\@xx{}%
-\@x{ WithMessage ( m ,\, msgs ) \.{\defeq}}%
-\@x{\@s{16.4} {\IF} m \.{\in} {\DOMAIN} msgs \.{\THEN}}%
-\@x{\@s{32.65} [ msgs {\EXCEPT} {\bang} [ m ] \.{=} msgs [ m ] \.{+} 1 ]}%
-\@x{\@s{16.4} \.{\ELSE}}%
-\@x{\@s{32.8} msgs \.{\,@@\,} ( m \.{\colongt} 1 )}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  Add a message to the bag of messages.
-}%
-\@xx{}%
- \@x{ Send ( m ) \.{\defeq} messages \.{'} \.{=} WithMessage ( m ,\, messages
- )}%
-\@pvspace{8.0pt}%
-\@x{ RequestVote ( i ,\, j ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} state [ i ] \.{=} Candidate}%
-\@x{\@s{16.4} \.{\land} j \.{\notin} votesResponded [ i ]}%
- \@x{\@s{16.4} \.{\land} Send ( [ mtype\@s{36.94} \.{\mapsto}
- RequestVoteRequest ,\,}%
-\@x{\@s{56.16} mterm\@s{33.98} \.{\mapsto} currentTerm [ i ] ,\,}%
-\@x{\@s{56.16} mlastLogTerm\@s{0.88} \.{\mapsto} LastTerm ( log [ i ] ) ,\,}%
-\@x{\@s{56.16} mlastLogIndex \.{\mapsto} Len ( log [ i ] ) ,\,}%
-\@x{\@s{56.16} msource\@s{27.35} \.{\mapsto} i ,\,}%
-\@x{\@s{56.16} mdest\@s{36.99} \.{\mapsto} j ] )}%
- \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} serverVars ,\, candidateVars
- ,\, leaderVars ,\, logVars {\rangle}}%
-\@x{}\bottombar\@xx{}%
-\end{tlatex}
-
-\begin{itemize}
-    \item i and j are reciever and sender, respectively
-    \item Send request only if receiver is a candidate
-    \item Send request only if j isn't part of i's votesResponded set
-    \item A \textit{message} is defined as a \textit{function} with a collection
-    of keys and values. 
-    \item \textit{Send} calls \textit{WithMessage}
-    \item \textit{WithMessage} increments the count (value) if the message (key) already exists
-    \item \textit{WithMessage} insert the message (key) with count of 1 (value) 
-    \begin{itemize}
-        \item $@@$ combines two functions
-        \item $m :> 1$ creates a function with message and a count of 1
-    \end{itemize}
-\end{itemize}
-
-In short, the \textit{RequestVote} function inserts a message into a ddictionary
-and track the number of times it has been inserted. Let's take a look at how the
-message is processed:
-
-\begin{tla}
-------- MODULE raft ---- 
-WithoutMessage(m, msgs) ==
-    IF m \in DOMAIN msgs THEN
-        IF msgs[m] <= 1 THEN [i \in DOMAIN msgs \ {m} |-> msgs[i]]
-        ELSE [msgs EXCEPT ![m] = msgs[m] - 1]
-    ELSE
-        msgs
-
-Reply(response, request) ==
-    messages' = WithoutMessage(request, WithMessage(response, messages))
-
-HandleRequestVoteRequest(i, j, m) ==
-    LET logOk == \/ m.mlastLogTerm > LastTerm(log[i])
-                 \/ /\ m.mlastLogTerm = LastTerm(log[i])
-                    /\ m.mlastLogIndex >= Len(log[i])
-        grant == /\ m.mterm = currentTerm[i]
-                 /\ logOk
-                 /\ votedFor[i] \in {Nil, j}
-    IN /\ m.mterm <= currentTerm[i]
-       /\ \/ grant  /\ votedFor' = [votedFor EXCEPT ![i] = j]
-          \/ ~grant /\ UNCHANGED votedFor
-       /\ Reply([mtype        |-> RequestVoteResponse,
-                 mterm        |-> currentTerm[i],
-                 mvoteGranted |-> grant,
-                 \* mlog is used just for the `elections' history variable for
-                 \* the proof. It would not exist in a real implementation.
-                 mlog         |-> log[i],
-                 msource      |-> i,
-                 mdest        |-> j],
-                 m)
-       /\ UNCHANGED <<state, currentTerm, candidateVars, leaderVars, logVars>>
-
-UpdateTerm(i, j, m) ==
-    /\ m.mterm > currentTerm[i]
-    /\ currentTerm'    = [currentTerm EXCEPT ![i] = m.mterm]
-    /\ state'          = [state       EXCEPT ![i] = Follower]
-    /\ votedFor'       = [votedFor    EXCEPT ![i] = Nil]
-       \* messages is unchanged so m can be processed further.
-    /\ UNCHANGED <<messages, candidateVars, leaderVars, logVars>>
-
-Receive(m) ==
-    LET i == m.mdest
-        j == m.msource
-    IN \* Any RPC with a newer term causes the recipient to advance
-       \* its term first. Responses with stale terms are ignored.
-       \/ UpdateTerm(i, j, m)
-       \/ /\ m.mtype = RequestVoteRequest
-          /\ HandleRequestVoteRequest(i, j, m)
-       \/ /\ m.mtype = RequestVoteResponse
-          /\ \/ DropStaleResponse(i, j, m)
-             \/ HandleRequestVoteResponse(i, j, m)
-       \/ /\ m.mtype = AppendEntriesRequest
-          /\ HandleAppendEntriesRequest(i, j, m)
-       \/ /\ m.mtype = AppendEntriesResponse
-          /\ \/ DropStaleResponse(i, j, m)
-             \/ HandleAppendEntriesResponse(i, j, m)
-------- MODULE raft ---- 
-\end{tla}
-\begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
-\@x{ WithoutMessage ( m ,\, msgs ) \.{\defeq}}%
-\@x{\@s{16.4} {\IF} m \.{\in} {\DOMAIN} msgs \.{\THEN}}%
- \@x{\@s{32.65} {\IF} msgs [ m ] \.{\leq} 1 \.{\THEN} [ i \.{\in} {\DOMAIN}
- msgs \.{\,\backslash\,} \{ m \} \.{\mapsto} msgs [ i ] ]}%
- \@x{\@s{32.65} \.{\ELSE} [ msgs {\EXCEPT} {\bang} [ m ] \.{=} msgs [ m ]
- \.{-} 1 ]}%
-\@x{\@s{16.4} \.{\ELSE}}%
-\@x{\@s{32.8} msgs}%
-\@pvspace{8.0pt}%
-\@x{ Reply ( response ,\, request ) \.{\defeq}}%
- \@x{\@s{16.4} messages \.{'} \.{=} WithoutMessage ( request ,\, WithMessage (
- response ,\, messages ) )}%
-\@pvspace{8.0pt}%
-\@x{ HandleRequestVoteRequest ( i ,\, j ,\, m ) \.{\defeq}}%
- \@x{\@s{16.4} \.{\LET} logOk \.{\defeq} \.{\lor} m . mlastLogTerm \.{>}
- LastTerm ( log [ i ] )}%
- \@x{\@s{80.78} \.{\lor} \.{\land} m . mlastLogTerm \.{=} LastTerm ( log [ i ]
- )}%
-\@x{\@s{91.89} \.{\land} m . mlastLogIndex \.{\geq} Len ( log [ i ] )}%
- \@x{\@s{36.79} grant\@s{1.78} \.{\defeq} \.{\land} m . mterm \.{=}
- currentTerm [ i ]}%
-\@x{\@s{80.78} \.{\land} logOk}%
-\@x{\@s{80.78} \.{\land} votedFor [ i ] \.{\in} \{ Nil ,\, j \}}%
-\@x{\@s{16.4} \.{\IN} \.{\land} m . mterm \.{\leq} currentTerm [ i ]}%
- \@x{\@s{36.79} \.{\land} \.{\lor} grant\@s{6.66} \.{\land} votedFor \.{'}
- \.{=} [ votedFor {\EXCEPT} {\bang} [ i ] \.{=} j ]}%
-\@x{\@s{47.91} \.{\lor} {\lnot} grant \.{\land} {\UNCHANGED} votedFor}%
- \@x{\@s{36.79} \.{\land} Reply ( [ mtype\@s{35.23} \.{\mapsto}
- RequestVoteResponse ,\,}%
-\@x{\@s{79.36} mterm\@s{32.27} \.{\mapsto} currentTerm [ i ] ,\,}%
-\@x{\@s{79.36} mvoteGranted \.{\mapsto} grant ,\,}%
-\@x{\@s{79.36}}%
-\@y{%
-  mlog is used just for the `elections' history variable for
-}%
-\@xx{}%
-\@x{\@s{79.36}}%
-\@y{%
-  the proof. It would not exist in a real implementation.
-}%
-\@xx{}%
-\@x{\@s{79.36} mlog\@s{35.57} \.{\mapsto} log [ i ] ,\,}%
-\@x{\@s{79.36} msource\@s{20.5} \.{\mapsto} i ,\,}%
-\@x{\@s{79.36} mdest\@s{30.14} \.{\mapsto} j ] ,\,}%
-\@x{\@s{79.36} m )}%
- \@x{\@s{36.79} \.{\land} {\UNCHANGED} {\langle} state ,\, currentTerm ,\,
- candidateVars ,\, leaderVars ,\, logVars {\rangle}}%
-\@pvspace{8.0pt}%
-\@x{ UpdateTerm ( i ,\, j ,\, m ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} m . mterm \.{>} currentTerm [ i ]}%
- \@x{\@s{16.4} \.{\land} currentTerm \.{'}\@s{12.29} \.{=} [ currentTerm
- {\EXCEPT} {\bang} [ i ] \.{=} m . mterm ]}%
- \@x{\@s{16.4} \.{\land} state \.{'}\@s{46.68} \.{=} [ state\@s{24.59}
- {\EXCEPT} {\bang} [ i ]\@s{9.78} \.{=} Follower ]}%
- \@x{\@s{16.4} \.{\land} votedFor \.{'}\@s{29.48} \.{=} [ votedFor\@s{12.29}
- {\EXCEPT} {\bang} [ i ]\@s{4.88} \.{=} Nil ]}%
-\@x{\@s{27.51}}%
-\@y{%
-  messages is unchanged so m can be processed further.
-}%
-\@xx{}%
- \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} messages ,\, candidateVars ,\,
- leaderVars ,\, logVars {\rangle}}%
-\@pvspace{8.0pt}%
-\@x{ Receive ( m ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\LET} i\@s{0.42} \.{\defeq} m . mdest}%
-\@x{\@s{36.79} j \.{\defeq} m . msource}%
+\@x{ LimitDivergence ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} values \.{\defeq} \{ term [ s ] \.{:} s \.{\in} Servers \}}%
+ \@x{\@s{32.8} max\_v \.{\defeq} {\CHOOSE} x \.{\in} values \.{:} \A\, y
+ \.{\in} values \.{:} x \.{\geq} y}%
+ \@x{\@s{32.8} min\_v\@s{1.49} \.{\defeq} {\CHOOSE} x \.{\in} values \.{:}
+ \A\, y \.{\in} values \.{:} x \.{\leq} y}%
 \@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} \.{\lor} \.{\land} term [ i ] \.{\neq} max\_v}%
+\@x{\@s{32.8} \.{\lor} \.{\land} term [ i ] \.{=} max\_v}%
+\@x{\@s{43.91} \.{\land} term [ i ] \.{-} min\_v \.{<} MaxDiff}%
+\@pvspace{8.0pt}%
+\@x{ Timeout ( i ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land}\@s{9.72} LimitDivergence ( i )}%
+ \@x{\@s{16.4} \.{\land}\@s{9.72} state \.{'} \.{=} [ state {\EXCEPT} {\bang}
+ [ i ] \.{=}\@w{Candidate} ]}%
+ \@x{\@s{16.4} \.{\land}\@s{9.72} voted\_for \.{'} \.{=} [ voted\_for
+ {\EXCEPT} {\bang} [ i ] \.{=} i ]\@s{49.19}}%
 \@y{%
-  Any RPC with a newer term causes the recipient to advance
+  voted for myself
 }%
 \@xx{}%
-\@x{\@s{36.79}}%
+ \@x{\@s{16.4} \.{\land}\@s{9.72} vote\_granted \.{'} \.{=} [ vote\_granted
+ {\EXCEPT} {\bang} [ i ] \.{=} \{ i \} ]}%
+ \@x{\@s{16.4} \.{\land}\@s{9.72} vote\_requested \.{'} \.{=} [
+ vote\_requested {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
+ \@x{\@s{16.4} \.{\land}\@s{9.72} term \.{'} \.{=} [ term {\EXCEPT} {\bang} [
+ i ] \.{=} @ \.{+} 1 ]\@s{68.59}}%
 \@y{%
-  its term first. Responses with stale terms are ignored.
+  bump term
 }%
 \@xx{}%
-\@x{\@s{36.79} \.{\lor} UpdateTerm ( i ,\, j ,\, m )}%
-\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} RequestVoteRequest}%
-\@x{\@s{47.91} \.{\land} HandleRequestVoteRequest ( i ,\, j ,\, m )}%
-\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} RequestVoteResponse}%
-\@x{\@s{47.91} \.{\land} \.{\lor} DropStaleResponse ( i ,\, j ,\, m )}%
-\@x{\@s{59.02} \.{\lor} HandleRequestVoteResponse ( i ,\, j ,\, m )}%
-\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} AppendEntriesRequest}%
-\@x{\@s{47.91} \.{\land} HandleAppendEntriesRequest ( i ,\, j ,\, m )}%
-\@x{\@s{36.79} \.{\lor} \.{\land} m . mtype \.{=} AppendEntriesResponse}%
-\@x{\@s{47.91} \.{\land} \.{\lor} DropStaleResponse ( i ,\, j ,\, m )}%
-\@x{\@s{59.02} \.{\lor} HandleAppendEntriesResponse ( i ,\, j ,\, m )}%
-\@x{}\moduleLeftDash\@xx{ {\MODULE} raft}\moduleRightDash\@xx{}%
+ \@x{\@s{16.4} \.{\land}\@s{9.72} establish\_leadership \.{'} \.{=} [
+ establish\_leadership {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
+\@x{\@s{16.4} \.{\land}\@s{9.72} {\UNCHANGED} {\langle} messages {\rangle}}%
+\@x{\@s{16.4}}%
+\@y{%
+  /\ PrintT(state')
+}%
+\@xx{}%
 \end{tlatex}
 
-\begin{itemize}
-    \item \textit{Next} randomly picks a message received. This simulates
-    network reordering effect
-    \item Per Raft protocol definition: \textit{UpdateTerm} checks if
-    \textit{message} has higher term. If so, the current server transitions back
-    to \textit{Follower} with grantVote cleared.
-    \item \textit{HandleRequestVoteRequest} defines two local variables:
-    \begin{itemize}
-        \item \textit{logOk} represents requester log's recency per protocol spec 
-        \item \textit{grant} represents if vote is granted per protocol spec. Note it's possible 
-    \end{itemize}
-    \item \textit{Reply} adds the replay to messages and removes the request
-    \item In \textit{WithoutMessage}, return a new function if message count is one: 
-    \begin{itemize}
-        \item $msgs \symbol{92} \{m\}$ is all msgs excluding m
-        \item For all $i$ in this reduced msgs functions, set value to key i as
-        msgs[i]. This effectively copies the entire msgs excluding key m
-    \end{itemize}
-\end{itemize}
+\subsection{Normalize Cluster Term}
 
-If receiver is stale (eg. lower term), it will \textbf{not} grant the vote.
-This wasn't explicitly stated in the protocol spec. At the same time, the
-receiver should eventually call \textit{UpdateTerm} to get updated term. 
+However, term \textit{itself} can grow unbounded. This is a key tenent 
+converging protocols rely on, an monotonically increasing counter. We want to 
+\textit{normalize} the range of terms in the cluster so the minimum value is
+reset back to 0. This provides an upper bound to the state graph.\newline
+
+\begin{tla}
+Normalize == 
+    LET 
+        values == {term[s] : s \in Servers}
+        max_v == CHOOSE x \in values : \A y \in values : x >= y
+        min_v == CHOOSE x \in values : \A y \in values : x <= y
+    IN 
+        /\ max_v = MaxTerm
+        /\ term' = [s \in Servers |-> term[s] - min_v]
+        /\ messages' = {}
+        /\ UNCHANGED <<state, voted_for, vote_granted, vote_requested, establish_leadership>>
+
+Next == 
+    \/ /\ \A i \in Servers : term[i] # MaxTerm 
+       /\ \/ \E i \in Servers : 
+                \/ Leader(i) 
+                \/ Candidate(i)
+                \/ Follower(i)
+          \/ \E msg \in messages : Receive(msg)
+    \/ /\ \E i \in Servers: term[i] = MaxTerm 
+       /\ Normalize
+\end{tla}
+\begin{tlatex}
+\@x{ Normalize \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} values \.{\defeq} \{ term [ s ] \.{:} s \.{\in} Servers \}}%
+ \@x{\@s{32.8} max\_v \.{\defeq} {\CHOOSE} x \.{\in} values \.{:} \A\, y
+ \.{\in} values \.{:} x \.{\geq} y}%
+ \@x{\@s{32.8} min\_v\@s{1.49} \.{\defeq} {\CHOOSE} x \.{\in} values \.{:}
+ \A\, y \.{\in} values \.{:} x \.{\leq} y}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} \.{\land} max\_v \.{=} MaxTerm}%
+ \@x{\@s{32.8} \.{\land} term \.{'}\@s{5.41} \.{=} [ s \.{\in} Servers
+ \.{\mapsto} term [ s ] \.{-} min\_v ]}%
+\@x{\@s{32.8} \.{\land} messages \.{'} \.{=} \{ \}}%
+ \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\,
+ vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ Next \.{\defeq}}%
+ \@x{\@s{16.4} \.{\lor} \.{\land} \A\, i \.{\in} Servers \.{:} term [ i ]
+ \.{\neq} MaxTerm}%
+\@x{\@s{27.51} \.{\land} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
+\@x{\@s{56.95} \.{\lor} Leader ( i )}%
+\@x{\@s{56.95} \.{\lor} Candidate ( i )}%
+\@x{\@s{56.95} \.{\lor} Follower ( i )}%
+\@x{\@s{38.62} \.{\lor} \E\, msg \.{\in} messages \.{:} Receive ( msg )}%
+ \@x{\@s{16.4} \.{\lor} \.{\land} \E\, i \.{\in} Servers \.{:} term [ i ]
+ \.{=} MaxTerm}%
+\@x{\@s{27.51} \.{\land} Normalize}%
+\end{tlatex}
+\newline
+
+The implementation ensures only the state machine only moves forward when none
+of the nodes is on MaxTerm. If any of the node is on MaxTerm, the cluster terms
+are normalized.\newline
+
+Another caveat here is in the initial implementation I didn't update messsages.
+This led to liveness property violation as the messages had terms disagreeing
+with the system state. To simplify the Spec I simply cleared all messages. This 
+indirectly verifies a portion of the packet loss handling in the Spec.
+
+\subsection{Send Requests to Cluster as a Set}
+
+Initially the send requests are implemented using the existential quantifier. 
+This introduces many interleaving states. This was latter replaced with a
+universal quantifier so the set of messages are only sent once. The
+implementation no longer tracks if the responses were received, since the 
+Spec should handle packet loss scenarios as well.\newline
+
+\begin{tla}
+RequestVoteSet(i) == {
+    [fSrc |-> i, fDst |-> s, fType |-> "RequestVoteReq", fTerm |-> term[i]] 
+        : s \in Servers \ {i}
+}
+
+Campaign(i) == 
+    /\ vote_requested[i] = 0
+    /\ vote_requested' = [vote_requested EXCEPT ![i] = 1]
+    /\ messages' = messages \cup RequestVoteSet(i) 
+    /\ UNCHANGED <<state, term, vote_granted, voted_for, establish_leadership>>
+
+KeepAliveSet(i) == {
+    [fSrc |-> i, fDst |-> s, fType |-> "AppendEntryReq", fTerm |-> term[i]] 
+        : s \in Servers \ {i}
+}
+
+Leader(i) == 
+    /\ state[i] = "Leader"
+    /\ establish_leadership[i] = 0
+    /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 1]
+    /\ messages' = messages \cup KeepAliveSet(i) 
+    /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
+\end{tla}
+
+\subsection{Prune Messages with Stale Terms}
+
+\begin{tla}
+AddMessage(to_add, msgs) == 
+    LET 
+        pruned == {msg \in msgs : 
+                    ~(msg.fDst = to_add.fDst /\ msg.fTerm < to_add.fTerm) }
+    IN
+        pruned \cup {to_add}
+
+RemoveMessage(to_remove, msgs) ==
+\end{tla}
+\begin{tlatex}
+\@x{ AddMessage ( to\_add ,\, msgs ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} pruned \.{\defeq} \{ msg \.{\in} msgs \.{:}}%
+ \@x{\@s{91.33} {\lnot} ( msg . fDst \.{=} to\_add . fDst \.{\land} msg .
+ fTerm \.{<} to\_add . fTerm ) \}}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} pruned \.{\cup} \{ to\_add \}}%
+\@pvspace{8.0pt}%
+\@x{ RemoveMessage ( to\_remove ,\, msgs ) \.{\defeq}}%
+\end{tlatex}
+
+\section{Safety}
+
+\section{Liveness}
 
 \include{scheduler}
 
