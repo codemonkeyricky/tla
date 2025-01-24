@@ -18,7 +18,7 @@ Init ==
     /\ messages = {} 
     /\ voted_for = [s \in Servers |-> ""]
     /\ vote_granted = [s \in Servers |-> {}]
-    /\ vote_requested = [s \in Servers |-> {}]
+    /\ vote_requested = [s \in Servers |-> 0]
     /\ term = [s \in Servers |-> 0]
 
 AddMessage(to_add, msgs) == 
@@ -55,19 +55,20 @@ Timeout(i) ==
     /\ state' = [state EXCEPT ![i] = "Candidate"]
     /\ voted_for' = [voted_for EXCEPT ![i] = i]             \* voted for myself
     /\ vote_granted' = [vote_granted EXCEPT ![i] = {i}]
-    /\ vote_requested' = [vote_requested EXCEPT ![i] = {i}]
+    /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
     /\ term' = [term EXCEPT ![i] = @ + 1]                   \* bump term
     /\ UNCHANGED <<messages>>
     \* /\ PrintT(state')
 
-Campaign(i, j) == 
-    /\ j \notin vote_requested[i]
-    /\ vote_requested' = [vote_requested EXCEPT ![i] = @ \cup {j}]
-    /\ messages' = AddMessage([fSrc |-> i, 
-                                fDst |-> j, 
-                                fType |-> "RequestVoteReq", 
-                                fTerm |-> term[i]], 
-                                messages)
+RequestVoteSet(i) == {
+    [fSrc |-> i, fDst |-> s, fType |-> "RequestVoteReq", fTerm |-> term[i]] 
+        : s \in Servers \ {i}
+}
+
+Campaign(i) == 
+    /\ vote_requested[i] = 0
+    /\ vote_requested' = [vote_requested EXCEPT ![i] = 1]
+    /\ messages' = messages \cup RequestVoteSet(i) 
     /\ UNCHANGED <<state, term, vote_granted, voted_for>>
 
 RequestVoteReq(msg) == 
@@ -114,7 +115,7 @@ RequestVoteReq(msg) ==
             /\ term' = [term EXCEPT ![i] = t]
             /\ voted_for' = [voted_for EXCEPT ![i] = j]
             /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
-            /\ vote_requested' = [vote_requested EXCEPT ![i] = {}]
+            /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
@@ -136,7 +137,7 @@ AppendEntryResp(msg) ==
            /\ state' = [state EXCEPT ![i] = "Follower"]
            /\ voted_for' = [voted_for EXCEPT ![i] = ""]
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
-           /\ vote_requested' = [vote_requested EXCEPT ![i] = {}]
+           /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
            /\ term' = [term EXCEPT ![i] = t]
         \* discard 
         \/ /\ t <= term[i]
@@ -172,7 +173,7 @@ RequestVoteResp(msg) ==
            /\ state' = [state EXCEPT ![i] = "Follower"]
            /\ voted_for' = [voted_for EXCEPT ![i] = ""]
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
-           /\ vote_requested' = [vote_requested EXCEPT ![i] = {}]
+           /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
            /\ term' = [term EXCEPT ![i] = t]
 
 AppendEntryReq(msg) == 
@@ -189,7 +190,7 @@ AppendEntryReq(msg) ==
               \/ /\ t = term[i] 
                  /\ UNCHANGED voted_for
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
-           /\ vote_requested' = [vote_requested EXCEPT ![i] = {}]
+           /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "AppendEntryResp",
@@ -228,7 +229,7 @@ BecomeLeader(i) ==
 
 Candidate(i) == 
     /\ state[i] = "Candidate"
-    /\ \/ \E j \in Servers: Campaign(i, j)
+    /\ \/ Campaign(i)
        \/ BecomeLeader(i)
        \/ Timeout(i)
 
@@ -266,8 +267,8 @@ LeaderUniqueTerm ==
         (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
 
 Converge ==
-    \A s \in Servers: 
-        term[s] = 0 ~> term[s] = MaxTerm - MaxDiff
+    \* \A s \in Servers: lx
+        term["s0"] = 0 ~> term["s0"] = MaxTerm - MaxDiff
 
 \* Liveness description to ensure no server is stuttering
 Liveness == 
