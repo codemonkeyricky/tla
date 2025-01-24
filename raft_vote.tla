@@ -9,7 +9,7 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_received, vote_re
 
 Servers == {"s0", "s1"}
 
-MaxOutstanding == 1
+MaxOutstanding == 2
 MaxDiff == 2
 MaxTerm == 5
 
@@ -263,11 +263,13 @@ Normalize ==
         /\ UNCHANGED <<state, voted_for, vote_granted, vote_received, vote_requested>>
 
 Next == 
-    \/ \E i \in Servers : Leader(i)
-    \/ \E i \in Servers : Candidate(i)
-    \/ \E i \in Servers : Follower(i)
-    \/ \E msg \in DOMAIN messages : Receive(msg)
-    \/ Normalize
+    \/ /\ \A i \in Servers : term[i] # MaxTerm 
+       /\ \E i \in Servers : 
+            \/ Leader(i) 
+            \/ Candidate(i)
+            \/ Follower(i)
+    \/ /\ \E i \in Servers: term[i] = MaxTerm 
+       /\ Normalize
 
 \* 
 \* Multiple leaders are permitted but only if they are on different terms 
@@ -282,13 +284,8 @@ Ceiling ==
         term[s] # MaxTerm
 
 Converge ==
-    /\ term["s0"] = 0 ~> term["s0"] = 3
-
-\* WF_vars(Next) ==
-\*     WF_vars(\E i \in Servers : Leader(i)) \/
-\*     WF_vars(\E i \in Servers : Candidate(i)) \/
-\*     WF_vars(\E i \in Servers : Follower(i)) \/
-\*     WF_vars(\E msg \in DOMAIN messages : Receive(msg))
+    \A s \in Servers: 
+        term[s] = 0 ~> term[s] = MaxTerm - MaxDiff
 
 \* Liveness description to ensure no server is stuttering
 Liveness == 
