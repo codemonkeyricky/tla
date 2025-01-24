@@ -226,7 +226,7 @@ BecomeLeader(i) ==
     /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_received, vote_requested>>
 
 Candidate(i) == 
-    \/ /\ state[i] = "Candidate"
+    /\ /\ state[i] = "Candidate"
        /\ \E j \in Servers: Campaign(i, j)
     \/ /\ state[i] = "Candidate"
        /\ BecomeLeader(i)
