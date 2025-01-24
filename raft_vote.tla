@@ -276,8 +276,8 @@ LeaderUniqueTerm ==
         (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
 
 Converge ==
-    \* \A s \in Servers: lx
-        term["s0"] = 0 ~> term["s0"] = MaxTerm - MaxDiff
+    \A s \in Servers:
+        term[s] = 0 ~> term[s] = MaxTerm - MaxDiff
 
 \* Liveness description to ensure no server is stuttering
 Liveness == 
