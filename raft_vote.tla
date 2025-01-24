@@ -7,11 +7,11 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_requested>>
 \* Candidate == 1
 \* Leader == 2
 
-Servers == {"s0", "s1"}
+Servers == {"s0", "s1", "s2"}
 
 MaxOutstanding == 1
 MaxDiff == 1
-MaxTerm == 2
+MaxTerm == 3
 
 Init ==
     /\ state = [s \in Servers |-> "Follower"]
@@ -21,19 +21,15 @@ Init ==
     /\ vote_requested = [s \in Servers |-> {}]
     /\ term = [s \in Servers |-> 0]
 
-\* UpdateMessages ==
-\*     LET updatedMessages ==
-\*         { msg \in messages : 
-\*             ~(msg.fDst = i /\ msg.fTerm < term[i]) }
-\*     IN
-\*     messages' = updatedMessages
-
 AddMessage(to_add, msgs) == 
-    msgs \cup {to_add}
+    LET 
+        pruned == {msg \in messages : 
+                    ~(msg.fDst = to_add.fDst /\ msg.fTerm < to_add.fTerm) }
+    IN
+        pruned \cup {to_add}
 
 RemoveMessage(to_remove, msgs) ==
     msgs \ {to_remove}
-    
 
 KeepAlive(i, j) == 
     /\ messages' = AddMessage([ fSrc |-> i,
