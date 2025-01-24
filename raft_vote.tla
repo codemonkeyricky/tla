@@ -7,7 +7,7 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_received, vote_re
 \* Candidate == 1
 \* Leader == 2
 
-Servers == {"s0", "s1"}
+Servers == {"s0", "s1", "s2"}
 
 MaxOutstanding == 2
 MaxDiff == 2
