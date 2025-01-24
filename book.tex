@@ -978,18 +978,19 @@ Next ==
 
 \chapter{Raft Consensus Protocol}
 
-Raft consensus protocol is a consensus algorithm that allows a cluster of
-independent nodes to work collectly to offer a service. One application of the
-raft consensus protocol is for database replication protocol. Assume replication 
-factor of 3 and hard drive failure rate of 0.81\% per year, the possibility of 
-the total failure where the entire replication group goes down is $1-0.0081^3 =
-99.9999\%$ uptime \cite{backblaze}.\newline
+Raft is a consensus algorithm that enables a cluster of nodes to agree on a
+collective state even in the presence of failures. An application of raft
+is database replication protocol. Assume replication factor of 3 and hard
+drive failure rate of 0.81\% per year, the possibility of the total failure
+where the entire replication group goes down is $1-0.0081^3 = 99.9999\%$ uptime
+\cite{backblaze}.\newline
 
-This section will provide a brief description of the protocol, enough to enable
-discussion of the TLA+ protocol. For a full description of the the Raft
-protocol, please refer to the sentinal paper \cite{raft}.\newline
+Since the purpose of the book is to learn TLA+, this chapter will only implement
+a portion of the Raft protocol, namely leader election. For a full description
+of the the Raft protocol, please refer to the original paper
+\cite{raft}.\newline
 
-The Raft protocol implements a few key tenent principles:
+We will briefly describe Raft and its leader election process below: 
 \begin{itemize}
     \item A Raft cluster have N nodes, the cluster work collective as a
     \textit{system} to offer some service
@@ -1000,35 +1001,26 @@ The Raft protocol implements a few key tenent principles:
     redirected to the leader. 
     \item The leader regularly sends heartbeat to the follower, indicate its
     alive.
-    \item The leader forwards all client requests to all of the followers. Once 
-    the majority nodes have processed the request, the request is now considered
-    \textit{committed to the system}. 
-    \item Once a request is \textit{committed}, the protocol gaurantees the
-    \textit{system} will persist (possibly correct and re-replicate) all
-    records across the cluster under \textit{all} circumstance, including: 
-    \begin{itemize}
-        \item One or more server lost packet due to unfavourable network condition 
-        \item One or more server crashed and recovered
-        \item A subset of the server were partitioned off for some period of time
-        \item ... etc
-    \end{itemize}
-    \item If a follower cannot detect heartbeat from the leader, it will
-    transition to become a candidate, vote for itself, and campaign for leader.
+    \item If a follower fails to receive heartbeat from the leader after
+    timeout, it will become a candidate, vote for itself, and campaign to be
+    leader.
     \item A candidate collect the majority of the vote becomes the leader
-    \item A newly elected leader will send a heartbeat to other nodes
-    (irrespective to their state, leader, follower or candidate).
-\end{itemize}
-There are a lot of details omitted here, such as:
-\begin{itemize}
-    \item How a node determine if it should vote for candidate
-    \item How a node knows it's leadership status expired
-    \item How a newly elected leader syncs its logs with the follower
-    \item ... and more
+    \item If multiple candidates are campaigning and no one wins the election, 
+    candidates will eventually declare election timeout and start new round of
+    election
+    \item The cluster should have only one leader, but can have mutliple with
+    different terms 
+    \item A newly elected leader will send a heartbeat to other nodes to establish 
+    leadership 
+    \item All request and responses include the sender's term, allowing the
+    receiver to react accordingly
 \end{itemize}
 
-Note all N nodes in the cluster operate \textit{independently} following the
-above hueristics. Hopefully this highlights the complexity around verifying the 
-the correctness of the protocol.
+The protocol also included description about log synchronization, state
+recovery, and more. These details are omitted for this discussion. Nontheless,
+the N nodes in the cluster operate \textit{independently} following the above
+hueristics. Hopefully this highlights the complexity around verifying the the
+correctness of the protocol.
 
 \section{Spec}
 
