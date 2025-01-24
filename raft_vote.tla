@@ -24,7 +24,7 @@ Init ==
 AddMessage(to_add, msgs) == 
     LET 
         pruned == {msg \in msgs : 
-                    ~(msg.fDst = to_add.fDst /\ msg.fTerm < to_add.fTerm) }
+                    ~(msg.fDst = to_add.fDst /\ msg.fTerm + 1 < to_add.fTerm) }
     IN
         pruned \cup {to_add}
 
@@ -208,10 +208,10 @@ AppendEntryReq(msg) ==
            /\ UNCHANGED <<state, voted_for, vote_granted, term, vote_requested>> 
 
 Receive(msg) == 
-    \* \/ /\ msg.fType = "AppendEntryReq"
-    \*    /\ AppendEntryReq(msg) 
-    \* \/ /\ msg.fType = "AppendEntryResp"
-    \*    /\ AppendEntryResp(msg) 
+    \/ /\ msg.fType = "AppendEntryReq"
+       /\ AppendEntryReq(msg) 
+    \/ /\ msg.fType = "AppendEntryResp"
+       /\ AppendEntryResp(msg) 
     \/ /\ msg.fType = "RequestVoteReq"
        /\ RequestVoteReq(msg) 
     \/ /\ msg.fType = "RequestVoteResp"
@@ -219,8 +219,7 @@ Receive(msg) ==
 
 Leader(i) == 
     /\ state[i] = "Leader"
-    /\ UNCHANGED vars
-    \* /\ \E j \in Servers \ {i}: KeepAlive(i, j)
+    /\ \E j \in Servers \ {i}: KeepAlive(i, j)
 
 BecomeLeader(i) ==
     /\ Cardinality(vote_granted[i]) > Cardinality(Servers) \div 2
