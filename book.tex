@@ -66,13 +66,13 @@ with \textit{no way} of live debugging related problem. At this point the
 developer needs to siphon through (possibly hundreds) of instructions to catch
 invariant violation \textit{manually}.\newline
 
-As one can imagine, maintaining the microcode was very expensive for the team.
-Fortunately, the propietary low power processor only had a handful of
-instructions, I created an emulator for this propietary processor to verify the
-microcode prior to deploying it on target. The emulator models the processor
-states as a state graph, with executed instruction transitions the state machine
-to to the next state. At every state all the invariants are evaluated to ensure
-none have been violated. Examples of invariants included:
+As one can imagine, maintaining the microcode was very expensive. Fortunately,
+the propietary low power processor only had a handful of instructions, I created
+an emulator for this propietary processor to verify the microcode prior to
+deploying it on target. The emulator models the processor states as a state
+graph, with executed instruction transitions the state machine to the next
+state. At every state all the invariants are evaluated to ensure none have been
+violated. Some of the invariants included:
 \begin{itemize}
     \item Accessing memory interface after power off leads to a hang
     \item Accessing certain register in certain chip revision leads to a hang 
@@ -83,15 +83,15 @@ The verification algorithm was implemented using a \textit{depth-first search}
 algorithm, providing \textit{100\%} microcode coverage before deploy on
 target.\newline
 
-This was a very enlighting experience. To generalize, we can model arbitrary
-system as a set of states with a collection of invariant that must be upheld at
-all times. The complexity of the such arbitrarily system generally grows
-quadratically as the number of states grow linearly (eg. in a N state system, 
-adding state N+1 may introduce N transitions into the new state). There are many
-engineering problems that exhibit a large number of states, including lockless
-or waitfree data structure, distributed algorithms, OS scheduler, and more.  \newline
+To generalize, we can model arbitrary system as a set of states with a
+collection of invariant that must be upheld at all times. The complexity of the
+such arbitrarily system generally grows quadratically as the number of states
+grow linearly (eg. in a N state system, adding state N+1 may introduce N
+transitions into the new state). There are many engineering problems that
+exhibit a large number of states, such as lockless or waitfree data structure,
+distributed algorithms, OS scheduler, and more.\newline
 
-\textit{So, how do we ensure a solution is correct by design?}
+\textit{So, how do we build a solution that is correct by design?}
 
 \section{The Generalized Problem}
 
@@ -1655,7 +1655,7 @@ term value either voluntary or involuntarily. The following is a few ways:
     \item A candidate receiving a request vote from another candidate on a higher term
 \end{itemize}
 
-In any case, a node's term number always increase. This can be described as below:
+In any case, a node's term number always increase. This can be described as below:\newline
 \begin{tla}
 Converge ==
     \A s \in Servers:
@@ -1667,9 +1667,31 @@ Converge ==
  \@x{\@s{27.72} term [ s ] \.{=} 0 \.{\leadsto} term [ s ] \.{=} MaxTerm \.{-}
  MaxDiff}%
 \end{tlatex}
+\newline
 
 Instead of MaxTerm, we use MaxTerm-MaxDiff to account to ensure the liveness
-property is always held after Normalization.
+property is always upheld even after Normalization. However, running the Spec
+against TLC now will encounter a set of stuttering issues. We also need to
+update the fairness description to the Spec to ensure all possible actions are
+called when the enabling conditions are \textit{eventually always} true:\newline
+
+\begin{tla}
+Liveness == 
+    /\ \A i \in Servers : 
+        /\ WF_vars(Leader(i))
+        /\ WF_vars(Candidate(i))
+        /\ WF_vars(Follower(i))
+    /\ WF_vars(\E msg \in messages : Receive(msg))
+\end{tla}
+\begin{tlatex}
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} \A\, i \.{\in} Servers \.{:}}%
+\@x{\@s{31.61} \.{\land} {\WF}_{ vars} ( Leader ( i ) )}%
+\@x{\@s{31.61} \.{\land} {\WF}_{ vars} ( Candidate ( i ) )}%
+\@x{\@s{31.61} \.{\land} {\WF}_{ vars} ( Follower ( i ) )}%
+ \@x{\@s{16.4} \.{\land} {\WF}_{ vars} ( \E\, msg \.{\in} messages \.{:}
+ Receive ( msg ) )}%
+\end{tlatex}
 
 \include{scheduler}
 
