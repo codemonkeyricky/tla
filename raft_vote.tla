@@ -7,7 +7,7 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_requested>>
 \* Candidate == 1
 \* Leader == 2
 
-Servers == {"s0", "s1", "s2" }
+Servers == {"s0", "s1", "s2"}
 
 MaxOutstanding == 1
 MaxDiff == 1
@@ -213,10 +213,10 @@ AppendEntryReq(msg) ==
            /\ UNCHANGED <<state, voted_for, vote_granted, term, vote_requested>> 
 
 Receive(msg) == 
-    \/ /\ msg.fType = "AppendEntryReq"
-       /\ AppendEntryReq(msg) 
-    \/ /\ msg.fType = "AppendEntryResp"
-       /\ AppendEntryResp(msg) 
+    \* \/ /\ msg.fType = "AppendEntryReq"
+    \*    /\ AppendEntryReq(msg) 
+    \* \/ /\ msg.fType = "AppendEntryResp"
+    \*    /\ AppendEntryResp(msg) 
     \/ /\ msg.fType = "RequestVoteReq"
        /\ RequestVoteReq(msg) 
     \/ /\ msg.fType = "RequestVoteResp"
@@ -224,7 +224,8 @@ Receive(msg) ==
 
 Leader(i) == 
     /\ state[i] = "Leader"
-    /\ \E j \in Servers \ {i}: KeepAlive(i, j)
+    /\ UNCHANGED vars
+    \* /\ \E j \in Servers \ {i}: KeepAlive(i, j)
 
 BecomeLeader(i) ==
     /\ Cardinality(vote_granted[i]) > Cardinality(Servers) \div 2
