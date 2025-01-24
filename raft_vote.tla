@@ -259,14 +259,15 @@ Normalize ==
     IN 
         /\ max_v = MaxTerm
         /\ term' = [s \in Servers |-> term[s] - min_v]
-        /\ UNCHANGED <<state, messages, voted_for, vote_granted, vote_received, vote_requested>>
+        /\ messages' = [m \in {} |-> 0]
+        /\ UNCHANGED <<state, voted_for, vote_granted, vote_received, vote_requested>>
 
 Next == 
     \/ \E i \in Servers : Leader(i)
     \/ \E i \in Servers : Candidate(i)
     \/ \E i \in Servers : Follower(i)
     \/ \E msg \in DOMAIN messages : Receive(msg)
-    \* \/ Normalize
+    \/ Normalize
 
 \* 
 \* Multiple leaders are permitted but only if they are on different terms 
