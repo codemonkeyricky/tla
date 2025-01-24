@@ -10,9 +10,8 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_received, vote_re
 Servers == {"s0", "s1"}
 
 MaxOutstanding == 1
-MaxDiff == 1
-MaxTerm == 10
-
+MaxDiff == 2
+MaxTerm == 5
 
 Init ==
     /\ state = [s \in Servers |-> "Follower"]
@@ -48,7 +47,19 @@ KeepAlive(i, j) ==
                     messages)
     /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_received, vote_requested>>
 
+\* TLC Constrain
+LimitDivergence(i) == 
+    LET 
+        values == {term[s] : s \in Servers}
+        max_v == CHOOSE x \in values : \A y \in values : x >= y
+        min_v == CHOOSE x \in values : \A y \in values : x <= y
+    IN 
+        \/ /\ term[i] # max_v
+        \/ /\ term[i] = max_v 
+           /\ term[i] - min_v < MaxDiff
+
 Timeout(i) == 
+    /\ LimitDivergence(i)
     /\ state' = [state EXCEPT ![i] = "Candidate"]
     /\ voted_for' = [voted_for EXCEPT ![i] = i]             \* voted for myself
     /\ vote_received' = [vote_received EXCEPT ![i] = {i}]
@@ -236,21 +247,9 @@ Candidate(i) ==
     \/ /\ state[i] = "Candidate"
        /\ Timeout(i)
 
-\* TLC Constrain
-LimitDivergence(i) == 
-    LET 
-        values == {term[s] : s \in Servers}
-        max_v == CHOOSE x \in values : \A y \in values : x >= y
-        min_v == CHOOSE x \in values : \A y \in values : x <= y
-    IN 
-        \/ /\ term[i] # max_v
-        \/ /\ term[i] = max_v 
-           /\ term[i] - min_v < MaxDiff
-
 Follower(i) == 
     /\ state[i] = "Follower"
     /\ Timeout(i)
-    /\ LimitDivergence(i)
 
 Normalize == 
     LET 
