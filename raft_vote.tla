@@ -7,7 +7,7 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_requested>>
 \* Candidate == 1
 \* Leader == 2
 
-Servers == {"s0", "s1", "s2"}
+Servers == {"s0", "s1"}
 
 MaxOutstanding == 1
 MaxDiff == 1
@@ -15,28 +15,25 @@ MaxTerm == 2
 
 Init ==
     /\ state = [s \in Servers |-> "Follower"]
-    /\ messages = [m \in {} |-> 0]
+    /\ messages = {} 
     /\ voted_for = [s \in Servers |-> ""]
     /\ vote_granted = [s \in Servers |-> {}]
     /\ vote_requested = [s \in Servers |-> {}]
     /\ term = [s \in Servers |-> 0]
 
+\* UpdateMessages ==
+\*     LET updatedMessages ==
+\*         { msg \in messages : 
+\*             ~(msg.fDst = i /\ msg.fTerm < term[i]) }
+\*     IN
+\*     messages' = updatedMessages
+
 AddMessage(to_add, msgs) == 
-    IF to_add \in DOMAIN msgs THEN 
-        \* TLC Constrain
-        IF msgs[to_add] < MaxOutstanding THEN
-            [msgs EXCEPT ![to_add] = @ + 1]
-        ELSE 
-            msgs 
-    ELSE 
-        msgs @@ (to_add :> 1)
+    msgs \cup {to_add}
 
 RemoveMessage(to_remove, msgs) ==
-    IF to_remove \in DOMAIN msgs THEN                                                                                                                                                                 
-        IF msgs[to_remove] <= 1 THEN [i \in DOMAIN msgs \ {to_remove} |-> msgs[i]]                                                                                                                            
-        ELSE [msgs EXCEPT ![to_remove] = msgs[to_remove] - 1]                                                                                                                                                 
-    ELSE                                                                                                                                                                                      
-        msgs    
+    msgs \ {to_remove}
+    
 
 KeepAlive(i, j) == 
     /\ messages' = AddMessage([ fSrc |-> i,
@@ -73,7 +70,8 @@ Campaign(i, j) ==
     /\ messages' = AddMessage([fSrc |-> i, 
                                 fDst |-> j, 
                                 fType |-> "RequestVoteReq", 
-                                fTerm |-> term[i]], messages)
+                                fTerm |-> term[i]], 
+                                messages)
     /\ UNCHANGED <<state, term, vote_granted, voted_for>>
 
 RequestVoteReq(msg) == 
@@ -250,7 +248,7 @@ Normalize ==
     IN 
         /\ max_v = MaxTerm
         /\ term' = [s \in Servers |-> term[s] - min_v]
-        /\ messages' = [m \in {} |-> 0]
+        /\ messages' = {}
         /\ UNCHANGED <<state, voted_for, vote_granted, vote_requested>>
 
 Next == 
@@ -259,7 +257,7 @@ Next ==
                 \/ Leader(i) 
                 \/ Candidate(i)
                 \/ Follower(i)
-          \/ \E msg \in DOMAIN messages : Receive(msg)
+          \/ \E msg \in messages : Receive(msg)
     \/ /\ \E i \in Servers: term[i] = MaxTerm 
        /\ Normalize
 
@@ -281,7 +279,7 @@ Liveness ==
         /\ WF_vars(Leader(i))
         /\ WF_vars(Candidate(i))
         /\ WF_vars(Follower(i))
-    /\ WF_vars(\E msg \in DOMAIN messages : Receive(msg))
+    /\ WF_vars(\E msg \in messages : Receive(msg))
 
 Spec ==
   /\ Init
