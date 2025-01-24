@@ -10,6 +10,9 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_received, vote_re
 Servers == {"s0", "s1"}
 
 MaxOutstanding == 1
+MaxDiff == 1
+MaxTerm == 10
+
 
 Init ==
     /\ state = [s \in Servers |-> "Follower"]
@@ -233,26 +236,21 @@ Candidate(i) ==
     \/ /\ state[i] = "Candidate"
        /\ Timeout(i)
 
-MaxDiff == 2
-MaxTerm == 1
-
 \* TLC Constrain
-Constrain(i) == 
+LimitDivergence(i) == 
     LET 
         values == {term[s] : s \in Servers}
         max_v == CHOOSE x \in values : \A y \in values : x >= y
         min_v == CHOOSE x \in values : \A y \in values : x <= y
     IN 
-        \/ \/ term[i] # max_v
+        \/ /\ term[i] # max_v
         \/ /\ term[i] = max_v 
            /\ term[i] - min_v < MaxDiff
 
 Follower(i) == 
     /\ state[i] = "Follower"
     /\ Timeout(i)
-
-    /\ term[i] < MaxTerm
-    /\ Constrain(i)
+    /\ LimitDivergence(i)
 
 Normalize == 
     LET 
@@ -269,7 +267,7 @@ Next ==
     \/ \E i \in Servers : Candidate(i)
     \/ \E i \in Servers : Follower(i)
     \/ \E msg \in DOMAIN messages : Receive(msg)
-    \/ Normalize
+    \* \/ Normalize
 
 \* 
 \* Multiple leaders are permitted but only if they are on different terms 
@@ -278,6 +276,10 @@ Next ==
 LeaderUniqueTerm ==
     \A s1, s2 \in Servers :
         (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
+
+Ceiling ==
+    \A s \in Servers :
+        term[s] # MaxTerm
 
 Converge ==
     /\ term["s0"] = 0 ~> term["s0"] = 3
