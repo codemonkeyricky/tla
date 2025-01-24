@@ -1,7 +1,7 @@
 --------------------------- MODULE raft_vote ----------------------------
 EXTENDS Integers, FiniteSets, TLC, Sequences
-VARIABLES state, messages, voted_for, vote_granted, term, vote_requested
-vars == <<state, messages, voted_for, term, vote_granted, vote_requested>>
+VARIABLES state, messages, voted_for, vote_granted, term, vote_requested, establish_leadership
+vars == <<state, messages, voted_for, term, vote_granted, vote_requested, establish_leadership>>
 
 \* Follower == 0 
 \* Candidate == 1
@@ -20,6 +20,7 @@ Init ==
     /\ vote_granted = [s \in Servers |-> {}]
     /\ vote_requested = [s \in Servers |-> 0]
     /\ term = [s \in Servers |-> 0]
+    /\ establish_leadership = [s \in Servers |-> 0]
 
 AddMessage(to_add, msgs) == 
     LET 
@@ -37,7 +38,6 @@ KeepAlive(i, j) ==
                                 fType |-> "AppendEntryReq",
                                 fTerm |-> term[i]], 
                     messages)
-    /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
 
 \* TLC Constrain
 LimitDivergence(i) == 
@@ -57,6 +57,7 @@ Timeout(i) ==
     /\ vote_granted' = [vote_granted EXCEPT ![i] = {i}]
     /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
     /\ term' = [term EXCEPT ![i] = @ + 1]                   \* bump term
+    /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 0]
     /\ UNCHANGED <<messages>>
     \* /\ PrintT(state')
 
@@ -69,7 +70,7 @@ Campaign(i) ==
     /\ vote_requested[i] = 0
     /\ vote_requested' = [vote_requested EXCEPT ![i] = 1]
     /\ messages' = messages \cup RequestVoteSet(i) 
-    /\ UNCHANGED <<state, term, vote_granted, voted_for>>
+    /\ UNCHANGED <<state, term, vote_granted, voted_for, establish_leadership>>
 
 RequestVoteReq(msg) == 
     LET 
@@ -89,7 +90,7 @@ RequestVoteReq(msg) ==
                                         fTerm |-> t, 
                                         fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
-           /\ UNCHANGED <<state, term, vote_granted, vote_requested>>
+           /\ UNCHANGED <<state, term, vote_granted, vote_requested, establish_leadership >>
         \* already voted someone else
         \/ /\ t = term[i]
            /\ voted_for[i] # j 
@@ -100,7 +101,7 @@ RequestVoteReq(msg) ==
                                         fTerm |-> t, 
                                         fSuccess |-> 0],
                                         RemoveMessage(msg, messages))
-            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
+            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
         \/  /\ t < term[i]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
@@ -108,7 +109,7 @@ RequestVoteReq(msg) ==
                                         fTerm |-> term[i], 
                                         fSuccess |-> 0],
                                         RemoveMessage(msg, messages))
-            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
+            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
         \* revert back to follower
         \/  /\ t > term[i]
             /\ state' = [state EXCEPT ![i] = "Follower"]
@@ -116,6 +117,7 @@ RequestVoteReq(msg) ==
             /\ voted_for' = [voted_for EXCEPT ![i] = j]
             /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
             /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
+            /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 0]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
                                         fType |-> "RequestVoteResp",
@@ -138,11 +140,12 @@ AppendEntryResp(msg) ==
            /\ voted_for' = [voted_for EXCEPT ![i] = ""]
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
            /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
+           /\ establish_leadership' = [term EXCEPT ![i] = 0]
            /\ term' = [term EXCEPT ![i] = t]
         \* discard 
         \/ /\ t <= term[i]
            /\ messages' = RemoveMessage(msg, messages)
-           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
+           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
 
 RequestVoteResp(msg) == 
     LET 
@@ -157,16 +160,16 @@ RequestVoteResp(msg) ==
            /\ s = 1
            /\ messages' = RemoveMessage(msg, messages)
            /\ vote_granted' = [vote_granted EXCEPT ![i] = @ \cup {j}]
-           /\ UNCHANGED <<state, voted_for, term, vote_requested>> 
+           /\ UNCHANGED <<state, voted_for, term, vote_requested, establish_leadership>> 
         \* same term unsuccess 
         \/ /\ t = term[i]
            /\ s = 0
            /\ messages' = RemoveMessage(msg, messages)
-           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>> 
+           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>> 
         \* response has smaller term - ignore
         \/ /\ t < term[i]
            /\ messages' = RemoveMessage(msg, messages)
-           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
+           /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
         \* response has higher term - become follower
         \/ /\ t > term[i]
            /\ messages' = RemoveMessage(msg, messages)
@@ -174,6 +177,7 @@ RequestVoteResp(msg) ==
            /\ voted_for' = [voted_for EXCEPT ![i] = ""]
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
            /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
+           /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 0]
            /\ term' = [term EXCEPT ![i] = t]
 
 AppendEntryReq(msg) == 
@@ -187,6 +191,7 @@ AppendEntryReq(msg) ==
            /\ state' = [state EXCEPT ![i] = "Follower"]
            /\ vote_granted' = [vote_granted EXCEPT ![i] = {}]
            /\ vote_requested' = [vote_requested EXCEPT ![i] = 0]
+           /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 0]
            /\ voted_for' = [voted_for EXCEPT ![i] = j]
            /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
@@ -202,7 +207,7 @@ AppendEntryReq(msg) ==
                                         fTerm |-> term[i], 
                                         fSuccess |-> 0],
                                         RemoveMessage(msg, messages))
-           /\ UNCHANGED <<state, voted_for, vote_granted, term, vote_requested>> 
+           /\ UNCHANGED <<state, voted_for, vote_granted, term, vote_requested, establish_leadership>> 
 
 Receive(msg) == 
     \/ /\ msg.fType = "AppendEntryReq"
@@ -216,13 +221,15 @@ Receive(msg) ==
 
 Leader(i) == 
     /\ state[i] = "Leader"
-    \* /\ UNCHANGED vars
-    /\ \E j \in Servers \ {i}: KeepAlive(i, j)
+    /\ establish_leadership[i] = 0
+    /\ establish_leadership' = [establish_leadership EXCEPT ![i] = 1]
+    /\ \A j \in Servers \ {i}: KeepAlive(i, j)
+    /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested>>
 
 BecomeLeader(i) ==
     /\ Cardinality(vote_granted[i]) > Cardinality(Servers) \div 2
     /\ state' = [state EXCEPT ![i] = "Leader"]
-    /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_requested>>
+    /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_requested, establish_leadership>>
 
 Candidate(i) == 
     /\ state[i] = "Candidate"
@@ -243,7 +250,7 @@ Normalize ==
         /\ max_v = MaxTerm
         /\ term' = [s \in Servers |-> term[s] - min_v]
         /\ messages' = {}
-        /\ UNCHANGED <<state, voted_for, vote_granted, vote_requested>>
+        /\ UNCHANGED <<state, voted_for, vote_granted, vote_requested, establish_leadership>>
 
 Next == 
     \/ /\ \A i \in Servers : term[i] # MaxTerm 
