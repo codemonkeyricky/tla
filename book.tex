@@ -61,7 +61,7 @@ An experienced reader may start to notice some redflags.\newline
 
 If the microcode attempts to access the memory interface when the power island
 has been shut off, processor would hang. Since the power island has been shut
-off, the physical hardware debug port is also shut off, leaving the developer
+off, the physical hardware debug port is also unavailable, leaving the developer
 with \textit{no way} of live debugging related problem. At this point the
 developer needs to siphon through (possibly hundreds) of instructions to catch
 invariant violation \textit{manually}.\newline
@@ -83,16 +83,15 @@ The verification algorithm was implemented using a \textit{depth-first search}
 algorithm, providing \textit{100\%} microcode coverage before deploy on
 target.\newline
 
-This was a very enlighting experience. To generalize, there are a class of
-problem where the solution has high \textit{failure cost}. Solution such as
-lockless or waitfree data structure, distributed algorithms, OS scheduler are
-typically hard to reason about correctness because all the possible states
-existed during execution. These solutions tend to have high failure cost because
-related issues are difficult to reproduce and hard to debug. Good software
-engineering practice suggest we need to implement tests, but tests do not cover
-the entire state graph of the solution space exhaustively.\newline 
+This was a very enlighting experience. To generalize, we can model arbitrary
+system as a set of states with a collection of invariant that must be upheld at
+all times. The complexity of the such arbitrarily system generally grows
+quadratically as the number of states grow linearly (eg. in a N state system, 
+adding state N+1 may introduce N transitions into the new state). There are many
+engineering problems that exhibit a large number of states, including lockless
+or waitfree data structure, distributed algorithms, OS scheduler, and more.  \newline
 
-\textit{So, how do we ensure the solution is correct by design?}
+\textit{So, how do we ensure a solution is correct by design?}
 
 \section{The Generalized Problem}
 
@@ -112,11 +111,12 @@ instead of a few high end hardware. This shifts the technology complexity from
 hardware to software, demanding software solution to maximize concurrent
 hardware resource utilization. \newline
 
-One slight problem: \textit{human are bad at concurrent reasoning.}\newline
+One slight problem: \textit{The cognitive load of of a person is between 5 to 9
+items at most.}\newline
 
-Humans are fundamentally single-threaded machines. Reasoning things that execute
-in parallel is possible, but difficult. It is hard to enumerate all possible
-scenario in one's mind to ensure the design accommodates all the edge cases. 
+Humans are good at high level reasoning, but not so good at keeping track of
+many things happening at the same time. It is hard to enumerate all possible
+scenario in one's mind to ensure the design accommodates all the edge cases.
 \newline
 
 Consider a distributed system. The system is a cluster of independently
