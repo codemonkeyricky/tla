@@ -1,0 +1,206 @@
+\chapter{SPSC Lockless Queue}
+
+A single producer single consumer (SPSC) lockless queue is a data exchange queue
+between a producer and a consumer. The SPSC lockfree queue enables data exchange
+between producer and consumer without the use of a lock, allowing both producer
+and consumer to make progress in all scenarios.\newline
+
+A real implementation need to account for memory ordering effects specific to
+the architecture. For example, ARM has weak memory ordering model where
+read/write may appear out-of-order between CPUs. In this chapter we will assume
+\textit{logical} execution order where each command is perceived issued
+sequentially (even across CPUs) to focus the discussion on describing the system
+using TLA+.
+\newline
+
+\section{Requirement}
+
+The following describes the SPSC queue requirements: 
+
+\begin{itemize}
+    \item Two executing context, reader and writer
+    \item Writer advances wtpr after writes
+    \item Reader advances rtpr after reads
+    \item If rtpr equals wptr, queue is empty
+    \item If (wtpr + 1) \% N equals rptr, queue is full
+\end{itemize}
+
+The following is an example of a SPSC queue:
+\begin{center}
+\begin{tikzpicture}
+\foreach \i in {0,1,2,3,4,5,6,7} {
+    \draw[thick] (\i,0) rectangle (\i+1,1); % Draw each spot in the queue
+    \node at (\i+0.5, 0.5) {\i}; % Label each spot
+}
+\draw[thick, ->, red] (1.5, -1) -- (1.5, -0.1) node[midway, left] {Read};
+\draw[thick, ->, blue] (7.5, -1) -- (7.5, -0.1) node[midway, right] {Write};
+\end{tikzpicture}
+\end{center}
+
+Since reader and writer execute in different context, the instructions in read
+and write can interleave in \textit{any} way imaginable:
+\begin{itemize}
+    \item Reader empty check can happen just as writer is writing data
+    \item Writer full check can happen just as reader is reading data
+    \item Reading and writing can occur concurrently
+\end{itemize}
+
+The key observations is the index held by write pointer is reserved by the
+writer. Similarly, index held by the read pointer is reserved by the reader. The
+only exception is when read pointer equals to write pointer, then the queue is
+empty. Given the possible ways the reader and writer execution can interleave, 
+we can use TLA+ to verify the design.
+
+\section{Spec}
+
+TLA+ specification can be writen using its native formal specification
+language, or a C-like syntax called PlusCal (which transpiles down to itse
+native form). In this example, I chose to implement the specification using
+PlusCal, since the content to be verified is psuedo implementation. While it is
+possible specify SPSC in native TLA+, it is the author's opinion that it is
+more error prone in this case, each line is effective an individual state needs
+to be modeled.\newline
+
+The following is a snippet of the specification written in PlusCal, hopefully
+intuitive to read:
+\begin{ppcal}
+procedure reader(i) 
+variable 
+begin
+r_chk_empty:        if rptr = wptr then 
+r_early_ret:            return;
+                    end if;
+r_read_buf:         assert buffer[rptr] # 0;
+r_cs:               buffer[rptr] := 0;
+r_upd_rtpr:         rptr := (rptr + 1) % N;
+                    return;
+end procedure; 
+
+procedure writer(i) begin
+w_chk_full:         if (wptr + 1) % N = rptr then 
+w_early_ret:            return; 
+                    end if;
+w_write_buf:        assert buffer[wptr] = 0;
+w_cs:               buffer[wptr] := wptr + 1000;
+w_upd_wptr:         wptr := (wptr + 1) % N;
+                    return;
+end procedure; 
+\end{ppcal}\newline
+\begin{tlatex}
+\@x{ {\p@procedure} reader ( i )}%
+\@x{ {\p@variable}}%
+\@x{ {\p@begin}}%
+ \@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@if} rptr \.{=} wptr
+ {\p@then}}%
+ \@x{ r\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{51.39} {\p@return}
+ {\p@semicolon}}%
+\@x{\@s{91.60} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}\@s{36.83} {\p@assert} buffer [ rptr
+ ] \.{\neq} 0 {\p@semicolon}}%
+ \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}\@s{66.02} buffer [ rptr ] \.{:=} 0
+ {\p@semicolon}}%
+ \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}\@s{36.98} rptr \.{:=} ( rptr \.{+} 1
+ ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{91.60} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\@pvspace{8.0pt}%
+\@x{ {\p@procedure} writer ( i ) {\p@begin}}%
+ \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}\@s{35.97} {\p@if} ( wptr \.{+} 1 )
+ \.{\%} N \.{=} rptr {\p@then}}%
+ \@x{ w\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{45.1} {\p@return}
+ {\p@semicolon}}%
+\@x{\@s{89.45} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@assert} buffer [ wptr
+ ] \.{=} 0 {\p@semicolon}}%
+ \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}\@s{64.27} buffer [ wptr ] \.{:=} wptr \.{+}
+ 1000 {\p@semicolon}}%
+ \@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}\@s{32.8} wptr \.{:=} ( wptr \.{+} 1
+ ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{92.28} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\end{tlatex}
+
+Note each command starts with a \textit{label}, such as r\_chk\_empty. All the
+actions associated with the label is assumed executed atomically. This is
+reflected in the generated TLA+ code:
+\begin{tla}
+    r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
+                     /\ IF rptr = wptr
+                           THEN /\ pc' = [pc EXCEPT ![self] = "r_early_ret"]
+                           ELSE /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
+                     /\ UNCHANGED << rptr, wptr, buffer, stack, i_, i >>
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} r\_chk\_empty ( self ) \.{\defeq} \.{\land} pc [ self ]
+ \.{=}\@w{r\_chk\_empty}}%
+\@x{\@s{97.45} \.{\land} {\IF} rptr \.{=} wptr}%
+ \@x{\@s{120.71} \.{\THEN} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
+ self ] \.{=}\@w{r\_early\_ret} ]}%
+ \@x{\@s{120.71} \.{\ELSE} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
+ self ] \.{=}\@w{r\_read\_buf} ]}%
+ \@x{\@s{97.45} \.{\land} {\UNCHANGED} {\langle} rptr ,\, wptr ,\, buffer ,\,
+ stack ,\, i\_ ,\, i {\rangle}}%
+\end{tlatex}
+
+\section{Safety}
+
+As mentioned before, safety properties need to hold true in every single state.
+Some safety requirement we can enforce, for example:\newline
+
+Reader and writer cannot access the same index at the same time:
+\begin{equation}
+    \sim ((pc[100] = "w\_cs") \land (pc[101] = "r\_cs") \land rptr = wptr)
+\end{equation}
+
+All unused index should be set to 0:
+\begin{equation}
+    \A kk \in unused : buffer[kk] = 0
+\end{equation}
+
+At any given moment, buffer[wtpr] may be unused or written. buffer[rptr] may be
+unused or read:
+\begin{tla}
+    \/ Cardinality(to_be_read) + 1 = Cardinality(reading)
+    \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
+    \/ Cardinality(to_be_read)     = Cardinality(reading)
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=} Cardinality
+ ( reading )}%
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
+ Cardinality ( reading ) \.{+} 1}%
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
+ Cardinality ( reading )}%
+\end{tlatex}
+
+\section{Liveness}
+
+All indicies are eventually used:
+
+\begin{tla}
+    Liveness ==
+    \A k \in 0..N-1:
+    <>(buffer[k] # 0)
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness \.{\defeq}}%
+\@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{16.4} {\Diamond} ( buffer [ k ] \.{\neq} 0 )}%
+\end{tlatex}
+
+Unused index 0 becomes used, used index 0 becomes unused.
+\begin{tla}
+    Liveness2 ==
+    /\ (buffer[0] = 0) ~> buffer[0] = 1000
+    /\ (buffer[0] = 1000) ~> buffer[0] = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness2 \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 0 ) \.{\leadsto} buffer [ 0 ]
+ \.{=} 1000}%
+ \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 1000 ) \.{\leadsto} buffer [ 0 ]
+ \.{=} 0}%
+\end{tlatex}
+
+\section{Configuration}
+
