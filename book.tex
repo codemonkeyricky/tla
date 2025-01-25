@@ -984,14 +984,14 @@ Next ==
 \end{tlatex}
 
 
-\chapter{Raft Consensus Protocol}
+\chapter{Raft Consensus Protocol}ldw
 
 Raft is a consensus algorithm that enables a cluster of nodes to agree on a
-collective state even in the presence of failures. An application of raft
-is database replication protocol. Assume replication factor of 3 and hard
-drive failure rate of 0.81\% per year, the possibility of the total failure
-where the entire replication group goes down is $1-0.0081^3 = 99.9999\%$ uptime
-\cite{backblaze}.\newline
+collective state even in the presence of failures. An application of Raft is
+database replication protocol. With a replication factor of 3 (which means the
+data is replicated across 3 nodes) and hard drive failure rate of 0.81\% per
+year, the possibility of the total failure where the entire replication group
+goes down is $1-0.0081^3 = 99.9999\%$ uptime \cite{backblaze}.\newline
 
 Since the purpose of the book is to learn TLA+, this chapter will only implement
 a portion of the Raft protocol, namely leader election. For a full description
@@ -1013,11 +1013,11 @@ We will briefly describe Raft and its leader election process below:
     timeout, it will become a candidate, vote for itself, and campaign to be
     leader
     \item A candidate collect the majority of the vote becomes the leader
-    \item If multiple candidates are campaigning and no one wins the election, 
+    \item If multiple candidates are campaigning and a split vote happen,
     candidates will eventually declare election timeout and start new round of
     election
     \item The cluster can have multiple leaders due to unfavourable network conditions, 
-    but they must be on different terms 
+    but the leaders must be on different terms 
     \item A newly elected leader will send a heartbeat to other nodes to establish 
     leadership 
     \item All request and responses include the sender's term, allowing the
@@ -1196,26 +1196,29 @@ Next ==
 \end{tlatex}
 
 \begin{itemize}
-    \item The Spec picks a server to make progress in \textit{Next}, including
-    process messages with \textit{Receive}. \textit{Receive} handling is 
-    state agnostic and implemented as such
-    \item \textit{message} is defined to be a set to hold a collection of functions, where 
+    \item \textit{Next} either picks a server to make progress, or picks a
+    message in the message pool to process. Message processing is done by
+    \textit{Receive}, handling is state agnostic
+    \item \textit{message} is defined to be a set that holds a collection of functions, where 
     each function is a message with source, destination, type, and more specified
-    \item \textit{voted\_for} represents who a node has previously voted for. This is to 
-    prevent a node from voting more than once
-    \item \textit{vote\_granted} tracks how many peers have voted for a node
-    \item \textit{vote\_requested} tracks if a node has already issued request vote
-    \item The actions defined for every state reflect description earlier 
+    \item \textit{voted\_for} tracks who a given node previously voted for.
+    This prevents a node from voting more than once
+    \item \textit{vote\_granted} tracks how many votes a candidate has received
+    \item \textit{vote\_requested} tracks if a node has already issued request
+    vote to its peers
     \item \textit{Follower} either Receive or Timeout and campaign to be a leader
     \item \textit{Candidate} campaigns to be a leader, and becomes one if it has
     enough vote. Failing to collect enough votes, \textit{Candidate} start a new
-    term of election. It can also receive a request with a higher term and
+    election on a new term. It can also receive a request with a higher term and
     transition to be a \textit{Follower}.
+    \item \textit{Leader} will establish its leadership by sending
+    \textit{AppepndEntryReq} to all its peers
 \end{itemize}
 
-
-The message processing functions are fairly similar in structure, here we will
-take a look at \textit{RequestVoteReq}:\newline
+The Spec implements four messages AppendEntry request/response, RequestVote
+request/response. Handling for all messages are fairly similar in structure. In
+this chapter we will look at \textit{RequestVoteReq} only. Readers are
+encouraged to check the remaining definition as an exercise:\newline
 
 \begin{tla}
 RequestVoteReq(msg) == 
@@ -1353,45 +1356,47 @@ RequestVoteReq(msg) ==
 \end{tlatex}
 \newline
 
-The handling is basically split into three cases. If received request is on a
-higher term, processing node grants vote and becomes a Follower. If received
-request is on a lower term, processing node ignores request. If received request
-is on the same term, then processing node grants vote if it hasn't voted, or had
-voted for the requester prior.
+The handling is split into three cases: 
+\begin{itemize}
+    \item If received request is on a higher term, processing node grants vote and becomes a Follower
+    \item If received request is on a lower term, processing node ignores request
+    \item If received request is on the same term, processing node only grants
+    vote if it hasn't voted, or has had voted for the same requester prior 
+\end{itemize}
 
 \section{Simplify Model}
 
-TLC will run the Spec as defined, but due to the expoential growth of states it
-is unlikely to complete in a practical amount of time. We need to simplify the
-model to allow the model checker completes in a reasonable time, but possibly
-trades off some correctness. Careful consideration must go into finding the
-right balance between maximizing model correctness and minimizing model checker
-runtime.\newline
+The model checker will run the spec as defined, but due to the expoential growth
+of states it is unlikely to complete in a reasonable amount of time. We need to
+simplify the model and possibly trades off some correctness. Careful
+consideration must go into finding the right balance between maximizing model
+correctness and minimizing model checker runtime.\newline
 
 The main strategy is to \textit{bound} the state graph. The following describe a
-set of optimization applied for this example.
+set of optimization implemented for this example.
 
 \subsection{Modeling Messages as a Set}
 
-In the original Raft TLA+ Spec \cite{raft_tla}, messages are modelled as an
+In the original Raft TLA+ Spec \cite{raft_tla}, messages are modeled as an
 \textit{unordered map} to track the count of each message. It is possible for a
-sender to repeatedly send the same message (eg. keepalive), and grows the 
+sender to repeatedly send the same message (eg. keepalive), and grow the 
 message count in an unbounded fashion.\newline
 
-\textit{messages} in this example has been implemented as a set so the model 
-checker doesn't go into the weeds as the count of a message grows. It is still 
-possible for messages to grow unboundedly because the message carries a term
-value. Further changes are described below.
+\textit{messages} in this example has been implemented as a set, which
+effectively limits message instance count to one. It is still possible for
+messages to grow unboundedly because of the monotonically increasing term value.
+Further changes are described below.
 
 \subsection{Limit Term Divergence} 
 
-It is possible for the a node to \textit{never} make progress (eg. one node is
-somehow partitioned off and the rest of the cluster keeps moving onto newer
-terms). While we do want to exercise handling of diverging terms in a cluster,
-limiting the range of terms in the cluster likely doesn't reduce the coverage by
-much.  We can limit divergence by preventing a node with a high term value to go
-into election. This allows the nodes with low term value to catchup. and thus
-reduce the number of states in the graph.\newline
+It is possible for a node to \textit{never} make progress. Such case can occur
+when a node is partitioned off while the rest of the cluster elects new leader
+and move onto newer terms. Many of the interesting behaviours of Raft are how it
+addresses these cases. In a cluster of nodes with mixed terms, the nodes with
+older term will eventually converge onto newer terms when they are contacted by
+new leader. This converging behaviour will happen whether the stale node is
+either 1 or N terms away from the curent leader, and the former is much less
+costly to simulate than the latter because the reduced number of states.\newline
 
 We can include \textit{LimitDivergence} as a conjunction in
 \textit{Timeout}:\newline
@@ -1464,8 +1469,8 @@ Timeout(i) ==
 
 However, term \textit{itself} can grow unbounded. This is a key tenent 
 converging protocols rely on, an monotonically increasing counter. We want to 
-\textit{normalize} the range of terms in the cluster so the minimum value is
-reset back to 0. This provides an upper bound to the state graph.\newline
+\textit{normalize} the range of terms in the cluster so the minimum value resets
+back to 0. This provides an upper bound to the state graph.\newline
 
 \begin{tla}
 Normalize == 
@@ -1520,21 +1525,21 @@ Next ==
 \newline
 
 The implementation ensures only the state machine only moves forward when none
-of the nodes is on MaxTerm. If any of the node is on MaxTerm, the cluster terms
-are normalized.\newline
+of the nodes is on \textit{MaxTerm}. If any of the node is on \textit{MaxTerm},
+the cluster terms are normalized.\newline
 
 Another caveat here is in the initial implementation I didn't update messsages.
 This led to liveness property violation as the messages had terms disagreeing
-with the system state. To simplify the Spec I simply cleared all messages. This 
-indirectly verifies a portion of the packet loss handling in the Spec.
+with the system state. To simplify the spec I simply cleared all messages. This 
+indirectly verifies a portion of the packet loss handling in the spec as well.
 
 \subsection{Send Requests to Cluster as a Set}
 
-Initially the send requests are implemented using the existential quantifier. 
-This introduces many interleaving states. This was latter replaced with a
-universal quantifier so the set of messages are only sent once. The
-implementation no longer tracks if the responses were received, since the 
-Spec should handle packet loss scenarios as well.\newline
+The send requests were initially implemented using the existential quantifier. 
+This introduces many interleaving states. This was replaced with a universal
+quantifier so the set of messages are only sent once. The implementation no
+longer tracks if the responses were received, since the spec should handle
+packet loss scenarios as well.\newline
 
 \begin{tla}
 RequestVoteSet(i) == {
@@ -1595,8 +1600,8 @@ Leader(i) ==
 
 \subsection{Prune Messages with Stale Terms}
 
-When a node's term advances, it'll discard all messages targeted to it with
-older terms. Keeping messages with stale terms allows the model checker to 
+When a node's term advances, all messages targeted to this node with older terms
+are discarded. Keeping messages with stale terms allows the model checker to 
 verify the node correctly discards them, but can exponentially grow the state
 machine. To simplify the model, we can prune stale messages as we add a new 
 message: \newline
@@ -1629,8 +1634,9 @@ One of the goals for the protocol is to ensure the cluster only have one leader.
 It is possible for the clusters to have mulitple leaders due to unfavourable
 network connections. For example, a leader node is partitioned off and a new
 leader is elected. However, even when the cluster have mutliple leaders, they
-must be on different terms. The leader with the highest term is effectively the
-\textit{true leader}. This invariant can be implemented like so:\newline
+\textit{must} be on different terms. The leader with the highest term is
+effectively the \textit{true leader}. This invariant can be implemented like
+so:\newline
 
 \begin{tla}
 LeaderUniqueTerm ==
@@ -1652,7 +1658,7 @@ term.
 \section{Liveness}
 
 In any failure recovery scenario, the nodes in the cluster converges to a higher
-term value either voluntary or involuntarily. The following is a few ways:
+term value either voluntary or involuntarily. For example: 
 \begin{itemize}
     \item A node timed out and starts a new election on a new term 
     \item A partitioned follower receives heartbeat from a new leader on a new term
@@ -1673,10 +1679,10 @@ Converge ==
 \end{tlatex}
 \newline
 
-Instead of MaxTerm, we use MaxTerm-MaxDiff to account to ensure the liveness
-property is always upheld even after Normalization. However, running the Spec
-against TLC now will encounter a set of stuttering issues. We also need to
-update the fairness description to the Spec to ensure all possible actions are
+Instead of \textit{MaxTerm}, we use \textit{MaxTerm-MaxDiff} to ensure the
+liveness property is always upheld even after \textit{Normalization}. However,
+running the spec against TLC now will encounter a set of stuttering issues. We
+also need to update the fairness description to ensure all possible actions are
 called when the enabling conditions are \textit{eventually always} true:\newline
 
 \begin{tla}
