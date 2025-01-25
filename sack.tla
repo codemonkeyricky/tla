@@ -27,7 +27,7 @@ MinS(s) ==
 MaxS(s) == 
     CHOOSE x \in s: \A y \in s: x >= y
 
-Receive(pp) ==
+ClientRx(pp) == 
     LET 
         p == pp.seq 
         dst == pp.dst
@@ -57,6 +57,15 @@ Receive(pp) ==
            /\ buffer_rx' = combined
            /\ network' = network \ {pp}
            /\ UNCHANGED <<seq_tx, seq_rx>>
+
+ServerRx(pp) == 
+    UNCHANGED vars
+
+Receive(pp) ==
+    \/ /\ pp.dst = "client"
+       /\ ClientRx(pp)
+    \/ /\ pp.dst = "server"
+       /\ ServerRx(pp)
 
 Next == 
     \/ Send 
