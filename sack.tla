@@ -17,7 +17,7 @@ Init ==
     /\ buffer_rx = {} 
 
 Send == 
-    /\ network' = network \cup {seq_tx}
+    /\ network' = network \cup {[dst |-> "client", seq |-> seq_tx]}
     /\ seq_tx' = (seq_tx + 1) % N 
     /\ UNCHANGED <<seq_rx, buffer_rx>>
 
@@ -27,8 +27,10 @@ MinS(s) ==
 MaxS(s) == 
     CHOOSE x \in s: \A y \in s: x >= y
 
-Receive(p) ==
+Receive(pp) ==
     LET 
+        p == pp.seq 
+        dst == pp.dst
         combined == buffer_rx \cup {p}
         upper == {x \in combined : x > N - WINDOW}
         lower == {x \in combined : x < WINDOW - 1}
@@ -49,11 +51,11 @@ Receive(p) ==
         \/ /\ ready = TRUE
            /\ buffer_rx' = {}
            /\ seq_rx' = maxv2
-           /\ network' = network \ {p}
+           /\ network' = network \ {pp}
            /\ UNCHANGED seq_tx
         \/ /\ ready = FALSE
            /\ buffer_rx' = combined
-           /\ network' = network \ {p}
+           /\ network' = network \ {pp}
            /\ UNCHANGED <<seq_tx, seq_rx>>
 
 Next == 
