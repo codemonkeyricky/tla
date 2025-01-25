@@ -1130,7 +1130,7 @@ State 2: Stuttering
 
 Since the \textit{Spec} permits \textit{suttering}, the state machine is allowed
 to perpetually stay on 1F and \textit{never} go to 2F. This can be fixed by
-introduce fairness description.
+introducing fairness description.
 
 \section{Weak Fairness}
 
@@ -1143,9 +1143,9 @@ The above translates to: if conditions required for action A to occur is
 \textit{eventually always} true, then action A will \textit{always eventually}
 happen.\newline 
 
-Without weak fairness defined, the elevator may \textit{stutter} at floor 1 and
-never go to floor 2. Weak fairness states that if the conditions of an action is
-\textit{eventually always} true (ie. elevator decides to stay on 1F but but
+Without weak fairness defined, the elevator may \textit{stutter} at 1F and
+never go to 2F. Weak fairness states that if the conditions of an action is
+\textit{eventually always} true (ie. elevator decides to stay on 1F but 
 \textit{can} go up), the elevator \textit{always eventually} go up.\newline
 
 \begin{tla}
@@ -1203,11 +1203,11 @@ The difference between weak and strong fairness is the \textit{eventually
 always} vs. \textit{always eventually}. \newline 
 
 In weak fairness, once the state machine is stuck in a state forever, the state
-machine always transition to a possible next state permitted by the spec (eg. if
-the elevator is stuck on 1F but can go to 2F, it will). With strong fairness,
-the elevator doesn't need to be stuck on 2F to go to 3F. If the elevator
-\textit{always eventually} makes it to 2F, it \textit{eventually always} go to
-3F.\newline 
+machine always transition to a possible next state permitted by the
+\textit{Spec} (eg. if the elevator is stuck on 1F but can go to 2F, it will).
+With strong fairness, the elevator doesn't need to be stuck on 2F to go to 3F.
+If the elevator \textit{always eventually} makes it to 2F, it \textit{always
+eventually} go to 3F.\newline 
 
 Intuitively we are tempted to enable strong fairness like so: \newline
 \begin{tla}
@@ -1235,7 +1235,8 @@ fairness for Up is \textit{already satisfied}. What we really want is strong
 fairness on \textit{Up} for \textit{every floor}, instead of \textit{any floor
 except top floor}. So if elevator makes to 2F once, it will \textit{always
 eventaully} go to 3F. If elevator makes to 3F once, it will \textit{always
-eventaully} go to 4F, etc. The following is the change required:\newline
+eventaully} go to 4F, so on and so forth. The following is the change
+required:\newline
 
 \begin{tla}
 Spec ==

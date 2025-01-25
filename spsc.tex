@@ -53,16 +53,14 @@ we can use TLA+ to verify the design.
 
 \section{Spec}
 
-TLA+ specification can be writen using its native formal specification
-language, or a C-like syntax called PlusCal (which transpiles down to itse
-native form). In this example, I chose to implement the specification using
-PlusCal, since the content to be verified is psuedo implementation. While it is
-possible specify SPSC in native TLA+, it is the author's opinion that it is
-more error prone in this case, each line is effective an individual state needs
-to be modeled.\newline
+TLA+ specification can be writen using its native formal specification language,
+or a C-like syntax called PlusCal (which transpiles down to itse native form).
+In this example, I chose to implement the specification using PlusCal, since the
+content to be verified is psuedo implementation. While it is possible specify
+SPSC in native TLA+, I find the approach more error prone as each line is
+effectively an individual state to be modeled.\newline
 
-The following is a snippet of the specification written in PlusCal, hopefully
-intuitive to read:
+The following is a snippet of the \textit{Spec} written in PlusCal:\newline
 \begin{ppcal}
 procedure reader(i) 
 variable 
@@ -120,9 +118,9 @@ end procedure;
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
 
-Note each command starts with a \textit{label}, such as r\_chk\_empty. All the
+Note some lines start with \textit{label} (eg. such as r\_chk\_empty). All the
 actions associated with the label is assumed executed atomically. This is
-reflected in the generated TLA+ code:
+reflected in the generated TLA+ code:\newline
 \begin{tla}
     r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
                      /\ IF rptr = wptr
