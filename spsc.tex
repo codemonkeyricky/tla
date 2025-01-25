@@ -1,3 +1,6 @@
+% \begin{document}
+
+
 \chapter{SPSC Lockless Queue}
 
 A single producer single consumer (SPSC) lockless queue is a data exchange queue
@@ -62,8 +65,7 @@ effectively an individual state to be modeled.\newline
 
 The following is a snippet of the \textit{Spec} written in PlusCal:\newline
 \begin{ppcal}
-procedure reader(i) 
-variable 
+procedure reader()
 begin
 r_chk_empty:        if rptr = wptr then 
 r_early_ret:            return;
@@ -74,7 +76,8 @@ r_upd_rtpr:         rptr := (rptr + 1) % N;
                     return;
 end procedure; 
 
-procedure writer(i) begin
+procedure writer() 
+begin
 w_chk_full:         if (wptr + 1) % N = rptr then 
 w_early_ret:            return; 
                     end if;
@@ -85,60 +88,62 @@ w_upd_wptr:         wptr := (wptr + 1) % N;
 end procedure; 
 \end{ppcal}\newline
 \begin{tlatex}
-\@x{ {\p@procedure} reader ( i )}%
-\@x{ {\p@variable}}%
+\@x{ {\p@procedure} reader ( )}%
 \@x{ {\p@begin}}%
  \@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@if} rptr \.{=} wptr
  {\p@then}}%
- \@x{ r\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{51.39} {\p@return}
+ \@x{ r\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@return}
  {\p@semicolon}}%
-\@x{\@s{91.60} {\p@end} {\p@if} {\p@semicolon}}%
- \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}\@s{36.83} {\p@assert} buffer [ rptr
- ] \.{\neq} 0 {\p@semicolon}}%
- \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}\@s{66.02} buffer [ rptr ] \.{:=} 0
+\@x{\@s{32.8} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@assert} buffer [ rptr ]
+ \.{\neq} 0 {\p@semicolon}}%
+ \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}\@s{32.8} buffer [ rptr ] \.{:=} 0
  {\p@semicolon}}%
- \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}\@s{36.98} rptr \.{:=} ( rptr \.{+} 1
+ \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}\@s{32.8} rptr \.{:=} ( rptr \.{+} 1
  ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{91.60} {\p@return} {\p@semicolon}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \@pvspace{8.0pt}%
-\@x{ {\p@procedure} writer ( i ) {\p@begin}}%
- \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}\@s{35.97} {\p@if} ( wptr \.{+} 1 )
+\@x{ {\p@procedure} writer ( )}%
+\@x{ {\p@begin}}%
+ \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@if} ( wptr \.{+} 1 )
  \.{\%} N \.{=} rptr {\p@then}}%
  \@x{ w\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{45.1} {\p@return}
  {\p@semicolon}}%
-\@x{\@s{89.45} {\p@end} {\p@if} {\p@semicolon}}%
- \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@assert} buffer [ wptr
+\@x{\@s{32.8} {\p@end} {\p@if} {\p@semicolon}}%
+ \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@assert} buffer [ wptr
  ] \.{=} 0 {\p@semicolon}}%
- \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}\@s{64.27} buffer [ wptr ] \.{:=} wptr \.{+}
+ \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}\@s{32.8} buffer [ wptr ] \.{:=} wptr \.{+}
  1000 {\p@semicolon}}%
  \@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}\@s{32.8} wptr \.{:=} ( wptr \.{+} 1
  ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{92.28} {\p@return} {\p@semicolon}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
 
-Note some lines start with \textit{label} (eg. such as r\_chk\_empty). All the
-actions associated with the label is assumed executed atomically. This is
-reflected in the generated TLA+ code:\newline
+Note some lines start with \textit{label} (eg. r\_chk\_empty). All the actions
+associated with the label is assumed executed atomically. This is reflected in
+the generated TLA+ code:\newline
 \begin{tla}
-    r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
+r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
                      /\ IF rptr = wptr
                            THEN /\ pc' = [pc EXCEPT ![self] = "r_early_ret"]
                            ELSE /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
-                     /\ UNCHANGED << rptr, wptr, buffer, stack, i_, i >>
+                     /\ UNCHANGED << rptr, wptr, buffer, stack >>
 \end{tla}
 \begin{tlatex}
- \@x{\@s{16.4} r\_chk\_empty ( self ) \.{\defeq} \.{\land} pc [ self ]
+ \@x{ r\_chk\_empty ( self ) \.{\defeq} \.{\land} pc [ self ]
  \.{=}\@w{r\_chk\_empty}}%
-\@x{\@s{97.45} \.{\land} {\IF} rptr \.{=} wptr}%
- \@x{\@s{120.71} \.{\THEN} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
- self ] \.{=}\@w{r\_early\_ret} ]}%
- \@x{\@s{120.71} \.{\ELSE} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [
- self ] \.{=}\@w{r\_read\_buf} ]}%
- \@x{\@s{97.45} \.{\land} {\UNCHANGED} {\langle} rptr ,\, wptr ,\, buffer ,\,
- stack ,\, i\_ ,\, i {\rangle}}%
+\@x{ \.{\land} {\IF} rptr \.{=} wptr}%
+ \@x{ \.{\THEN} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [ self ]
+ \.{=}\@w{r\_early\_ret} ]}%
+ \@x{ \.{\ELSE} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [ self ]
+ \.{=}\@w{r\_read\_buf} ]}%
+ \@x{ \.{\land} {\UNCHANGED} {\langle} rptr ,\, wptr ,\, buffer ,\, stack
+ {\rangle}}%
 \end{tlatex}
+\newline
+
 
 \section{Safety}
 
@@ -165,10 +170,10 @@ unused or read:
 \begin{tlatex}
  \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=} Cardinality
  ( reading )}%
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{16.4} \.{=}
  Cardinality ( reading ) \.{+} 1}%
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{17.22} \.{=}
- Cardinality ( reading )}%
+ \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{=} Cardinality (
+ reading )}%
 \end{tlatex}
 
 \section{Liveness}
@@ -202,3 +207,4 @@ Unused index 0 becomes used, used index 0 becomes unused.
 
 \section{Configuration}
 
+% \end{document}

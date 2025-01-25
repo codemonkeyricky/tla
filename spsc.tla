@@ -9,7 +9,7 @@ CONSTANT M, N, Reader, Writer  \* Fixed size of the array
 variables 
     rptr = 0,
     wptr = 0,
-    buffer = [kk \in 0..N-1 |-> 0],
+    buffer = [i \in 0..N-1 |-> 0],
 
 define
 written == 
@@ -92,7 +92,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "4eb764f2" /\ chksum(tla) = "8b99ba63")
+\* BEGIN TRANSLATION (chksum(pcal) = "681cb983" /\ chksum(tla) = "cda1a5ca")
 VARIABLES rptr, wptr, buffer, pc, stack
 
 (* define statement *)
@@ -143,7 +143,7 @@ ProcSet == {WRITER} \cup {READER}
 Init == (* Global variables *)
         /\ rptr = 0
         /\ wptr = 0
-        /\ buffer = [kk \in 0..N-1 |-> 0]
+        /\ buffer = [i \in 0..N-1 |-> 0]
         /\ stack = [self \in ProcSet |-> << >>]
         /\ pc = [self \in ProcSet |-> CASE self = WRITER -> "w_while"
                                         [] self = READER -> "r_start"]
@@ -247,7 +247,7 @@ Inv_Basics ==
     \* /\ to_read \subseteq written                            \* to_read is a subset of written
     \* /\ read_reserved \intersect unused = {}
     \* /\ (reading \cup to_read) = written
-    /\ \A kk \in unused : buffer[kk] = 0
+    /\ \A i \in unused : buffer[i] = 0
     \* /\ \A kk \in written : buffer[kk] # 0
     \* /\ (reading \cup to_read) = written
     \* /\ \A kk \in to_read : buffer[kk] # 0                     \* to_read must be populated
