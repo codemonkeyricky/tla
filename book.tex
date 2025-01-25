@@ -1533,7 +1533,7 @@ This led to liveness property violation as the messages had terms disagreeing
 with the system state. To simplify the spec I simply cleared all messages. This 
 indirectly verifies a portion of the packet loss handling in the spec as well.
 
-\subsection{Send Requests to Cluster as a Set}
+\subsection{Sending Request as a Batch}
 
 The send requests were initially implemented using the existential quantifier. 
 This introduces many interleaving states. This was replaced with a universal
@@ -1626,6 +1626,18 @@ RemoveMessage(to_remove, msgs) ==
 \@x{\@s{32.8} pruned \.{\cup} \{ to\_add \}}%
 \@pvspace{8.0pt}%
 \@x{ RemoveMessage ( to\_remove ,\, msgs ) \.{\defeq}}%
+\end{tlatex}
+
+\subsection{Enable Symmetry}
+
+Since the behaviour is symmetric between nodes, we can enable symmetry to speed
+up model checker runtime:\newline
+
+\begin{tla}
+Perms == Permutations(Servers)
+\end{tla}
+\begin{tlatex}
+\@x{ Perms \.{\defeq} Permutations ( Servers )}%
 \end{tlatex}
 
 \section{Safety}

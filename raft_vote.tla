@@ -1,5 +1,6 @@
 --------------------------- MODULE raft_vote ----------------------------
 EXTENDS Integers, FiniteSets, TLC, Sequences
+CONSTANTS Servers
 VARIABLES state, messages, voted_for, vote_granted, term, vote_requested, establish_leadership
 vars == <<state, messages, voted_for, term, vote_granted, vote_requested, establish_leadership>>
 
@@ -7,7 +8,8 @@ vars == <<state, messages, voted_for, term, vote_granted, vote_requested, establ
 \* Candidate == 1
 \* Leader == 2
 
-Servers == {"s0", "s1", "s2"}
+
+Perms == Permutations(Servers)
 
 MaxOutstanding == 1
 MaxDiff == 1
