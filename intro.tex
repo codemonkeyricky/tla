@@ -1,0 +1,138 @@
+\chapter{Introduction}
+
+\section{Catching Problems Early}
+
+Years ago, I worked on a propietary low power processor in an embedded system.
+The processor ran microcode featuring a custom instruction set. To enter a low
+power state, a set of (possibly hundreds) instructions were executed. These
+instructions progressively puts the system in lower power state. For example:
+turn off IP A, then turn off IP B, then turn off the power island to the IPs. To
+save cost and power, the low power processor had very limited debuggability
+support.\newline
+
+An experienced reader may start to notice some redflags.\newline
+
+If the microcode attempts to access the memory interface when the power island
+has been shut off, processor would hang. Since the power island has been shut
+off, the physical hardware debug port is also unavailable, leaving the developer
+with \textit{no way} of live debugging related problem. At this point the
+developer needs to siphon through (possibly hundreds) of instructions to catch
+invariant violation \textit{manually}.\newline
+
+As one can imagine, maintaining the microcode was very expensive. Fortunately,
+the propietary low power processor only had a handful of instructions, I created
+an emulator for this propietary processor to verify the microcode prior to
+deploying it on target. The emulator models the processor states as a state
+graph, with executed instruction transitions the state machine to the next
+state. At every state all the invariants are evaluated to ensure none have been
+violated. Some of the invariants included:
+\begin{itemize}
+    \item Accessing memory interface after power off leads to a hang
+    \item Accessing certain register in certain chip revision leads to a hang 
+    \item Verify IPs are shut off in the allowed order
+\end{itemize}
+
+The verification algorithm was implemented using a \textit{depth-first search}
+algorithm, providing \textit{100\%} microcode coverage before deploy on
+target.\newline
+
+To generalize, we can model arbitrary system as a set of states with a
+collection of invariant that must be upheld at all times. The complexity of the
+such arbitrarily system generally grows quadratically as the number of states
+grow linearly (eg. in a N state system, adding state N+1 may introduce N
+transitions into the new state). There are many engineering problems that
+exhibit a large number of states, such as lockless or waitfree data structure,
+distributed algorithms, OS scheduler, and more.\newline
+
+\textit{So, how do we build a solution that is correct by design?}
+
+\section{The Generalized Problem}
+
+Fast forward to now: I stumbled across TLA+, a formalized solution of what I was
+looking for.\newline
+
+Leslie Lamport invented the TLA+ 1999, but TLA+ didn't appear to have caught on
+until the 2010's. My personal opinion is TLA+ was invented ahead of its time,
+and the problem complexity finally caught up in the past decade or so to allow
+TLA+ to visibly demonstrate its strength.\newline
+
+We are also at a point in the technology curve where vertical scaling is no
+longer practical, with CPU speed plateau'd in the past decade or so. The
+industry is exploring horizontal scaling solution, such as hardware vendor
+focusing adding more CPU cores, or software vendors buying many low end hardware
+instead of a few high end hardware. This shifts the technology complexity from
+hardware to software, demanding software solution to maximize concurrent
+hardware resource utilization. \newline
+
+One slight problem: \textit{The cognitive load of of a person is between 5 to 9
+items at most.}\newline
+
+Humans are good at high level reasoning, but not so good at keeping track of
+many things happening at the same time. It is hard to enumerate all possible
+scenario in one's mind to ensure the design accommodates all the edge cases.
+\newline
+
+Consider a distributed system. The system is a cluster of independently
+operating entities and need to somehow collectively offer the correct system
+behaviour, while any one of the machines may receive instructions out of order,
+crash, recover, etc. \newline
+
+Consider a single producer multiple consumer lockless queue. The consumers may 
+reserve an index in the queue in certain order, but may release them in different order. 
+What if one reader is really slow, and another reader is super fast and possibly 
+lapse the slow reader? \newline
+
+Consider an OS scheduler with locks. Assume all the processes have the same
+priority. Can a process starve the other processes by repeatedly acquire and
+release the lock? How do we ensure scheduling is fair?\newline
+
+The usual \textit{anti-pattern} is to keep bandaiding the design until bugs stop
+comming. This is never ideal. Per Murphy's law, anything that can go wrong will
+go wrong, and a hard to reproduce bug will come in at the most inconvinient
+time. How do we make sure the solution is actually \textit{correct by design}?
+To solve this problem, we must rely on tools to do the reasoning \textit{for
+us}.
+
+\section{TLA+}
+
+TLA+ is a \textit{system specification language}, with the intent to describe
+the system with implementation details removed. TLA+ allows designer to describe
+the system as a sequence of states. The designer can expresses transition
+condition from one state to another, describe invariants that must hold true in
+every state and liveness properties that the overall system should converge to.
+The key innovation of TLA+ is once the system is modeled as a finite state
+machine, the states can be \textit{exhaustively} explored (via
+breath-first-search) to ensure certain properties are held through out the
+entire state space (either per state or a sequence of states).\newline
+
+\section{Target Audience}
+
+The intent for the book is to teach reader how to write TLA+ spec for their
+design to provide confidence in \textit{design correctness}. The content to this
+book is appropriate for software designer, hardware designer, system architect,
+and such.\newline 
+
+As for the readers: some computing science knowledge is required. One doesn't
+need to be expert at a particular language to understand this book; TLA+ is
+effectively its own language. This book is example driven and will go through
+designs such as lockless queue, simple task scheduler, consensus algorithm, etc.
+Reader will likely enjoy a deeper insight if she has some familiarity with these
+topics.
+
+\section{Book Layout}
+
+This book was motivated by the intent to solve problems. The book is designed to
+be example heavy with many chapter each represnting an problem that can be
+modelled using TLA+.\newline
+
+Examples are split into two categories: A set of examples written using native
+TLA+ syntax, and another set of examples written using PlusCal (C-like syntax).
+I believe they are useful under different use cases. The differences will be
+highlighted in their respective sections. All examples will follow a similar 
+layout, covering the expected design process (eg. requirement, spec, safety and
+liveness properties). \newline
+
+Finally, there will be part that language reference portion that that discuss a
+few topics deserving extra attention. The intent is to be using this section of the 
+book as a \textit{reference}.
+
