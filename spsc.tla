@@ -47,6 +47,10 @@ Liveness2 ==
     /\ (\A k \in 0..N-1: buffer[k] = 0 ~> buffer[k] = 1000 + k)
     /\ (\A k \in 0..N-1: buffer[k] = 1000+k ~> buffer[k] = 0)
 
+
+READER == 0
+WRITER == 1
+
 end define;
 
 procedure reader()
@@ -71,7 +75,7 @@ w_upd_wptr:         wptr := (wptr + 1) % N;
                     return;
 end procedure; 
 
-fair process writer_0 = 100
+fair process WriterP = WRITER
 begin 
     w_while:
     while TRUE do
@@ -79,7 +83,7 @@ begin
     end while;
 end process; 
 
-fair process reader_0 = 101
+fair process ReaderP = READER
 begin 
     r_start: 
     while TRUE do
@@ -88,7 +92,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "ac283b5f" /\ chksum(tla) = "667f1550")
+\* BEGIN TRANSLATION (chksum(pcal) = "4eb764f2" /\ chksum(tla) = "8b99ba63")
 VARIABLES rptr, wptr, buffer, pc, stack
 
 (* define statement *)
@@ -128,17 +132,21 @@ Liveness2 ==
     /\ (\A k \in 0..N-1: buffer[k] = 1000+k ~> buffer[k] = 0)
 
 
+READER == 0
+WRITER == 1
+
+
 vars == << rptr, wptr, buffer, pc, stack >>
 
-ProcSet == {100} \cup {101}
+ProcSet == {WRITER} \cup {READER}
 
 Init == (* Global variables *)
         /\ rptr = 0
         /\ wptr = 0
         /\ buffer = [kk \in 0..N-1 |-> 0]
         /\ stack = [self \in ProcSet |-> << >>]
-        /\ pc = [self \in ProcSet |-> CASE self = 100 -> "w_while"
-                                        [] self = 101 -> "r_start"]
+        /\ pc = [self \in ProcSet |-> CASE self = WRITER -> "w_while"
+                                        [] self = READER -> "r_start"]
 
 r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
                      /\ IF rptr = wptr
@@ -153,7 +161,7 @@ r_early_ret(self) == /\ pc[self] = "r_early_ret"
 
 r_read_buf(self) == /\ pc[self] = "r_read_buf"
                     /\ Assert(buffer[rptr] # 0, 
-                              "Failure of assertion at line 57, column 21.")
+                              "Failure of assertion at line 61, column 21.")
                     /\ pc' = [pc EXCEPT ![self] = "r_cs"]
                     /\ UNCHANGED << rptr, wptr, buffer, stack >>
 
@@ -184,7 +192,7 @@ w_early_ret(self) == /\ pc[self] = "w_early_ret"
 
 w_write_buf(self) == /\ pc[self] = "w_write_buf"
                      /\ Assert(buffer[wptr] = 0, 
-                               "Failure of assertion at line 68, column 21.")
+                               "Failure of assertion at line 72, column 21.")
                      /\ pc' = [pc EXCEPT ![self] = "w_cs"]
                      /\ UNCHANGED << rptr, wptr, buffer, stack >>
 
@@ -202,36 +210,36 @@ w_upd_wptr(self) == /\ pc[self] = "w_upd_wptr"
 writer(self) == w_chk_full(self) \/ w_early_ret(self) \/ w_write_buf(self)
                    \/ w_cs(self) \/ w_upd_wptr(self)
 
-w_while == /\ pc[100] = "w_while"
-           /\ stack' = [stack EXCEPT ![100] = << [ procedure |->  "writer",
-                                                   pc        |->  "w_while" ] >>
-                                               \o stack[100]]
-           /\ pc' = [pc EXCEPT ![100] = "w_chk_full"]
+w_while == /\ pc[WRITER] = "w_while"
+           /\ stack' = [stack EXCEPT ![WRITER] = << [ procedure |->  "writer",
+                                                      pc        |->  "w_while" ] >>
+                                                  \o stack[WRITER]]
+           /\ pc' = [pc EXCEPT ![WRITER] = "w_chk_full"]
            /\ UNCHANGED << rptr, wptr, buffer >>
 
-writer_0 == w_while
+WriterP == w_while
 
-r_start == /\ pc[101] = "r_start"
-           /\ stack' = [stack EXCEPT ![101] = << [ procedure |->  "reader",
-                                                   pc        |->  "r_start" ] >>
-                                               \o stack[101]]
-           /\ pc' = [pc EXCEPT ![101] = "r_chk_empty"]
+r_start == /\ pc[READER] = "r_start"
+           /\ stack' = [stack EXCEPT ![READER] = << [ procedure |->  "reader",
+                                                      pc        |->  "r_start" ] >>
+                                                  \o stack[READER]]
+           /\ pc' = [pc EXCEPT ![READER] = "r_chk_empty"]
            /\ UNCHANGED << rptr, wptr, buffer >>
 
-reader_0 == r_start
+ReaderP == r_start
 
-Next == writer_0 \/ reader_0
+Next == WriterP \/ ReaderP
            \/ (\E self \in ProcSet: reader(self) \/ writer(self))
 
 Spec == /\ Init /\ [][Next]_vars
-        /\ WF_vars(writer_0) /\ WF_vars(writer(100))
-        /\ WF_vars(reader_0) /\ WF_vars(reader(101))
+        /\ WF_vars(WriterP) /\ WF_vars(writer(WRITER))
+        /\ WF_vars(ReaderP) /\ WF_vars(reader(READER))
 
 \* END TRANSLATION 
 
 \* reader and writer cannot operator on the same index
 MUTEX ==
-    ~ ((pc[100] = "w_cs") /\ (pc[101] = "r_cs") /\ rptr = wptr)
+    ~ ((pc[WRITER] = "w_cs") /\ (pc[READER] = "r_cs") /\ rptr = wptr)
 
 Inv_Basics == 
     /\ ((written \cup writing) \cup unused) = all
