@@ -85,6 +85,7 @@ RemoveStaleAck(ack, msgs) ==
         {m \in msgs : ~(m.dst = "server" /\ m.type = "ack" /\ m.ack \in acks)}
 
 ServerRx(pp) == 
+    /\ pp.type = "ack"
     /\ tx_ack' = pp.ack
     /\ tx_limit' = (pp.ack + WINDOW) % N
     /\ network' = RemoveStaleAck(pp.ack, RemoveMessage(pp, network))
@@ -100,10 +101,21 @@ Drop(p) ==
     /\ network' = RemoveMessage(p, network)
     /\ UNCHANGED <<tx, client_rx, client_buffer, tx_ack, tx_limit>>
 
+ClientRetranReq == 
+    /\ client_buffer # {}
+    /\ client_rx + 1 # MinS(client_buffer)
+    /\ ~(\E p \in network : p.dst = "client" /\ p.seq = client_rx + 1)
+    /\ network' = AddMessage([dst |-> "server", 
+                              type |-> "retransmit",
+                              seq |-> client_rx + 1], 
+                                network)
+    /\ UNCHANGED <<tx, tx_limit, client_rx, client_buffer, tx_ack>>
+
 Next == 
     \/ Send 
     \/ \E p \in network : 
         Receive(p)
+    \/ ClientRetranReq
     \* \/ \E p \in network : 
     \*     /\ p.dst = "client" 
     \*     /\ Drop(p)
