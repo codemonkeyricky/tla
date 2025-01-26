@@ -24,11 +24,11 @@ Send ==
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
-    \/ /\ lost # WINDOW -1
-       /\ server_tx # server_tx_limit
-       /\ server_tx' = (server_tx + 1) % N
-       /\ lost' = lost + 1
-       /\ UNCHANGED <<network, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
+    \* \/ /\ lost # WINDOW -1
+    \*    /\ server_tx # server_tx_limit
+    \*    /\ server_tx' = (server_tx + 1) % N
+    \*    /\ lost' = lost + 1
+    \*    /\ UNCHANGED <<network, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
 
 Liveness == 
     server_tx = 0 ~> server_tx = N-1
@@ -119,7 +119,9 @@ Receive(pp) ==
        /\ ServerRx(pp)
     
 Drop(p) == 
+    /\ lost # WINDOW-1
     /\ network' = RemoveMessage(p, network)
+    /\ lost' = lost + 1
     /\ UNCHANGED <<server_tx, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
 
 Missing == 
@@ -171,14 +173,13 @@ Next ==
         Receive(p)
     \/ ClientRetranReq
     \/ Client
-    \* \/ \E p \in network : 
-    \*     /\ p.dst = "client" 
-    \*     /\ Drop(p)
-    \* \/ /\ network = {} 
-    \*    /\ Reset 
+    \/ \E p \in network : 
+        /\ p.dst = "client" 
+        /\ Drop(p)
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
+  /\ SF_vars(\E p \in network: p.dst = "client" /\ ClientRx(p))
 =============================================================================
