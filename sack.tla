@@ -5,7 +5,7 @@ VARIABLES
 
 vars == <<network, tx, tx_limit, rx, buffer_rx, tx_ack>>
 
-\* N == 8
+N == 16
 WINDOW == 3
 
 \* ASSUME WINDOW * 2 < N
@@ -20,6 +20,7 @@ Init ==
 
 Send == 
     /\ tx # tx_limit
+    \* /\ tx # N
     /\ tx' = tx + 1
     /\ network' = network \cup {[dst |-> "client", seq |-> tx']}
     /\ UNCHANGED <<rx, buffer_rx, tx_ack, tx_limit>>
