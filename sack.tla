@@ -52,6 +52,7 @@ ClientRx(pp) ==
         \/ /\ ready = TRUE
            /\ buffer_rx' = {}
            /\ rx' = maxv
+           /\ Assert(range < 5,"")
            /\ network' = AddMessage([dst |-> "server", 
                                      ack |-> maxv], 
                                         RemoveMessage(pp, network))
@@ -64,7 +65,7 @@ ClientRx(pp) ==
 ServerRx(pp) == 
     \/  /\ pp.ack > tx_ack
         /\ tx_ack' = pp.ack
-        /\ tx_limit' = (pp.ack + WINDOW) % N
+        /\ tx_limit' = pp.ack + WINDOW
         /\ network' = network \ {pp}
         /\ UNCHANGED <<tx, rx, buffer_rx>>
     \/  /\ pp.ack <= tx_ack
