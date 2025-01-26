@@ -17,17 +17,17 @@ Init ==
     /\ server_tx_ack = 0
     /\ client_rx = 0
     /\ client_buffer = {} 
-    /\ lost = -1
+    /\ lost = 0
 
 Send == 
     \/ /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
-    \/ /\ lost = -1
+    \/ /\ lost = 0
        /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
-       /\ lost' = server_tx'
+       /\ lost' = 1
        /\ UNCHANGED <<network, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
 
 Liveness == 
@@ -109,7 +109,7 @@ ServerRx(pp) ==
     \/ /\ pp.type = "retransmit"
        /\ network' = AddMessage([dst |-> "client", seq |-> pp.seq], 
                                 RemoveMessage(pp, network))
-       /\ lost' = -1
+       /\ lost' = 0
        /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack>>
 
 Receive(pp) ==
@@ -125,7 +125,7 @@ Drop(p) ==
 Missing == 
     LET 
         full_seq == 
-            IF MaxIndex >= MinIndex 
+            IF MaxIndex >= client_rx+1 
             THEN 
                 {x \in client_rx+1 .. MaxIndex : TRUE}
             ELSE 
@@ -142,7 +142,8 @@ ClientRetranReq ==
     \/ /\ ~MergeReady
        /\ client_buffer # {}
        /\ Missing # {}
-       /\ PrintT(Range) 
+    \*    /\ PrintT(Missing) 
+    \*    /\ Assert(0,"")
        /\ network' = AddMessage([dst |-> "server", 
                                  type |-> "retransmit",
                                  seq |-> CHOOSE x \in Missing : TRUE],
