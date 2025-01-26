@@ -82,17 +82,13 @@ RemoveStaleAck(ack, msgs) ==
     LET 
         acks == {(ack - k + N ) % N : k \in 1..WINDOW}
     IN 
-        {m \in msgs : ~(m.dst = "client" /\ m.ack \in acks)}
+        {m \in msgs : ~(m.dst = "server" /\ m.ack \in acks)}
 
 ServerRx(pp) == 
-    \/  /\ pp.ack > tx_ack
-        /\ tx_ack' = pp.ack
-        /\ tx_limit' = (pp.ack + WINDOW) % N
-        /\ network' = network \ {pp}
-        /\ UNCHANGED <<tx, client_rx, client_buffer>>
-    \/  /\ pp.ack <= tx_ack
-        /\ network' = network \ {pp}
-        /\ UNCHANGED <<tx, client_rx, client_buffer, tx_ack, tx_limit>>
+    /\ tx_ack' = pp.ack
+    /\ tx_limit' = (pp.ack + WINDOW) % N
+    /\ network' = RemoveStaleAck(pp.ack, RemoveMessage(pp, network))
+    /\ UNCHANGED <<tx, client_rx, client_buffer>>
 
 Receive(pp) ==
     \/ /\ pp.dst = "client"
