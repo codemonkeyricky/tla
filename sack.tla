@@ -79,7 +79,7 @@ Range ==
     THEN
         MaxIndex - MinIndex + 1
     ELSE 
-        MinIndex + 1 + N - MaxIndex
+        MaxIndex + 1 + N - MinIndex
 
 MergeReady == 
     /\ client_buffer # {}
