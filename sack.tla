@@ -46,10 +46,13 @@ AddMessage(m, msgs) ==
     msgs \cup {m}
 
 ClientRx(pp) == 
+    /\ network' = RemoveMessage(pp, network)
+    /\ client_buffer' = client_buffer \cup {pp.seq}
+    /\ UNCHANGED <<tx, client_rx, tx_ack, tx_limit, lost>>
+
+Client == 
     LET 
-        p == pp.seq 
-        dst == pp.dst
-        combined == client_buffer \cup {p}
+        combined == client_buffer 
         upper == {x \in combined : x > N - WINDOW}
         lower == {x \in combined : x < WINDOW}
         range == IF upper # {} /\ lower # {} 
@@ -71,18 +74,12 @@ ClientRx(pp) ==
             /\ (client_rx + 1) % N = minv       \* contiguousu with previous ack
             /\ range = Cardinality(combined)    \* combined is contiguous 
     IN 
-        \/ /\ ready = TRUE
+           /\ client_buffer # {}
+           /\ ready = TRUE
            /\ client_buffer' = {}
            /\ client_rx' = maxv
-           /\ network' = AddMessage([dst |-> "server", 
-                                     type |-> "ack",
-                                     ack |-> maxv], 
-                                        RemoveMessage(pp, network))
+           /\ network' = AddMessage([dst |-> "server", type |-> "ack", ack |-> maxv], network)
            /\ UNCHANGED <<tx, tx_ack, tx_limit, lost>>
-        \/ /\ ready = FALSE
-           /\ client_buffer' = combined
-           /\ network' = network \ {pp}
-           /\ UNCHANGED <<tx, client_rx, tx_ack, tx_limit, lost>>
 
 RemoveStaleAck(ack, msgs) == 
     LET 
@@ -165,6 +162,7 @@ Next ==
     \/ \E p \in network : 
         Receive(p)
     \/ ClientRetranReq
+    \/ Client
     \* \/ \E p \in network : 
     \*     /\ p.dst = "client" 
     \*     /\ Drop(p)
