@@ -5,8 +5,8 @@ VARIABLES
 
 vars == <<network, server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
 
-N == 10
-WINDOW == 4
+N == 16
+WINDOW == 5
 
 ASSUME WINDOW * 2 < N
 
@@ -24,7 +24,7 @@ Send ==
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
-    \/ /\ lost < 3
+    \/ /\ lost < 4
        /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
        /\ lost' = lost + 1
