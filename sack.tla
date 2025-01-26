@@ -63,7 +63,7 @@ ClientRx(pp) ==
                 ELSE 
                     MaxS(combined)
         ready == 
-            /\ (client_rx + 1) % N = minv              \* contiguousu with previous ack
+            /\ (client_rx + 1) % N = minv       \* contiguousu with previous ack
             /\ range = Cardinality(combined)    \* combined is contiguous 
     IN 
         \/ /\ ready = TRUE
@@ -77,6 +77,12 @@ ClientRx(pp) ==
            /\ client_buffer' = combined
            /\ network' = network \ {pp}
            /\ UNCHANGED <<tx, client_rx, tx_ack, tx_limit>>
+
+RemoveStaleAck(ack, msgs) == 
+    LET 
+        acks == {(ack - k + N ) % N : k \in 1..WINDOW}
+    IN 
+        {m \in msgs : ~(m.dst = "client" /\ m.ack \in acks)}
 
 ServerRx(pp) == 
     \/  /\ pp.ack > tx_ack
