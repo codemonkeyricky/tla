@@ -24,7 +24,7 @@ Send ==
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
-    \/ /\ lost < 4
+    \/ /\ lost # WINDOW -1
        /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
        /\ lost' = lost + 1
