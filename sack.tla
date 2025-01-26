@@ -1,9 +1,9 @@
 --------------------------- MODULE sack ----------------------------
 EXTENDS Integers, Naturals, TLC, FiniteSets
 VARIABLES 
-    network, seq_tx, seq_rx, buffer_rx
+    network, seq_tx, seq_rx, buffer_rx, ack_tx
 
-vars == <<network, seq_tx, seq_rx, buffer_rx>>
+vars == <<network, seq_tx, seq_rx, buffer_rx, ack_tx>>
 
 N == 8
 WINDOW == 3
@@ -13,13 +13,15 @@ ASSUME WINDOW * 2 < N
 Init ==
     /\ network = {}
     /\ seq_tx = 0
+    /\ ack_tx = 0
     /\ seq_rx = 0
     /\ buffer_rx = {} 
 
 Send == 
-    /\ network' = network \cup {[dst |-> "client", seq |-> seq_tx]}
+    /\ seq_tx = ack_tx
     /\ seq_tx' = (seq_tx + 1) % N 
-    /\ UNCHANGED <<seq_rx, buffer_rx>>
+    /\ network' = network \cup {[dst |-> "client", seq |-> seq_tx]}
+    /\ UNCHANGED <<seq_rx, buffer_rx, ack_tx>>
 
 MinS(s) == 
     CHOOSE x \in s: \A y \in s: x <= y
@@ -51,16 +53,18 @@ ClientRx(pp) ==
         \/ /\ ready = TRUE
            /\ buffer_rx' = {}
            /\ seq_rx' = maxv2
-           /\ network' = network \ {pp}
-           /\ UNCHANGED seq_tx
-        \*    /\ Assert(maxv2 # 7, "")
+           /\ network' = (network \{pp}) \cup {[dst |-> "server", ack |-> maxv2]} 
+           /\ UNCHANGED <<seq_tx, ack_tx>>
         \/ /\ ready = FALSE
+        \*    /\ Assert(0,"")
            /\ buffer_rx' = combined
            /\ network' = network \ {pp}
-           /\ UNCHANGED <<seq_tx, seq_rx>>
+           /\ UNCHANGED <<seq_tx, seq_rx, ack_tx>>
 
 ServerRx(pp) == 
-    UNCHANGED vars
+    /\ ack_tx' = pp.ack
+    /\ network' = network \ {pp}
+    /\ UNCHANGED <<seq_tx, seq_rx, buffer_rx, ack_tx>>
 
 Receive(pp) ==
     \/ /\ pp.dst = "client"
