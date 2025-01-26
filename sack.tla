@@ -24,6 +24,9 @@ Send ==
     /\ network' = network \cup {[dst |-> "client", seq |-> tx']}
     /\ UNCHANGED <<client_rx, client_buffer, tx_ack, tx_limit>>
 
+Liveness == 
+    tx = 0 ~> tx = N-1
+
 MinS(s) == 
     CHOOSE x \in s: \A y \in s: x <= y
 
@@ -35,10 +38,6 @@ RemoveMessage(m, msgs) ==
 
 AddMessage(m, msgs) == 
     msgs \cup {m}
-
-\* /\ PrintT(minv)
-\* /\ PrintT(maxv)
-\* /\ PrintT(client_rx)
 
 ClientRx(pp) == 
     LET 
@@ -104,4 +103,5 @@ Next ==
 Spec ==
   /\ Init
   /\ [][Next]_vars
+  /\ WF_vars(Next)
 =============================================================================
