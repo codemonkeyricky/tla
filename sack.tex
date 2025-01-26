@@ -1,0 +1,54 @@
+\chapter{Selective Retransmit}
+
+Assume client device that streams a video. Structurelly, a video is composed of
+frames, frames are then segmented into packets to stream across the network. The
+client device needs to recombine the packets into a frame, then sequence the
+frame to playback the video.\newline
+
+However, network is not-deterministic. Depending on the route the packet takes
+to get to the client, packets may be re-ordered by the time the client receives
+them.  The client may need to maintain a receive buffer for the packets to
+re-order the packets back into sequence before pushing the packets down to
+decoding engine.\newline
+
+The network may drop packets if the switch gets too busy. In the case of a
+packet drop, we can discard the frame, request the whole frame re-sent, or
+selectively request the missing packet to be retransmitted. In this chapter, we
+will implement the third solution.\newline
+
+\begin{center}
+
+\begin{tikzpicture}[
+    packet/.style={rectangle, draw, fill=blue!20, minimum width=1cm, minimum height=0.8cm},
+    missing/.style={rectangle, draw, dashed, fill=red!20, minimum width=1cm, minimum height=0.8cm},
+    arrow/.style={->, >=stealth, thick}
+]
+
+    % Draw packets
+    \node[packet] (p0) at (0,0) {\(pkt\ 0\)};
+    \node[packet, right=0.5cm of p0] (p2) {\(pkt\ 1\)};
+    \node[missing, right=0.5cm of p2] (missing1) {\(lost\)};
+    \node[packet, right=0.5cm of missing1] (p4) {\(pkt\ 3\)};
+    \node[packet, right=0.5cm of p4] (p5) {\(pkt\ 4\)};
+    \node[right=0.5cm of p5] (dots) {\(\dots\)}; % Just dots, no box
+    \node[packet, right=0.5cm of dots] (pn) {\(pkt\_n\)};
+
+    % Draw arrows between packets
+    \draw[arrow] (p0.east) -- (p2.west);
+    \draw[arrow] (p2.east) -- (missing1.west);
+    \draw[arrow] (missing1.east) -- (p4.west);
+    \draw[arrow] (p4.east) -- (p5.west);
+    \draw[arrow] (p5.east) -- (dots);
+    \draw[arrow] (dots) -- (pn.west);
+
+    % Add arrow pointing to "lost" with caption
+    \draw[arrow, red] ([yshift=0.3cm] missing1.north) -- (missing1.north) 
+        node[midway, above, text=red] {request to retransmit};
+
+\end{tikzpicture}
+
+\end{center}
+
+\section{Requirement}
+
+\section{Spec}
