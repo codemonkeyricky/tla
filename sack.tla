@@ -30,6 +30,12 @@ MinS(s) ==
 MaxS(s) == 
     CHOOSE x \in s: \A y \in s: x >= y
 
+RemoveMessage(m, msgs) == 
+    msgs \ {m}
+
+AddMessage(m, msgs) == 
+    msgs \cup {m}
+
 ClientRx(pp) == 
     LET 
         p == pp.seq 
@@ -46,7 +52,9 @@ ClientRx(pp) ==
         \/ /\ ready = TRUE
            /\ buffer_rx' = {}
            /\ rx' = maxv
-           /\ network' = network_wo_msg \cup {[dst |-> "server", ack |-> maxv]} 
+           /\ network' = AddMessage([dst |-> "server", 
+                                     ack |-> maxv], 
+                                        RemoveMessage(pp, network))
            /\ UNCHANGED <<tx, tx_ack, tx_limit>>
         \/ /\ ready = FALSE
            /\ buffer_rx' = combined
