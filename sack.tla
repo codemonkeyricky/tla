@@ -75,7 +75,7 @@ ClientRx(pp) ==
     /\ UNCHANGED <<server_tx, client_rx, server_tx_ack, server_tx_limit, lost>>
 
 Range == 
-    IF MaxIndex > MinIndex
+    IF MaxIndex >= MinIndex
     THEN
         MaxIndex - MinIndex + 1
     ELSE 
@@ -125,15 +125,15 @@ Drop(p) ==
 Missing == 
     LET 
         full_seq == 
-            IF MaxIndex > MinIndex 
+            IF MaxIndex >= MinIndex 
             THEN 
                 {x \in client_rx+1 .. MaxIndex : TRUE}
             ELSE 
                 {x \in 0..MaxIndex : TRUE} \cup {x \in client_rx + 1..N-1 : TRUE}
         all_client_msgs == {m \in network: m.dst = "client"}
         all_client_seqs == {m.seq : m \in all_client_msgs}
-        client_missing == full_seq \ client_buffer
         network_missing == full_seq \ all_client_seqs
+        client_missing == full_seq \ client_buffer
         to_request == network_missing \intersect client_missing
     IN 
         to_request
@@ -141,8 +141,8 @@ Missing ==
 ClientRetranReq == 
     \/ /\ ~MergeReady
        /\ client_buffer # {}
-       /\ PrintT(Missing)
        /\ Missing # {}
+       /\ PrintT(Range) 
        /\ network' = AddMessage([dst |-> "server", 
                                  type |-> "retransmit",
                                  seq |-> CHOOSE x \in Missing : TRUE],
