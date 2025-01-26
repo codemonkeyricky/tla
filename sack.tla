@@ -69,6 +69,7 @@ ClientRx(pp) ==
            /\ client_buffer' = {}
            /\ client_rx' = maxv
            /\ network' = AddMessage([dst |-> "server", 
+                                     type |-> "ack",
                                      ack |-> maxv], 
                                         RemoveMessage(pp, network))
            /\ UNCHANGED <<tx, tx_ack, tx_limit>>
@@ -81,7 +82,7 @@ RemoveStaleAck(ack, msgs) ==
     LET 
         acks == {(ack - k + N ) % N : k \in 1..WINDOW}
     IN 
-        {m \in msgs : ~(m.dst = "server" /\ m.ack \in acks)}
+        {m \in msgs : ~(m.dst = "server" /\ m.type = "ack" /\ m.ack \in acks)}
 
 ServerRx(pp) == 
     /\ tx_ack' = pp.ack
@@ -94,11 +95,18 @@ Receive(pp) ==
        /\ ClientRx(pp)
     \/ /\ pp.dst = "server"
        /\ ServerRx(pp)
+    
+Drop(p) == 
+    /\ network' = RemoveMessage(p, network)
+    /\ UNCHANGED <<tx, client_rx, client_buffer, tx_ack, tx_limit>>
 
 Next == 
     \/ Send 
     \/ \E p \in network : 
         Receive(p)
+    \* \/ \E p \in network : 
+    \*     /\ p.dst = "client" 
+    \*     /\ Drop(p)
 
 Spec ==
   /\ Init
