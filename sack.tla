@@ -6,7 +6,7 @@ VARIABLES
 vars == <<network, tx, tx_limit, rx, buffer_rx, tx_ack>>
 
 N == 8
-WINDOW == 1
+WINDOW == 2
 
 ASSUME WINDOW * 2 < N
 
@@ -20,7 +20,7 @@ Init ==
 
 Send == 
     /\ tx # tx_limit
-    /\ tx' = (tx + 1) % N 
+    /\ tx' = tx + 1
     /\ network' = network \cup {[dst |-> "client", seq |-> tx']}
     /\ UNCHANGED <<rx, buffer_rx, tx_ack, tx_limit>>
 
@@ -35,26 +35,18 @@ ClientRx(pp) ==
         p == pp.seq 
         dst == pp.dst
         combined == buffer_rx \cup {p}
-        upper == {x \in combined : x > N - WINDOW}
-        lower == {x \in combined : x < WINDOW - 1}
-        maxv == MinS(combined) 
-        minv == MaxS(combined)
-        range == IF upper # {} /\ lower # {} 
-                 THEN 
-                    N - MinS(upper) + MaxS(lower)
-                 ELSE 
-                    maxv - minv + 1
-        ready == range = Cardinality(combined)
-        maxv2 == IF upper # {} /\ lower # {} 
-                 THEN
-                    MaxS(lower)
-                 ELSE 
-                    maxv
+        minv == MinS(combined) 
+        maxv == MaxS(combined)
+        range == maxv - minv + 1
+        ready == 
+            /\ rx + 1 = minv 
+            /\ range = Cardinality(combined)
+        network_wo_msg == network \ {pp}
     IN 
         \/ /\ ready = TRUE
            /\ buffer_rx' = {}
-           /\ rx' = maxv2
-           /\ network' = (network \{pp}) \cup {[dst |-> "server", ack |-> maxv2]} 
+           /\ rx' = maxv
+           /\ network' = network_wo_msg \cup {[dst |-> "server", ack |-> maxv]} 
            /\ UNCHANGED <<tx, tx_ack, tx_limit>>
         \/ /\ ready = FALSE
            /\ buffer_rx' = combined
@@ -62,10 +54,14 @@ ClientRx(pp) ==
            /\ UNCHANGED <<tx, rx, tx_ack, tx_limit>>
 
 ServerRx(pp) == 
-    /\ tx_ack' = pp.ack
-    /\ tx_limit' = (pp.ack + WINDOW) % N
-    /\ network' = network \ {pp}
-    /\ UNCHANGED <<tx, rx, buffer_rx>>
+    \/  /\ pp.ack > tx_ack
+        /\ tx_ack' = pp.ack
+        /\ tx_limit' = (pp.ack + WINDOW) % N
+        /\ network' = network \ {pp}
+        /\ UNCHANGED <<tx, rx, buffer_rx>>
+    \/  /\ pp.ack <= tx_ack
+        /\ network' = network \ {pp}
+        /\ UNCHANGED <<tx, rx, buffer_rx, tx_ack, tx_limit>>
 
 Receive(pp) ==
     \/ /\ pp.dst = "client"
