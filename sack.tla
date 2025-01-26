@@ -1,29 +1,28 @@
---------------------------- MODULE sack ----------------------------
+x-------------------------- MODULE sack ----------------------------
 EXTENDS Integers, Naturals, TLC, FiniteSets
 VARIABLES 
-    network, tx, rx, buffer_rx, tx_ack, tx_limit
+    network, tx, client_rx, client_buffer, tx_ack, tx_limit
 
-vars == <<network, tx, tx_limit, rx, buffer_rx, tx_ack>>
+vars == <<network, tx, tx_limit, client_rx, client_buffer, tx_ack>>
 
-N == 16
+N == 8
 WINDOW == 3
 
-\* ASSUME WINDOW * 2 < N
+ASSUME WINDOW * 2 < N
 
 Init ==
     /\ network = {}
     /\ tx = 0
     /\ tx_limit = WINDOW
     /\ tx_ack = 0
-    /\ rx = 0
-    /\ buffer_rx = {} 
+    /\ client_rx = 0
+    /\ client_buffer = {} 
 
 Send == 
     /\ tx # tx_limit
-    \* /\ tx # N
-    /\ tx' = tx + 1
+    /\ tx' = (tx + 1) % N
     /\ network' = network \cup {[dst |-> "client", seq |-> tx']}
-    /\ UNCHANGED <<rx, buffer_rx, tx_ack, tx_limit>>
+    /\ UNCHANGED <<client_rx, client_buffer, tx_ack, tx_limit>>
 
 MinS(s) == 
     CHOOSE x \in s: \A y \in s: x <= y
@@ -37,40 +36,57 @@ RemoveMessage(m, msgs) ==
 AddMessage(m, msgs) == 
     msgs \cup {m}
 
+\* /\ PrintT(minv)
+\* /\ PrintT(maxv)
+\* /\ PrintT(client_rx)
+
 ClientRx(pp) == 
     LET 
         p == pp.seq 
         dst == pp.dst
-        combined == buffer_rx \cup {p}
-        minv == MinS(combined) 
-        maxv == MaxS(combined)
-        range == maxv - minv + 1
+        combined == client_buffer \cup {p}
+        upper == {x \in combined : x > N - WINDOW}
+        lower == {x \in combined : x < WINDOW}
+        range == IF upper # {} /\ lower # {} 
+                 THEN 
+                    N - MinS(upper) + MaxS(lower) + 1
+                 ELSE 
+                    MaxS(combined) - MinS(combined) + 1
+        minv == IF upper # {} /\ lower # {} 
+                THEN 
+                    MinS(upper)
+                ELSE 
+                    MinS(combined)
+        maxv == IF upper # {} /\ lower # {} 
+                THEN 
+                    MaxS(lower)
+                ELSE 
+                    MaxS(combined)
         ready == 
-            /\ rx + 1 = minv                    \* contiguousu with previous ack
+            /\ (client_rx + 1) % N = minv              \* contiguousu with previous ack
             /\ range = Cardinality(combined)    \* combined is contiguous 
     IN 
         \/ /\ ready = TRUE
-           /\ buffer_rx' = {}
-           /\ rx' = maxv
-           /\ Assert(range <= 3,"")
+           /\ client_buffer' = {}
+           /\ client_rx' = maxv
            /\ network' = AddMessage([dst |-> "server", 
                                      ack |-> maxv], 
                                         RemoveMessage(pp, network))
            /\ UNCHANGED <<tx, tx_ack, tx_limit>>
         \/ /\ ready = FALSE
-           /\ buffer_rx' = combined
+           /\ client_buffer' = combined
            /\ network' = network \ {pp}
-           /\ UNCHANGED <<tx, rx, tx_ack, tx_limit>>
+           /\ UNCHANGED <<tx, client_rx, tx_ack, tx_limit>>
 
 ServerRx(pp) == 
     \/  /\ pp.ack > tx_ack
         /\ tx_ack' = pp.ack
-        /\ tx_limit' = pp.ack + WINDOW
+        /\ tx_limit' = (pp.ack + WINDOW) % N
         /\ network' = network \ {pp}
-        /\ UNCHANGED <<tx, rx, buffer_rx>>
+        /\ UNCHANGED <<tx, client_rx, client_buffer>>
     \/  /\ pp.ack <= tx_ack
         /\ network' = network \ {pp}
-        /\ UNCHANGED <<tx, rx, buffer_rx, tx_ack, tx_limit>>
+        /\ UNCHANGED <<tx, client_rx, client_buffer, tx_ack, tx_limit>>
 
 Receive(pp) ==
     \/ /\ pp.dst = "client"
