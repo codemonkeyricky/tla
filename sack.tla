@@ -17,18 +17,18 @@ Init ==
     /\ server_tx_ack = 0
     /\ client_rx = 0
     /\ client_buffer = {} 
-    /\ lost = 0
+    /\ lost = -1
 
 Send == 
     \/ /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
-    \* \/ /\ lost = 0
-    \*    /\ server_tx # server_tx_limit
-    \*    /\ server_tx' = (server_tx + 1) % N
-    \*    /\ lost' = 1
-    \*    /\ UNCHANGED <<network, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
+    \/ /\ lost = -1
+       /\ server_tx # server_tx_limit
+       /\ server_tx' = (server_tx + 1) % N
+       /\ lost' = server_tx'
+       /\ UNCHANGED <<network, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
 
 Liveness == 
     server_tx = 0 ~> server_tx = N-1
@@ -109,7 +109,7 @@ ServerRx(pp) ==
     \/ /\ pp.type = "retransmit"
        /\ network' = AddMessage([dst |-> "client", seq |-> pp.seq], 
                                 RemoveMessage(pp, network))
-       /\ lost' = 0
+       /\ lost' = -1
        /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack>>
 
 Receive(pp) ==
@@ -125,11 +125,11 @@ Drop(p) ==
 Missing == 
     LET 
         full_seq == 
-            IF MaxIndex < MinIndex 
+            IF MaxIndex > MinIndex 
             THEN 
-                {x \in 0..MaxIndex : TRUE} \cup {x \in client_rx + 1..N-1 : TRUE}
+                {x \in client_rx+1 .. MaxIndex : TRUE}
             ELSE 
-                {x \in client_rx+1 ..MaxIndex : TRUE}
+                {x \in 0..MaxIndex : TRUE} \cup {x \in client_rx + 1..N-1 : TRUE}
         all_client_msgs == {m \in network: m.dst = "client"}
         all_client_seqs == {m.seq : m \in all_client_msgs}
         client_missing == full_seq \ client_buffer
@@ -141,6 +141,7 @@ Missing ==
 ClientRetranReq == 
     \/ /\ ~MergeReady
        /\ client_buffer # {}
+       /\ PrintT(Missing)
        /\ Missing # {}
        /\ network' = AddMessage([dst |-> "server", 
                                  type |-> "retransmit",
