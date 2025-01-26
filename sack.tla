@@ -5,8 +5,8 @@ VARIABLES
 
 vars == <<network, server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
 
-N == 8
-WINDOW == 3
+N == 10
+WINDOW == 4
 
 ASSUME WINDOW * 2 < N
 
@@ -24,10 +24,10 @@ Send ==
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
-    \/ /\ lost = 0
+    \/ /\ lost < 3
        /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
-       /\ lost' = 1
+       /\ lost' = lost + 1
        /\ UNCHANGED <<network, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
 
 Liveness == 
@@ -109,7 +109,7 @@ ServerRx(pp) ==
     \/ /\ pp.type = "retransmit"
        /\ network' = AddMessage([dst |-> "client", seq |-> pp.seq], 
                                 RemoveMessage(pp, network))
-       /\ lost' = 0
+       /\ lost' = lost -1
        /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack>>
 
 Receive(pp) ==
