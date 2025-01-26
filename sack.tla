@@ -5,10 +5,10 @@ VARIABLES
 
 vars == <<network, tx, tx_limit, rx, buffer_rx, tx_ack>>
 
-N == 8
-WINDOW == 2
+\* N == 8
+WINDOW == 3
 
-ASSUME WINDOW * 2 < N
+\* ASSUME WINDOW * 2 < N
 
 Init ==
     /\ network = {}
@@ -45,14 +45,13 @@ ClientRx(pp) ==
         maxv == MaxS(combined)
         range == maxv - minv + 1
         ready == 
-            /\ rx + 1 = minv 
-            /\ range = Cardinality(combined)
-        network_wo_msg == network \ {pp}
+            /\ rx + 1 = minv                    \* contiguousu with previous ack
+            /\ range = Cardinality(combined)    \* combined is contiguous 
     IN 
         \/ /\ ready = TRUE
            /\ buffer_rx' = {}
            /\ rx' = maxv
-           /\ Assert(range < 5,"")
+           /\ Assert(range <= 3,"")
            /\ network' = AddMessage([dst |-> "server", 
                                      ack |-> maxv], 
                                         RemoveMessage(pp, network))
