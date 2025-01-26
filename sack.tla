@@ -53,6 +53,7 @@ ClientRx(pp) ==
            /\ seq_rx' = maxv2
            /\ network' = network \ {pp}
            /\ UNCHANGED seq_tx
+        \*    /\ Assert(maxv2 # 7, "")
         \/ /\ ready = FALSE
            /\ buffer_rx' = combined
            /\ network' = network \ {pp}
