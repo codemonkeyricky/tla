@@ -244,17 +244,7 @@ MUTEX ==
 Inv_Basics == 
     /\ ((written \cup writing) \cup unused) = all
     /\ reading \subseteq written                            \* reading is a subset of written
-    \* /\ to_read \subseteq written                            \* to_read is a subset of written
-    \* /\ read_reserved \intersect unused = {}
-    \* /\ (reading \cup to_read) = written
     /\ \A i \in unused : buffer[i] = 0
-    \* /\ \A kk \in written : buffer[kk] # 0
-    \* /\ (reading \cup to_read) = written
-    \* /\ \A kk \in to_read : buffer[kk] # 0                     \* to_read must be populated
-    \* /\ \A kk \in read_reserved : buffer[kk] # 0
-    \* /\ \A kk \in reading : rrsvd[kk] = 0 => buffer[kk] = 0     \* part of reading but not reserved - read done.
-    \* /\ \A kk \in reading : rrsvd[kk] # 0 => buffer[kk] # 0     \* part of reading but reserved - read in progress.
-    \* /\ Cardinality(read_reserved) <= Reader                 \* at most 'Reader' indices can be reserved
     /\ \/ Cardinality(to_be_read) + 1 = Cardinality(reading) 
        \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
        \/ Cardinality(to_be_read)     = Cardinality(reading)

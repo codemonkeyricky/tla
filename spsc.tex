@@ -1,12 +1,14 @@
 % \begin{document}
 
-
 \chapter{SPSC Lockless Queue}
 
 A single producer single consumer (SPSC) lockless queue is a data exchange queue
 between a producer and a consumer. The SPSC lockfree queue enables data exchange
 between producer and consumer without the use of a lock, allowing both producer
 and consumer to make progress in all scenarios.\newline
+
+An example application of SPSC queue is a data exchange interface between ASIC
+and the CPU in a driver implementation.\newline
 
 A real implementation need to account for memory ordering effects specific to
 the architecture. For example, ARM has weak memory ordering model where
@@ -147,34 +149,44 @@ r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
 
 \section{Safety}
 
-As mentioned before, safety properties need to hold true in every single state.
-Some safety requirement we can enforce, for example:\newline
+Some safety requirement we can enforce include:\newline
 
-Reader and writer cannot access the same index at the same time:
-\begin{equation}
-    \sim ((pc[100] = "w\_cs") \land (pc[101] = "r\_cs") \land rptr = wptr)
-\end{equation}
-
-All unused index should be set to 0:
-\begin{equation}
-    \A kk \in unused : buffer[kk] = 0
-\end{equation}
-
-At any given moment, buffer[wtpr] may be unused or written. buffer[rptr] may be
-unused or read:
 \begin{tla}
-    \/ Cardinality(to_be_read) + 1 = Cardinality(reading)
-    \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
-    \/ Cardinality(to_be_read)     = Cardinality(reading)
+MUTEX ==
+    ~ ((pc[WRITER] = "w_cs") /\ (pc[READER] = "r_cs") /\ rptr = wptr)
+
+Inv_Basics == 
+    /\ ((written \cup writing) \cup unused) = all
+    /\ reading \subseteq written                            \* reading is a subset of written
+    /\ \A i \in unused : buffer[i] = 0
+    /\ \/ Cardinality(to_be_read) + 1 = Cardinality(reading) 
+       \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
+       \/ Cardinality(to_be_read)     = Cardinality(reading)
+    /\ MUTEX
 \end{tla}
 \begin{tlatex}
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=} Cardinality
- ( reading )}%
+\@x{ MUTEX \.{\defeq}}%
+ \@x{\@s{16.4} {\lnot} ( ( pc [ WRITER ] \.{=}\@w{w\_cs} ) \.{\land} ( pc [
+ READER ] \.{=}\@w{r\_cs} ) \.{\land} rptr \.{=} wptr )}%
+\@pvspace{8.0pt}%
+\@x{ Inv\_Basics \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} ( ( written \.{\cup} writing ) \.{\cup} unused )
+ \.{=} all}%
+\@x{\@s{16.4} \.{\land} reading \.{\subseteq} written\@s{110.7}}%
+\@y{%
+  reading is a subset of written
+}%
+\@xx{}%
+\@x{\@s{16.4} \.{\land} \A\, i \.{\in} unused \.{:} buffer [ i ] \.{=} 0}%
+ \@x{\@s{16.4} \.{\land} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=}
+ Cardinality ( reading )}%
  \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{16.4} \.{=}
  Cardinality ( reading ) \.{+} 1}%
  \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{=} Cardinality (
  reading )}%
+\@x{\@s{16.4} \.{\land} MUTEX}%
 \end{tlatex}
+\newline
 
 \section{Liveness}
 
