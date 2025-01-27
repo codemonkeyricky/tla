@@ -152,8 +152,11 @@ Next ==
     \/ ClientRetransmitRequest
     \/ ClientAcknowledgement
     \/ \E p \in network: 
-        /\ p.dst = "client" 
-        /\ Drop(p)
+        \/ /\p.dst = "client" 
+           /\ Drop(p)
+        \* \/ /\ p.dst = "server"
+        \*    /\ p.type = "retransmit"
+        \*    /\ Drop(p)
 
 Spec ==
   /\ Init
