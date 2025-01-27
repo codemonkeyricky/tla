@@ -42,16 +42,18 @@ such arbitrarily system generally grows quadratically as the number of states
 grow linearly (eg. in a N state system, adding state N+1 may introduce N
 transitions into the new state). There are many engineering problems that
 exhibit a large number of states, such as lockless or waitfree data structure,
-distributed algorithms, OS scheduler, and more.\newline
+distributed algorithms, OS scheduler, and more. As the number of states grow, 
+the problem becomes more mentally taxing for designer to reason about.\newline
 
-\textit{So, how do we build a solution that is correct by design?}
+\textit{How does a designer reason about the correctness of a proposed
+solution?}
 
 \section{The Generalized Problem}
 
 Fast forward to now: I stumbled across TLA+, a formalized solution of what I was
 looking for.\newline
 
-The Turing Award winnerLeslie Lamport invented the TLA+ 1999, but TLA+ didn't
+The Turing Award winner Leslie Lamport invented the TLA+ 1999, but TLA+ didn't
 appear to have caught on until the 2010's. My personal opinion is TLA+ was
 invented ahead of its time, and the problem complexity finally caught up in the
 past decade or so, to allow TLA+ to visibly demonstrate its strength.\newline
@@ -64,12 +66,15 @@ few high end hardware. This shifts the technology complexity from hardware to
 software, demanding software solution to maximize concurrent hardware resource
 utilization. One slight problem:\newline
 
-\textit{Humans are good at high level reasoning, but not so good at tracking
-many things happening at the same time.}\newline
+\textit{Humans are good at high level reasoning, but not so good at reasoning
+about many things happening at the same time.}\newline
 
-The average cognitive load of of a person is between 5 to 9 items at most. It is
-hard to enumerate all possible scenario in one's mind to ensure the design
-accommodates all the edge cases.\newline
+The average cognitive load of of a person is between 5 to 9 items. It is hard to
+enumerate all possible scenario in one's mind to ensure the design accommodates
+all the edge cases.\newline
+
+Consider a low power processor execution hundreds of instruction, how does the 
+designer ensure the invariants are upheld after every instruction?\newline
 
 Consider a distributed system. The system is a cluster of independently
 operating entities and need to somehow collectively offer the correct system
@@ -84,6 +89,10 @@ lapse the slow reader? \newline
 Consider an OS scheduler with locks. Assume all the processes have the same
 priority. Can a process starve the other processes by repeatedly acquire and
 release the lock? How do we ensure scheduling is fair?\newline
+
+% One \textit{anti-solution} is to assert that these are easy problem for designer
+% with the right experience and skill set. While this may be true, it also isn't
+% very scalable. It is likely to your organization's 
 
 The \textit{anti-pattern} is to keep bandaiding the design until user stops
 filing bug reports. This is never ideal. Per Murphy's law, anything that can go
