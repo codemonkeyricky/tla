@@ -20,7 +20,7 @@ Send ==
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[
             dst |-> "client", 
-            prot |-> "reliable",
+            prot |-> "unreliable",
             seq |-> server_tx'
             ]}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
@@ -168,7 +168,7 @@ Next ==
     \/ ClientRetransmitRequest
     \/ ClientAcknowledgement
     \/ \E p \in network: 
-        \/ /\p.dst = "client" 
+        \/ /\ p.prot = "unreliable" 
            /\ Drop(p)
         \* \/ /\ p.dst = "server"
         \*    /\ p.type = "retransmit"
