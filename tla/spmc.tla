@@ -10,7 +10,7 @@ variables
     reader_k = 0,
     rrsvd = [kk \in 0..N-1 |-> 0],
     \* rptr_rsvd = [kk \in 0..Reader-1 |-> 100 + kk],
-    rptr = [kk \in 0..Reader-1 |-> 0],
+    rptr = [k \in READERS |-> 0],
     wptr = 0,
     outstanding = 0,
     \* rstate = [kk \in 0..Reader-1 |-> "read_init"],
@@ -39,6 +39,9 @@ Liveness ==
 Liveness2 == 
     /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[0] = 0)
     /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[2] = 0)
+
+WRITER == "writer0"
+READERS == {"reader0", "reader1"}
 
 end define;
 
@@ -82,7 +85,7 @@ w_inc_wptr:         wptr := (wptr + 1) % N;
 w_done:             return;
 end procedure; 
 
-fair process writer_0 = 100
+fair process writer_0 = WRITER
 begin 
     w_while:
     while TRUE do
@@ -90,7 +93,7 @@ begin
     end while;
 end process; 
 
-fair process reader_k \in 0..Reader-1 
+fair process reader_k \in READERS
 begin 
     r_start: 
     while TRUE do
@@ -99,8 +102,8 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "1a207b09" /\ chksum(tla) = "f5b59511")
-\* Process reader_k at line 93 col 6 changed to reader_k_
+\* BEGIN TRANSLATION (chksum(pcal) = "58a37bc6" /\ chksum(tla) = "380f41fa")
+\* Process reader_k at line 96 col 6 changed to reader_k_
 VARIABLES reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -125,24 +128,27 @@ Liveness2 ==
     /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[0] = 0)
     /\ (rrsvd[0] = 1 /\ rrsvd[1] = 0 /\ rrsvd[2] = 1) ~> (rrsvd[2] = 0)
 
+WRITER == "writer0"
+READERS == {"reader0", "reader1"}
+
 VARIABLE i
 
 vars == << reader_k, rrsvd, rptr, wptr, outstanding, buffer, pc, stack, i >>
 
-ProcSet == {100} \cup (0..Reader-1)
+ProcSet == {WRITER} \cup (READERS)
 
 Init == (* Global variables *)
         /\ reader_k = 0
         /\ rrsvd = [kk \in 0..N-1 |-> 0]
-        /\ rptr = [kk \in 0..Reader-1 |-> 0]
+        /\ rptr = [k \in READERS |-> 0]
         /\ wptr = 0
         /\ outstanding = 0
         /\ buffer = [kk \in 0..N-1 |-> 0]
         (* Procedure reader *)
         /\ i = [ self \in ProcSet |-> self]
         /\ stack = [self \in ProcSet |-> << >>]
-        /\ pc = [self \in ProcSet |-> CASE self = 100 -> "w_while"
-                                        [] self \in 0..Reader-1 -> "r_start"]
+        /\ pc = [self \in ProcSet |-> CASE self = WRITER -> "w_while"
+                                        [] self \in READERS -> "r_start"]
 
 r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
                      /\ IF outstanding # 0
@@ -177,7 +183,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 63, column 21.")
+                              "Failure of assertion at line 66, column 21.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, 
                                     buffer, stack, i >>
@@ -265,11 +271,11 @@ writer(self) == w_chk_full(self) \/ w_early_ret(self) \/ w_chk_st(self)
                    \/ w_mark_written(self) \/ w_inc(self)
                    \/ w_inc_wptr(self) \/ w_done(self)
 
-w_while == /\ pc[100] = "w_while"
-           /\ stack' = [stack EXCEPT ![100] = << [ procedure |->  "writer",
-                                                   pc        |->  "w_while" ] >>
-                                               \o stack[100]]
-           /\ pc' = [pc EXCEPT ![100] = "w_chk_full"]
+w_while == /\ pc[WRITER] = "w_while"
+           /\ stack' = [stack EXCEPT ![WRITER] = << [ procedure |->  "writer",
+                                                      pc        |->  "w_while" ] >>
+                                                  \o stack[WRITER]]
+           /\ pc' = [pc EXCEPT ![WRITER] = "w_chk_full"]
            /\ UNCHANGED << reader_k, rrsvd, rptr, wptr, outstanding, buffer, i >>
 
 writer_0 == w_while
@@ -288,11 +294,11 @@ reader_k_(self) == r_start(self)
 
 Next == writer_0
            \/ (\E self \in ProcSet: reader(self) \/ writer(self))
-           \/ (\E self \in 0..Reader-1: reader_k_(self))
+           \/ (\E self \in READERS: reader_k_(self))
 
 Spec == /\ Init /\ [][Next]_vars
-        /\ WF_vars(writer_0) /\ WF_vars(writer(100))
-        /\ \A self \in 0..Reader-1 : WF_vars(reader_k_(self)) /\ WF_vars(reader(self))
+        /\ WF_vars(writer_0) /\ WF_vars(writer(WRITER))
+        /\ \A self \in READERS : WF_vars(reader_k_(self)) /\ WF_vars(reader(self))
 
 \* END TRANSLATION 
 
