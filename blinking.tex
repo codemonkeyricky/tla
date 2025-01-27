@@ -1,0 +1,233 @@
+\chapter{Blinking LED}
+
+Let's start with a trivial specification of a blinking LED. The intent of this example 
+is to demonstrate the core functionalities of TLA+ specification language.
+
+TODO: briefly talk about tla+ and model checker here.
+
+\section{Requirement}
+
+The LED is represented by a boolean variable that can be either 0 or 1.\newline
+
+... that's it.
+
+\section{Spec}
+
+The specification language may appear alienating as it is mathematically
+motivated based on propositional logic. Despite the (possibly) daunting syntax,
+designer only need to be familiar with a handful of key operators to start
+realizing value using TLA+. This chapter will attempt to describe the example in
+exhaustive detail to reduce the learning curve.
+
+The following describe the core portion of the blinking LED spec. 
+
+\begin{tla}
+--------------------------- MODULE blinking ----------------------------
+VARIABLES b 
+vars == <<b>>
+Init ==
+    /\ b = 0
+On == 
+    /\ b = 0
+    /\ b' = 1
+Off == 
+    /\ b = 1
+    /\ b' = 0
+Next ==
+    \/ Off 
+    \/ On
+Spec ==
+    /\ Init
+    /\ [][Next]_vars
+========
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} blinking}\moduleRightDash\@xx{}%
+\@x{ {\VARIABLES} b}%
+\@x{ vars \.{\defeq} {\langle} b {\rangle}}%
+\@x{ Init\@s{2.02} \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} b \.{=} 0}%
+\@x{ On \.{\defeq}}%
+\@x{\@s{18.15} \.{\land} b \.{=} 0}%
+\@x{\@s{18.15} \.{\land} b \.{'} \.{=} 1}%
+\@x{ Off \.{\defeq}}%
+\@x{\@s{15.91} \.{\land} b \.{=} 1}%
+\@x{\@s{15.91} \.{\land} b \.{'} \.{=} 0}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} Off}%
+\@x{\@s{16.4} \.{\lor} On}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} Init}%
+\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+\begin{itemize}
+    \item $\defeq$ is the \textit{defines equal} operator 
+    \item $\land$ and $\lor$ are the AND and OR operator. The effect
+    of these operator follow the natural definition in English: 
+    \begin{itemize}
+        \item $C \defeq A \land B$: C is true iff A and B are true
+        \item $C \defeq A \lor B$: C is true iff A or B is true
+    \end{itemize}
+    \item The $'$ operator represents the next state. $b'$ represent b's next state. 
+    \item $VARIABLES$ keyword defines a list of variables for the spec. In this case 
+    the spec defines a variable $b$ which can be either 0 or 1
+    \item $vars$ is typically defined as a shorthand to refer to \textit{all}
+    variables in the spec. 
+\end{itemize}
+
+With the above definition, we can revisit the Action definitions: $Init$ defines
+the initial system state, where b is set to 0.\newline 
+
+$Next$ requires more elaboration. TLA+ specifies the system as a collection of
+states with transitions between them. In a simplified sense, the state is
+described as a collection of ANDs (eg. system is in state C if both A and B are
+true), the ORs then describe the states the system can possibly be in (eg.
+system can be in state C OR D). Revisiting the example, the blinking LED has two
+states:
+\begin{itemize}
+    \item $On \defeq b = 0 \land b' = 1$: b switches on 
+    \item $Off \defeq = 1 \land b' = 0$: b switches off
+\end{itemize}
+
+The system's $Next$ state is defined to be one of these states:\newline
+$Next \defeq On \lor Off$.\newline
+
+$\Box[Next]_{vars}$ is a \textbf{Box-Action Formula}, where \textit{Next} is an
+action and \textit{vars} is a state function. The formula is true iff every
+successive pair of steps in behaviour is a $[Next]_{vars}$. Finally $Spec$ is
+conjunction between $Init$ and $\Box[Next]_{vars}$. Note \textbf{all} TLA+
+specification follows very similar template. There are situation we will need to
+provide \textit{fairness} description - this will be covered later. \newline
+
+In short: this specification describes a two-state state machine where b toggles
+between 0 and 1.\newline
+
+Note that b can technically be \textit{anything}. b can be 0, 1, -42, a
+dinosaur, etc. TLA+ specifies values of $b$ which are valid in the system.
+
+\section{Safety}
+
+The spec so far only defines the possible states - but the \textit{power} of
+TLA+ lies in its \textit{properties} description. Safety properties are
+invariants that must hold true in \textit{every} state. An invariant in the
+blinking LED example is: 
+\begin{tla}
+    TypeOK == b \in {0, 1}
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} TypeOK \.{\defeq} b \.{\in} \{ 0 ,\, 1 \}}%
+\end{tlatex}
+
+This states the only valid value of b is 0 or 1. If b is ever set to anything
+else, the spec is invalid.\newline
+
+Some example safety properties include: Only a single thread have exclusive
+access to critical section, number of concurrent reads cannot exceed data
+available to be read, etc. 
+
+\section{Liveness}
+
+While safety properties describe invariant that must be upheld in every state,
+\textit{Liveness} describe properties of a sequence of states. In the blinking
+LED example, a liveness property can be the if b is 0, it eventually becomes 1,
+and vice versa. This is described below:
+\begin{tla}
+    Liveness == 
+        /\ b = 0 ~> b = 1
+        /\ b = 1 ~> b = 0
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4} Liveness \.{\defeq}}%
+\@x{\@s{32.8} \.{\land} b \.{=} 0 \.{\leadsto} b \.{=} 1}%
+\@x{\@s{32.8} \.{\land} b \.{=} 1 \.{\leadsto} b \.{=} 0}%
+\end{tlatex}
+
+It is the author's opinion liveness describes the \textit{design essense} behind
+the spec. The key characteristic of a system is described by its
+\textit{behaviour} across a series of states. Does a distribute algorithm
+eventually converge to a working state? Does a resource manager fairly allocate
+resources in all scenarios? Does a scheduler ensure all tasks are eventually
+scheduled? These are behaviours that are \textit{cannot} be concluded by looking
+at a single state, but across a \textit{sequence of state}. Liveness allows 
+designer to express and verify these properties.
+
+\section{Model Checking}
+
+Since the blinking LED is trivially specified, the full specification is
+included below. For subsequent chapters only snippet will be included. Please
+refer to the accompanied material for full spec source. 
+
+TODO: install toolchain 
+
+TODO: commandline
+
+TODO: using TLC
+
+The following is the content of \textit{blinking.tla}:
+\begin{tla}
+--------------------------- MODULE blinking ----------------------------
+EXTENDS Naturals
+VARIABLES b 
+vars == <<b>>
+TypeOK ==
+  /\ b \in {0, 1} 
+Liveness == 
+    /\ b = 0 ~> b = 1
+    /\ b = 1 ~> b = 0
+Init ==
+  /\ b = 0
+Next ==
+  \/ /\ b = 0
+     /\ b' = 1
+  \/ /\ b = 1
+     /\ b' = 0
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+=============================================================================
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} blinking}\moduleRightDash\@xx{}%
+\@x{ {\EXTENDS} Naturals}%
+\@x{ {\VARIABLES} b}%
+\@x{ vars \.{\defeq} {\langle} b {\rangle}}%
+\@x{ TypeOK \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} b \.{\in} \{ 0 ,\, 1 \}}%
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} b \.{=} 0 \.{\leadsto} b \.{=} 1}%
+\@x{\@s{16.4} \.{\land} b \.{=} 1 \.{\leadsto} b \.{=} 0}%
+\@x{ Init \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} b \.{=} 0}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} \.{\land} b \.{=} 0}%
+\@x{\@s{20.94} \.{\land} b \.{'} \.{=} 1}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} \.{\land} b \.{=} 1}%
+\@x{\@s{20.94} \.{\land} b \.{'} \.{=} 0}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} Init}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land}\@s{0.16} {\WF}_{ vars} ( Next )}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+The following is the content of \textit{blinking.cfg}:
+
+\begin{lstlisting}
+    SPECIFICATION Spec
+    INVARIANTS TypeOK
+    PROPERTIES Liveness
+\end{lstlisting}
+
+\section{Limitation}
+
+Since TLA+ exhaustively explores all possible state, a linear growth of
+variables leads to TLC (temporal logic checker) execution time grows
+\textit{exponentially}.This means the specification must be scoped correctly to
+limit the state space.\newline
+
+Similarly, if you want to verify concurrent psuedo code implementation in
+PlusCal, you can likely at most verify 10s of lines of code.
+
