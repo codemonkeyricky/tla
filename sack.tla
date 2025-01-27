@@ -13,15 +13,6 @@ ASSUME W * 2 < N
 Liveness == 
     server_tx = 0 ~> server_tx = N-1
 
-Init ==
-    /\ network = {}
-    /\ server_tx = 0
-    /\ server_tx_limit = W
-    /\ server_tx_ack = 0
-    /\ client_rx = 0
-    /\ client_buffer = {} 
-    /\ lost = 0
-
 Send == 
     \/ /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
@@ -145,13 +136,14 @@ ClientRetransmitRequest ==
                                 network)
     /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
 
-Reset == 
-    /\ network' = {}
-    /\ server_tx' = 0
-    /\ server_tx_limit' = W
-    /\ server_tx_ack' = 0
-    /\ client_rx' = 0
-    /\ client_buffer' = {} 
+Init ==
+    /\ network = {}
+    /\ server_tx = 0
+    /\ server_tx_limit = W
+    /\ server_tx_ack = 0
+    /\ client_rx = 0
+    /\ client_buffer = {} 
+    /\ lost = 0
 
 Next == 
     \/ Send 
