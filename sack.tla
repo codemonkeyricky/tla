@@ -6,14 +6,17 @@ VARIABLES
 vars == <<network, server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
 
 N == 16
-WINDOW == 5
+W == 5
 
-ASSUME WINDOW * 2 < N
+ASSUME W * 2 < N
+
+Liveness == 
+    server_tx = 0 ~> server_tx = N-1
 
 Init ==
     /\ network = {}
     /\ server_tx = 0
-    /\ server_tx_limit = WINDOW
+    /\ server_tx_limit = W
     /\ server_tx_ack = 0
     /\ client_rx = 0
     /\ client_buffer = {} 
@@ -24,14 +27,6 @@ Send ==
        /\ server_tx' = (server_tx + 1) % N
        /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
-    \* \/ /\ lost # WINDOW -1
-    \*    /\ server_tx # server_tx_limit
-    \*    /\ server_tx' = (server_tx + 1) % N
-    \*    /\ lost' = lost + 1
-    \*    /\ UNCHANGED <<network, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
-
-Liveness == 
-    server_tx = 0 ~> server_tx = N-1
 
 MinS(s) == 
     CHOOSE x \in s: \A y \in s: x <= y
@@ -41,8 +36,8 @@ MaxS(s) ==
 
 MaxIndex == 
     LET 
-        upper == {x \in client_buffer : x > N - WINDOW}
-        lower == {x \in client_buffer : x < WINDOW}
+        upper == {x \in client_buffer : x > N - W}
+        lower == {x \in client_buffer : x < W}
         maxv == IF upper # {} /\ lower # {} 
                 THEN 
                     MaxS(lower)
@@ -53,8 +48,8 @@ MaxIndex ==
 
 MinIndex == 
     LET 
-        upper == {x \in client_buffer : x > N - WINDOW}
-        lower == {x \in client_buffer : x < WINDOW}
+        upper == {x \in client_buffer : x > N - W}
+        lower == {x \in client_buffer : x < W}
         minv == IF upper # {} /\ lower # {} 
                 THEN 
                     MinS(upper)
@@ -69,7 +64,7 @@ RemoveMessage(m, msgs) ==
 AddMessage(m, msgs) == 
     msgs \cup {m}
 
-ClientRx(pp) == 
+ClientReceive(pp) == 
     /\ network' = RemoveMessage(pp, network)
     /\ client_buffer' = client_buffer \cup {pp.seq}
     /\ UNCHANGED <<server_tx, client_rx, server_tx_ack, server_tx_limit, lost>>
@@ -86,7 +81,7 @@ MergeReady ==
     /\ (client_rx + 1) % N = MinIndex       \* contiguous with previous ack
     /\ Range = Cardinality(client_buffer)   \* combined is contiguous 
 
-Client == 
+ClientAcknowledgement == 
     /\ client_buffer # {}
     /\ MergeReady 
     /\ client_buffer' = {}
@@ -96,14 +91,14 @@ Client ==
 
 RemoveStaleAck(ack, msgs) == 
     LET 
-        acks == {(ack - k + N ) % N : k \in 1..WINDOW}
+        acks == {(ack - k + N ) % N : k \in 1..W}
     IN 
         {m \in msgs : ~(m.dst = "server" /\ m.type = "ack" /\ m.ack \in acks)}
 
-ServerRx(pp) == 
+ServerReceive(pp) == 
     \/ /\ pp.type = "ack"
        /\ server_tx_ack' = pp.ack
-       /\ server_tx_limit' = (pp.ack + WINDOW) % N
+       /\ server_tx_limit' = (pp.ack + W) % N
        /\ network' = RemoveStaleAck(pp.ack, RemoveMessage(pp, network))
        /\ UNCHANGED <<server_tx, client_rx, client_buffer, lost>>
     \/ /\ pp.type = "retransmit"
@@ -114,12 +109,12 @@ ServerRx(pp) ==
 
 Receive(pp) ==
     \/ /\ pp.dst = "client"
-       /\ ClientRx(pp)
+       /\ ClientReceive(pp)
     \/ /\ pp.dst = "server"
-       /\ ServerRx(pp)
+       /\ ServerReceive(pp)
     
 Drop(p) == 
-    /\ lost # WINDOW-1
+    /\ lost # W-1
     /\ network' = RemoveMessage(p, network)
     /\ lost' = lost + 1
     /\ UNCHANGED <<server_tx, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
@@ -140,40 +135,31 @@ Missing ==
     IN 
         to_request
 
-ClientRetranReq == 
-    \/ /\ ~MergeReady
-       /\ client_buffer # {}
-       /\ Missing # {}
-    \*    /\ PrintT(Missing) 
-    \*    /\ Assert(0,"")
-       /\ network' = AddMessage([dst |-> "server", 
-                                 type |-> "retransmit",
-                                 seq |-> CHOOSE x \in Missing : TRUE],
-                                   network)
-       /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
-    \* \/ /\ ~MergeReady
-    \*    /\ network = {}
-    \*    /\ network' = AddMessage([dst |-> "server", 
-    \*                              type |-> "retransmit",
-    \*                              seq |-> (client_rx + 1) % N],
-    \*                                network)
-    \*    /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
+ClientRetransmitRequest == 
+    /\ ~MergeReady
+    /\ client_buffer # {}
+    /\ Missing # {}
+    /\ network' = AddMessage([dst |-> "server", 
+                              type |-> "retransmit",
+                              seq |-> CHOOSE x \in Missing : TRUE],
+                                network)
+    /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
 
 Reset == 
     /\ network' = {}
     /\ server_tx' = 0
-    /\ server_tx_limit' = WINDOW
+    /\ server_tx_limit' = W
     /\ server_tx_ack' = 0
     /\ client_rx' = 0
     /\ client_buffer' = {} 
 
 Next == 
     \/ Send 
-    \/ \E p \in network : 
+    \/ \E p \in network: 
         Receive(p)
-    \/ ClientRetranReq
-    \/ Client
-    \/ \E p \in network : 
+    \/ ClientRetransmitRequest
+    \/ ClientAcknowledgement
+    \/ \E p \in network: 
         /\ p.dst = "client" 
         /\ Drop(p)
 
@@ -181,5 +167,5 @@ Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-  /\ SF_vars(\E p \in network: p.dst = "client" /\ ClientRx(p))
+  /\ SF_vars(\E p \in network: p.dst = "client" /\ ClientReceive(p))
 =============================================================================
