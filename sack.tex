@@ -13,8 +13,10 @@ decoding engine.\newline
 
 The network may drop packets if the switch gets too busy. In the case of a
 packet drop, we can discard the frame, request the whole frame re-sent, or
-selectively request the missing packet to be retransmitted. In this chapter, we
-will implement the third solution.\newline
+selectively request the missing packet to be retransmitted.\newline 
+
+In this chapter, we will implement a simple selective retransmit
+algorithm.\newline
 
 \begin{center}
 
@@ -50,5 +52,7 @@ will implement the third solution.\newline
 \end{center}
 
 \section{Requirement}
+
+
 
 \section{Spec}
