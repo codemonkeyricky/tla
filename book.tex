@@ -73,35 +73,12 @@
 
 \include{ds}
 
-\chapter{Idiom}
-
-Choose a x in set S such that for every Y in S x is smaller than y.
-Finding minimum in set:\newline
-\begin{tla}
-    Min(S) == CHOOSE x \in S : \A y \in S : x <= y
-\end{tla}
-\begin{tlatex}
- \@x{\@s{16.4} Min ( S ) \.{\defeq} {\CHOOSE} x \.{\in} S \.{:} \A\, y \.{\in}
- S \.{:} x \.{\leq} y}%
-\end{tlatex}
-\newline
-
-messages is an unordered map with untyped key and integer value:\newline
-
-\begin{tla}
-messages = [m \in {} |-> 0]
-\end{tla}
-\begin{tlatex}
-\@x{ messages \.{=} [ m \.{\in} \{ \} \.{\mapsto} 0 ]}%
-\end{tlatex}
-
 \include{fairness}
 
 \include{debug}
 
-\include{reference}
-
 \chapter{Abstraction Guideline}
 
+\include{reference}
 
 \end{document}

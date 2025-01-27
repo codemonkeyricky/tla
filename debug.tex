@@ -1,6 +1,61 @@
-\chapter{Debugging}
+\chapter{General Tips}
 
-TODO: debug using -dump 
-TODO: check for run away state 
-TODO: look for low value states to trim
+\section{Model Checker Debug}
 
+Debugging in TLC is a bit different than debugging with normal programs. A step
+in the model checker is really a state transition. Even if the model cheker
+completes, it's still worthwhile dump and audit the states just to make sure the
+Spec is defined correctly.
+
+\begin{verbatim}
+tlc elevator -dump out > /dev/null && cat out.dump | head -n5
+State 1:
+a = 1
+State 2:
+a = 2
+\end{verbatim}
+
+You may want to grep the output to look for state being set to certain value to 
+confirm the Spec is working as intended.
+
+\subsection{Dead Lock}
+
+Deadlock typically happens when the model checker ran out of things to do. This
+is typically a result of an incomplete Spec definition, where certain edge cases
+were not accounted for. The model checker typically provides a fairly
+comprehensive backtrace leading up to the dead lock to simplify debug.
+
+\subsection{Live Lock}
+
+Livelock happens when the model checker identifies a case where the liveness
+property is violated. An example is the elevator stuck going between two floors 
+instead of keep going to the top floor, or the system is stuck dropping and
+retransmit the same packet.\newline 
+
+These are typically fixed by providing additional fairness description to the
+Spec, telling the model checker how continue in the case of a live lock.\newline 
+
+For a detail fairness description please refer to Chapter~\ref{chap:fairness}.
+
+\section{Model Refinement}
+
+This is, in some sense, the \textit{art} associated with writing model checker
+verifiable TLA+ spec. Model checking is only valuable if it can be verified
+within a reasonable amount of time. Since the model complexity grows
+exponentially, there's little value in attempting to hyper-optimize the details.
+Designer should focus on optimizing the broad stroke, such as removing features 
+that are harder to get wrong, and focus the model on the bits that have the
+highest return on investment.\newline
+
+One useful way of trimming out low value portion of the Spec is to audit the
+state dump. Even in the case of a non-terminating run, a partial state dump can
+help identify low value details we can remove from the Spec.\newline
+
+One key value of TLA+ is it highlights all the corner cases in the system. Even
+if you end up removing certain details from the Spec, it still likely highlights
+to you certain condition you were unaware of.\newline
+
+As a broad stroke principle: when the Spec has millions or higher more states,
+it is unlikely to terminate within a few seconds. From first principles if you
+can find one failure case in a million states, you can also likely reduce the 
+scope of the model to reproduce the failure in much fewer states.
