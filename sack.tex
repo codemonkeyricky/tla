@@ -69,9 +69,11 @@ can send more video data to the client. The acknowlegements are not latency
 sensitive in nature, and take up a very small proportion of bandwidth, so they
 are transported through reliable channel.\newline
 
+The following illustrates a re-ordering scenario:
+\begin{center}
 \begin{tikzpicture}[
     lifeline/.style={thick},
-    message/.style={->, >=stealth, thick},
+    message/.style={->, >=stealth, dashed},
     activation/.style={rectangle, fill=blue!20, minimum width=0.5cm, minimum height=0.8cm} ]
 
     % Define lifelines
@@ -85,26 +87,30 @@ are transported through reliable channel.\newline
     % \draw[lifeline] (database.south) -- ++(0,-8);
 
     % Draw messages
-    \draw[message] ([yshift=-1cm] client.south) -- node[above] {request} ([yshift=-1cm] server.south);
+    \draw[message] ([yshift=-1cm] client.south) -- node[above] {pkt \#0} ([yshift=-2cm] server.south);
+    \draw[message] ([yshift=-2cm] client.south) -- node[above] {pkt \#2} ([yshift=-3cm] server.south);
+    \draw[message] ([yshift=-3cm] client.south) -- node[above] {pkt \#1} ([yshift=-4cm] server.south);
     % \draw[message] ([yshift=-2cm] server.south) -- node[above] {query} ([yshift=-2cm] database.south);
     % \draw[message] ([yshift=-3cm] database.south) -- node[above] {response} ([yshift=-3cm] server.south);
-    \draw[message] ([yshift=-4cm] server.south) -- node[above] {reply} ([yshift=-4cm] client.south);
+    \draw[message] ([yshift=-6cm] server.south) -- node[above] {ack \#3} ([yshift=-7cm] client.south);
+
+    % \draw[message] ([yshift=-5cm] server.south) to[out=-90, in=-90, looseness=1.5] node[above] {ack \#3} ([yshift=-6cm] server.south);
+    % \draw[message] ([yshift=-1cm] server.south) to[out=-90, in=-90, looseness=1.5] node[midway, above] {ack \#3} ([yshift=-2cm] server.south);
 
     % Draw activations
-    \node[activation] at ([yshift=-1.5cm] server.south) {};
+    \node[activation] at ([yshift=-5cm] server.south) {Process pkt \#0..2};
     % \node[activation] at ([yshift=-2.5cm] database.south) {};
+
+    % \draw[arrow, out=120, in=60, looseness=8] (server.west) to node[above] {} (server.east);
+    % \begin{umlcallself}[op=c1, return=0]{b} 
+    % \draw[message] ([yshift=-1cm] server.south) to[out=-100, in=100, looseness=1.5] node[midway, above] {ack \#3} ([yshift=-2cm] server.south);
 
     % Optional: Add dashed lines for return messages
     % \draw[dashed] ([yshift=-3cm] database.south) -- ++(0,-1);
-    \draw[dashed] ([yshift=-4cm] server.south) -- ++(0,-1);
-
+    % \draw[dashed] ([yshift=-4cm] server.south) -- ++(0,-1);
+ 
 \end{tikzpicture}
+\end{center}
 
-
-
-
-waits for a sequences the packets in order (possibly wait
-for out of order packets to arrive), processing them all together process all
-the When the client has processed a batch of packets 
 
 \section{Spec}
