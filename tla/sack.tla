@@ -7,8 +7,10 @@ vars == <<network, server_tx, server_tx_limit, client_rx, client_buffer, server_
 
 N == 16
 W == 5
+L == 4
 
 ASSUME W * 2 < N
+ASSUME L < W
 
 Liveness == 
     server_tx = 0 ~> server_tx = N-1
@@ -105,7 +107,7 @@ Receive(pp) ==
        /\ ServerReceive(pp)
     
 Drop(p) == 
-    /\ lost # W-1
+    /\ lost # L
     /\ network' = RemoveMessage(p, network)
     /\ lost' = lost + 1
     /\ UNCHANGED <<server_tx, client_rx, client_buffer, server_tx_ack, server_tx_limit>>
