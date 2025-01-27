@@ -213,7 +213,91 @@ The allowed actions include packet \textit{Receive}, which the existential
 quantifier also has the side effect of re-ordering.
 \textit{ClientRetransmitRequest} detects and sends retransmit request.
 \textit{ClientAcknowledgement} sends acknowledgement. Finally, data packets may
-be dropped. 
+be dropped.\newline
+
+Before we start defining the actions, let us define some helper functions:\newline
+\begin{tla}
+MinS(s) == 
+    CHOOSE x \in s: \A y \in s: x <= y
+
+MaxS(s) == 
+    CHOOSE x \in s: \A y \in s: x >= y
+
+MaxIndex == 
+    LET 
+        upper == {x \in client_buffer : x > N - W}
+        lower == {x \in client_buffer : x < W}
+        maxv == IF upper # {} /\ lower # {} 
+                THEN 
+                    MaxS(lower)
+                ELSE 
+                    MaxS(client_buffer)
+    IN 
+        maxv
+
+MinIndex == 
+    LET 
+        upper == {x \in client_buffer : x > N - W}
+        lower == {x \in client_buffer : x < W}
+        minv == IF upper # {} /\ lower # {} 
+                THEN 
+                    MinS(upper)
+                ELSE 
+                    MinS(client_buffer)
+    IN 
+        minv
+
+Range == 
+    IF MaxIndex >= MinIndex
+    THEN
+        MaxIndex - MinIndex + 1
+    ELSE 
+        MaxIndex + 1 + N - MinIndex
+\end{tla}
+\begin{tlatex}
+\@x{ MinS ( s ) \.{\defeq}}%
+\@x{ {\CHOOSE} x \.{\in} s \.{:} \A\, y \.{\in} s \.{:} x \.{\leq} y}%
+\@pvspace{8.0pt}%
+\@x{ MaxS ( s ) \.{\defeq}}%
+\@x{ {\CHOOSE} x \.{\in} s \.{:} \A\, y \.{\in} s \.{:} x \.{\geq} y}%
+\@pvspace{8.0pt}%
+\@x{ MaxIndex \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} upper \.{\defeq} \{ x \.{\in} client\_buffer \.{:} x \.{>} N
+ \.{-} W \}}%
+ \@x{\@s{32.8} lower \.{\defeq} \{ x \.{\in} client\_buffer \.{:} x \.{<} W
+ \}}%
+ \@x{\@s{32.8} maxv \.{\defeq} {\IF} upper \.{\neq} \{ \} \.{\land} lower
+ \.{\neq} \{ \}}%
+\@x{\@s{32.8} \.{\THEN}}%
+\@x{\@s{49.19} MaxS ( lower )}%
+\@x{\@s{32.8} \.{\ELSE}}%
+\@x{\@s{49.19} MaxS ( client\_buffer )}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} maxv}%
+\@pvspace{8.0pt}%
+\@x{ MinIndex \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} upper \.{\defeq} \{ x \.{\in} client\_buffer \.{:} x \.{>} N
+ \.{-} W \}}%
+ \@x{\@s{32.8} lower \.{\defeq} \{ x \.{\in} client\_buffer \.{:} x \.{<} W
+ \}}%
+ \@x{\@s{32.8} minv \.{\defeq} {\IF} upper \.{\neq} \{ \} \.{\land} lower
+ \.{\neq} \{ \}}%
+\@x{\@s{32.8} \.{\THEN}}%
+\@x{\@s{49.19} MinS ( upper )}%
+\@x{\@s{32.8} \.{\ELSE}}%
+\@x{\@s{49.19} MinS ( client\_buffer )}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} minv}%
+\@pvspace{8.0pt}%
+\@x{ Range \.{\defeq}}%
+\@x{\@s{16.4} {\IF} MaxIndex \.{\geq} MinIndex}%
+\@x{\@s{16.4} \.{\THEN}}%
+\@x{\@s{32.8} MaxIndex \.{-} MinIndex \.{+} 1}%
+\@x{\@s{16.4} \.{\ELSE}}%
+\@x{\@s{32.8} MaxIndex \.{+} 1 \.{+} N \.{-} MinIndex}%
+\end{tlatex}
 
 
 % \end{document}
