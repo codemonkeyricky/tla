@@ -55,44 +55,17 @@
 
 \include{gossip}
 
-
-
-
 \include{scheduler}
 
 \include{sack}
 
 \include{raft}
 
-\section{Requirement}
-
-\section{Spec}
-
-\begin{tla}
-Init ==
-    /\ lastHash = NoHash
-    /\ distributedLedger = [n \in Node |-> [h \in Hash |-> NoBlock]]
-    /\ received = [n \in Node |-> {}]
-\end{tla}
-\begin{tlatex}
-\@x{ Init \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} lastHash \.{=} NoHash}%
- \@x{\@s{16.4} \.{\land} distributedLedger \.{=} [ n \.{\in} Node \.{\mapsto}
- [ h \.{\in} Hash \.{\mapsto} NoBlock ] ]}%
-\@x{\@s{16.4} \.{\land} received \.{=} [ n \.{\in} Node \.{\mapsto} \{ \} ]}%
-\end{tlatex}
-\newline
-
-\begin{itemize}
-    \item Every node is a ledger in this system, initialized to NoBlock
-    \item Every node's received set is initialized to nothing
-\end{itemize}
-
 \part{Examples with PlusCal}
 
 \include{spsc}
 
-\chapter{SPMC Lockless Queue}
+\include{spmc}
 
 \part{Language Reference}
 
