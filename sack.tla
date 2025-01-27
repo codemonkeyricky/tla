@@ -49,6 +49,13 @@ MinIndex ==
     IN 
         minv
 
+Range == 
+    IF MaxIndex >= MinIndex
+    THEN
+        MaxIndex - MinIndex + 1
+    ELSE 
+        MaxIndex + 1 + N - MinIndex
+
 RemoveMessage(m, msgs) == 
     msgs \ {m}
 
@@ -59,13 +66,6 @@ ClientReceive(pp) ==
     /\ network' = RemoveMessage(pp, network)
     /\ client_buffer' = client_buffer \cup {pp.seq}
     /\ UNCHANGED <<server_tx, client_rx, server_tx_ack, server_tx_limit, lost>>
-
-Range == 
-    IF MaxIndex >= MinIndex
-    THEN
-        MaxIndex - MinIndex + 1
-    ELSE 
-        MaxIndex + 1 + N - MinIndex
 
 MergeReady == 
     /\ client_buffer # {}

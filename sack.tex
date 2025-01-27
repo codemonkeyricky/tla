@@ -1,3 +1,5 @@
+% \begin{document}
+
 \chapter{Selective Retransmit}
 
 Assume client device that playsback a video stream. Structurelly, a video is
@@ -139,8 +141,79 @@ description for our requirement:
     sequence number of the received packets are contiguous. The client will also
     send an acknowledgement back to the Server with the most recent sequence
     number
+    \item Server to Client data packets are assumed unreliable due to bulk bandwidth
+    \item Client to Server control packets are assumed to be reliable
 \end{itemize}
 
 We are now ready to implement the \textit{Spec}. 
 
 \section{Spec}
+
+The following is the skeleton of the Spec: 
+\newline
+
+\begin{tla}
+Init ==
+    /\ network = {}
+    /\ server_tx = 0
+    /\ server_tx_limit = W
+    /\ server_tx_ack = 0
+    /\ client_rx = 0
+    /\ client_buffer = {} 
+    /\ lost = 0
+
+Next == 
+    \/ Send 
+    \/ \E p \in network: 
+        Receive(p)
+    \/ ClientRetransmitRequest
+    \/ ClientAcknowledgement
+    \/ \E p \in network: 
+        /\ p.dst = "client" 
+        /\ Drop(p)
+\end{tla}
+\begin{tlatex}
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} network \.{=} \{ \}}%
+\@x{\@s{16.4} \.{\land} server\_tx \.{=} 0}%
+\@x{\@s{16.4} \.{\land} server\_tx\_limit \.{=} W}%
+\@x{\@s{16.4} \.{\land} server\_tx\_ack \.{=} 0}%
+\@x{\@s{16.4} \.{\land} client\_rx \.{=} 0}%
+\@x{\@s{16.4} \.{\land} client\_buffer \.{=} \{ \}}%
+\@x{\@s{16.4} \.{\land} lost \.{=} 0}%
+\@pvspace{8.0pt}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} Send}%
+\@x{\@s{16.4} \.{\lor} \E\, p \.{\in} network \.{:}}%
+\@x{\@s{20.5} Receive ( p )}%
+\@x{\@s{16.4} \.{\lor} ClientRetransmitRequest}%
+\@x{\@s{16.4} \.{\lor} ClientAcknowledgement}%
+\@x{\@s{16.4} \.{\lor} \E\, p \.{\in} network \.{:}}%
+\@x{\@s{20.5} \.{\land} p . dst \.{=}\@w{client}}%
+\@x{\@s{20.5} \.{\land} Drop ( p )}%
+\end{tlatex}
+\newline
+
+The server is represented by three variables: 
+\begin{itemize}
+    \item tx+1 represents the sequence number to be used in the next packet
+    \item tx\_liimit represents the highest sequence number server can send
+    without waiting for an acknowledgement
+    \item tx\_ack represents the most recent acknowledged sequence number
+\end{itemize}
+
+The client is represented by two variables: 
+\begin{itemize}
+    \item client\_rx is the most recently acknowledged sequence number
+    \item client\_buffer is the receive buffer holding all the packets waiting 
+    to be re-ordered prior to being acknowleged 
+\end{itemize}
+
+The allowed actions include packet \textit{Receive}, which the existential
+quantifier also has the side effect of re-ordering.
+\textit{ClientRetransmitRequest} detects and sends retransmit request.
+\textit{ClientAcknowledgement} sends acknowledgement. Finally, data packets may
+be dropped. 
+
+
+% \end{document}
