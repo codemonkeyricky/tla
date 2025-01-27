@@ -18,7 +18,11 @@ Liveness ==
 Send == 
     \/ /\ server_tx # server_tx_limit
        /\ server_tx' = (server_tx + 1) % N
-       /\ network' = network \cup {[dst |-> "client", seq |-> server_tx']}
+       /\ network' = network \cup {[
+            dst |-> "client", 
+            prot |-> "reliable",
+            seq |-> server_tx'
+            ]}
        /\ UNCHANGED <<client_rx, client_buffer, server_tx_ack, server_tx_limit, lost>>
 
 MinS(s) == 
@@ -79,7 +83,12 @@ ClientAcknowledgement ==
     /\ MergeReady 
     /\ client_buffer' = {}
     /\ client_rx' = MaxIndex
-    /\ network' = AddMessage([dst |-> "server", type |-> "ack", ack |-> MaxIndex], network)
+    /\ network' = AddMessage([
+                    dst |-> "server", 
+                    prot |-> "reliable", 
+                    type |-> "ack", 
+                    ack |-> MaxIndex], 
+                        network)
     /\ UNCHANGED <<server_tx, server_tx_ack, server_tx_limit, lost>>
 
 RemoveStaleAck(ack, msgs) == 
@@ -95,7 +104,11 @@ ServerReceive(pp) ==
        /\ network' = RemoveStaleAck(pp.ack, RemoveMessage(pp, network))
        /\ UNCHANGED <<server_tx, client_rx, client_buffer, lost>>
     \/ /\ pp.type = "retransmit"
-       /\ network' = AddMessage([dst |-> "client", seq |-> pp.seq], 
+       /\ network' = AddMessage([
+                        dst |-> "client", 
+                        prot |-> "unreliable",
+                        seq |-> pp.seq
+                        ], 
                                 RemoveMessage(pp, network))
        /\ lost' = lost -1
        /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack>>
@@ -133,6 +146,7 @@ ClientRetransmitRequest ==
     /\ client_buffer # {}
     /\ Missing # {}
     /\ network' = AddMessage([dst |-> "server", 
+                              prot |-> "reliable",
                               type |-> "retransmit",
                               seq |-> CHOOSE x \in Missing : TRUE],
                                 network)
@@ -164,5 +178,5 @@ Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-  /\ SF_vars(\E p \in network: p.dst = "client" /\ ClientReceive(p))
+  /\ SF_vars(\E p \in network: p.prot = "unreliable" /\ ClientReceive(p))
 =============================================================================
