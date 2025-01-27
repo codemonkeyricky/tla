@@ -12,14 +12,14 @@ to get to the client, they may arrive out-of-order. The client may need to
 maintain a receive buffer for the packets, re-order the packets back into
 sequence before pushing the packets down to decoding engine.\newline
 
-The network may also drop packets if any of the switches gets too busy. In the
-case of a packet drop, the client has a few options. The client can either
-discard the frame and let the decoding engine downstream to deal with it (which
-may ressult in  visible artifacts during play back). The client can request the
-whole frame to be re-sent, which results in additional bandwidith consumption.
-The client can selectively request the missing packet to be retransmited, which
-will minimize additional bandwidth consumption, but increases implementation 
-complexity.\newline 
+The network may also drop packets if any of the switches along the way gets 
+busy. In the case of a packet drop, the client has a few options. The client can
+either discard the frame and let the decoding engine downstream to deal with it
+(which may ressult in visible artifacts during playback). The client can
+request the whole frame to be re-sent, which results in additional bandwidith
+consumption.  The client can selectively request the missing packet to be
+retransmited, which will minimize additional bandwidth consumption, but
+increases implementation complexity.\newline 
 
 In this chapter, we will implement a simple selective retransmit
 algorithm.\newline
@@ -298,6 +298,231 @@ Range ==
 \@x{\@s{16.4} \.{\ELSE}}%
 \@x{\@s{32.8} MaxIndex \.{+} 1 \.{+} N \.{-} MinIndex}%
 \end{tlatex}
+\newline
+
+At any moment the system allows a window of packets to be unacknowledged. Both
+the client and server are aware of the window size, represented by W. By looking
+at packets in its receive buffer and its most acknowleged sequence number, the
+client can determine which packets were lost. There's actually some nuisance 
+to implement this.\newline
+
+Since the system does not allow more than W unacknowledged packets, the client
+can assume the window of packet in its receiver buffer must have sequence number
+$s \in client\_rx ..client\_rx+W$. Since the sequence number has a ceiling, the
+window of packets may wrap around the boundary. This introduces some
+complication around determining the minimum and maximum in the window of packet.
+The functions defined above calcluates the range, maximum and minimum value in
+the window accounting for wraparound.\newline
+
+Now we can look at how the client acknowledgement logic:\newline
+\begin{tla}
+MergeReady == 
+    /\ client_buffer # {}
+    /\ (client_rx + 1) % N = MinIndex       \* contiguous with previous ack
+    /\ Range = Cardinality(client_buffer)   \* combined is contiguous 
+
+ClientAcknowledgement == 
+    /\ client_buffer # {}
+    /\ MergeReady 
+    /\ client_buffer' = {}
+    /\ client_rx' = MaxIndex
+    /\ network' = AddMessage([dst |-> "server", type |-> "ack", ack |-> MaxIndex], network)
+    /\ UNCHANGED <<server_tx, server_tx_ack, server_tx_limit, lost>>
+\end{tla}
+\begin{tlatex}
+\@x{ MergeReady \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} client\_buffer \.{\neq} \{ \}}%
+ \@x{\@s{16.4} \.{\land} ( client\_rx \.{+} 1 ) \.{\%} N \.{=}
+ MinIndex\@s{24.59}}%
+\@y{%
+  contiguous with previous ack
+}%
+\@xx{}%
+\@x{\@s{16.4} \.{\land} Range \.{=} Cardinality ( client\_buffer )\@s{24.6}}%
+\@y{%
+  combined is contiguous 
+}%
+\@xx{}%
+\@pvspace{8.0pt}%
+\@x{ ClientAcknowledgement \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} client\_buffer \.{\neq} \{ \}}%
+\@x{\@s{16.4} \.{\land} MergeReady}%
+\@x{\@s{16.4} \.{\land} client\_buffer \.{'} \.{=} \{ \}}%
+\@x{\@s{16.4} \.{\land} client\_rx \.{'} \.{=} MaxIndex}%
+ \@x{\@s{16.4} \.{\land} network \.{'} \.{=} AddMessage ( [ dst
+ \.{\mapsto}\@w{server} ,\, type \.{\mapsto}\@w{ack} ,\, ack \.{\mapsto}
+ MaxIndex ] ,\, network )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\, server\_tx\_ack
+ ,\, server\_tx\_limit ,\, lost {\rangle}}%
+\end{tlatex}
+\newline
+
+The client only acknowledges when it has a contiguous sequence of packets that
+follows its most recently acknowledged packet. When MergeReady is true, the
+client sends the acknowledgement back to the server.\newline
+
+\begin{tla}
+ClientReceive(pp) == 
+    /\ network' = RemoveMessage(pp, network)
+    /\ client_buffer' = client_buffer \cup {pp.seq}
+    /\ UNCHANGED <<server_tx, client_rx, server_tx_ack, server_tx_limit, lost>>
+
+Missing == 
+    LET 
+        full_seq == 
+            IF MaxIndex >= client_rx+1 
+            THEN 
+                {x \in client_rx+1 .. MaxIndex : TRUE}
+            ELSE 
+                {x \in 0..MaxIndex : TRUE} \cup {x \in client_rx + 1..N-1 : TRUE}
+        all_client_msgs == {m \in network: m.dst = "client"}
+        all_client_seqs == {m.seq : m \in all_client_msgs}
+        network_missing == full_seq \ all_client_seqs
+        client_missing == full_seq \ client_buffer
+        to_request == network_missing \intersect client_missing
+    IN 
+        to_request
+
+ClientRetransmitRequest == 
+    /\ ~MergeReady
+    /\ client_buffer # {}
+    /\ Missing # {}
+    /\ network' = AddMessage([dst |-> "server", 
+                              type |-> "retransmit",
+                              seq |-> CHOOSE x \in Missing : TRUE],
+                                network)
+    /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
+\end{tla}
+\begin{tlatex}
+\@x{ ClientReceive ( pp ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} network \.{'} \.{=} RemoveMessage ( pp ,\, network )}%
+ \@x{\@s{16.4} \.{\land} client\_buffer \.{'} \.{=} client\_buffer \.{\cup} \{
+ pp . seq \}}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\, client\_rx ,\,
+ server\_tx\_ack ,\, server\_tx\_limit ,\, lost {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ Missing \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} full\_seq \.{\defeq}}%
+\@x{\@s{49.19} {\IF} MaxIndex \.{\geq} client\_rx \.{+} 1}%
+\@x{\@s{49.19} \.{\THEN}}%
+ \@x{\@s{65.6} \{ x \.{\in} client\_rx \.{+} 1 \.{\dotdot} MaxIndex \.{:}
+ {\TRUE} \}}%
+\@x{\@s{49.19} \.{\ELSE}}%
+ \@x{\@s{65.6} \{ x \.{\in} 0 \.{\dotdot} MaxIndex \.{:} {\TRUE} \} \.{\cup}
+ \{ x \.{\in} client\_rx \.{+} 1 \.{\dotdot} N \.{-} 1 \.{:} {\TRUE} \}}%
+ \@x{\@s{32.8} all\_client\_msgs \.{\defeq} \{ m \.{\in} network \.{:} m . dst
+ \.{=}\@w{client} \}}%
+ \@x{\@s{32.8} all\_client\_seqs \.{\defeq} \{ m . seq \.{:} m \.{\in}
+ all\_client\_msgs \}}%
+ \@x{\@s{32.8} network\_missing \.{\defeq} full\_seq \.{\,\backslash\,}
+ all\_client\_seqs}%
+ \@x{\@s{32.8} client\_missing \.{\defeq} full\_seq \.{\,\backslash\,}
+ client\_buffer}%
+ \@x{\@s{32.8} to\_request \.{\defeq} network\_missing \.{\cap}
+ client\_missing}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} to\_request}%
+\@pvspace{8.0pt}%
+\@x{ ClientRetransmitRequest \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} {\lnot} MergeReady}%
+\@x{\@s{16.4} \.{\land} client\_buffer \.{\neq} \{ \}}%
+\@x{\@s{16.4} \.{\land} Missing \.{\neq} \{ \}}%
+ \@x{\@s{16.4} \.{\land} network \.{'} \.{=} AddMessage ( [ dst
+ \.{\mapsto}\@w{server} ,\,}%
+\@x{\@s{16.4} type \.{\mapsto}\@w{retransmit} ,\,}%
+ \@x{\@s{16.4} seq \.{\mapsto} {\CHOOSE} x \.{\in} Missing \.{:} {\TRUE} ]
+ ,\,}%
+\@x{\@s{24.59} network )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\,
+ server\_tx\_limit ,\, client\_rx ,\, client\_buffer ,\, server\_tx\_ack ,\,
+ lost {\rangle}}%
+\end{tlatex}
+\newline
+
+\textit{ClientReceive} moves the a packet from network into client receive
+buffer. The only reason why this is done as a separate step is to make debugging
+easier.\newline
+
+\textit{Missing} returns a set of missing missing sequence number. This is done
+by cross checking the client receive buffer and the outstanding network packet
+targeting the client. In theory, the client doesn't know if a gap in its receive
+buffer means the packet is lost or will arrive soon. Practically, the client
+will assume a packet is lost after some configurable timeout and request a
+retransmit.\newline
+
+Let us take a look at server related definitions:\newline
+
+\begin{tla}
+RemoveStaleAck(ack, msgs) == 
+    LET 
+        acks == {(ack - k + N ) % N : k \in 1..W}
+    IN 
+        {m \in msgs : ~(m.dst = "server" /\ m.type = "ack" /\ m.ack \in acks)}
+
+ServerReceive(pp) == 
+    \/ /\ pp.type = "ack"
+       /\ server_tx_ack' = pp.ack
+       /\ server_tx_limit' = (pp.ack + W) % N
+       /\ network' = RemoveStaleAck(pp.ack, RemoveMessage(pp, network))
+       /\ UNCHANGED <<server_tx, client_rx, client_buffer, lost>>
+    \/ /\ pp.type = "retransmit"
+       /\ network' = AddMessage([dst |-> "client", seq |-> pp.seq], 
+                                RemoveMessage(pp, network))
+       /\ lost' = lost -1
+       /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack>>
+\end{tla}
+\begin{tlatex}
+\@x{ RemoveStaleAck ( ack ,\, msgs ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} acks \.{\defeq} \{ ( ack \.{-} k \.{+} N ) \.{\%} N \.{:} k
+ \.{\in} 1 \.{\dotdot} W \}}%
+\@x{\@s{16.4} \.{\IN}}%
+ \@x{\@s{32.8} \{ m \.{\in} msgs \.{:} {\lnot} ( m . dst \.{=}\@w{server}
+ \.{\land} m . type \.{=}\@w{ack} \.{\land} m . ack \.{\in} acks ) \}}%
+\@pvspace{8.0pt}%
+\@x{ ServerReceive ( pp ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \.{\land} pp . type \.{=}\@w{ack}}%
+\@x{\@s{16.4} \.{\land} server\_tx\_ack \.{'} \.{=} pp . ack}%
+ \@x{\@s{16.4} \.{\land} server\_tx\_limit \.{'} \.{=} ( pp . ack \.{+} W )
+ \.{\%} N}%
+ \@x{\@s{16.4} \.{\land} network \.{'} \.{=} RemoveStaleAck ( pp . ack ,\,
+ RemoveMessage ( pp ,\, network ) )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\, client\_rx ,\,
+ client\_buffer ,\, lost {\rangle}}%
+\@x{\@s{16.4} \.{\lor} \.{\land} pp . type \.{=}\@w{retransmit}}%
+ \@x{\@s{16.4} \.{\land} network \.{'} \.{=} AddMessage ( [ dst
+ \.{\mapsto}\@w{client} ,\, seq \.{\mapsto} pp . seq ] ,\,}%
+\@x{\@s{16.4} RemoveMessage ( pp ,\, network ) )}%
+\@x{\@s{16.4} \.{\land} lost \.{'} \.{=} lost \.{-} 1}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\,
+ server\_tx\_limit ,\, client\_rx ,\, client\_buffer ,\, server\_tx\_ack
+ {\rangle}}%
+\end{tlatex}
+\newline
+
+When the server receives an acknowledgement for sequence number K, it assumes
+K-1 and prior were all received by the client. \textit{RemoveStaleAck} is an
+model optimization to drop all acknowledgements with sequence number less than
+K. Note that sequence number k, k-N, k-2*N, are all represented as k, and in
+theory the client may not be able to differentiate betweeen them.  Practically,
+N is sized large enough to represent a few seconds worth of data, so the system
+can safely assume a sequence number k is for the most recent N packets.\newline
+
+Upon receiving an acknowledgement from the client, the server bumps the
+server\_tx\_limit allowing it to send more data. The server can also receive a 
+retransmit request and send the requested data. \textit{lost} is configurable to
+determine how many packets can be dropped at the same time.
+
+\section{Simplification}
+
+TODO: W * 2 < N
+
+TODO: stale ack removal
+
+TODO: describe network empty 
+
+TODO: retransmit is assumed to be reliable, because making it unreliable doesn't make sense.
 
 
 % \end{document}
