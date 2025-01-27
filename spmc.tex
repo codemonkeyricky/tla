@@ -1,2 +1,122 @@
+\begin{document}
 
 \chapter{SPMC Lockless Queue}
+
+\section{Spec}
+
+\begin{pcal}
+procedure reader() 
+variable 
+    i = self;
+begin
+r_chk_empty:        
+    if outstanding # 0 then 
+        outstanding := outstanding - 1; 
+    else 
+    r_early_ret:            
+        return;
+    end if;
+\* reserved a read - now find it
+r_try_lock:         
+    if status[rptr[i]] = WRITTEN then 
+        status[rptr[i]] := READING;
+    else 
+    r_retry:                
+        rptr[i] := (rptr[i] + 1) % N;
+            goto r_try_lock;
+    end if;
+r_data_chk:         
+    assert buffer[rptr[i]] = rptr[i] + 1000;
+r_read_buf:         
+    buffer[rptr[i]] := 0;
+r_unlock:           
+    status[rptr[i]] := UNUSED;
+r_done:             
+    return;
+end procedure; 
+
+procedure writer() begin
+w_chk_full:         
+    if outstanding = N - 1 then 
+    w_early_ret:            
+        return; 
+    end if;
+w_chk_st:           
+    if status[wptr] # UNUSED then 
+    w_early_ret2:           
+        return;
+    end if;
+w_write_buf:        
+    buffer[wptr] := wptr + 1000;
+w_mark_written:     
+    status[wptr] := WRITTEN;
+w_inc_wptr:         
+    wptr := (wptr + 1) % N;
+w_inc:              
+    outstanding := outstanding + 1;
+w_done:             
+    return;
+end procedure; 
+\end{pcal}
+\begin{tlatex}
+\@x{ {\p@procedure} reader {\p@lparen} {\p@rparen}}%
+\@x{ {\p@variable}}%
+\@x{\@s{16.4} i \.{=} self {\p@semicolon}}%
+\@x{ {\p@begin}}%
+\@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} outstanding \.{\neq} 0 {\p@then}}%
+\@x{\@s{20.5} outstanding \.{:=} outstanding \.{-} 1 {\p@semicolon}}%
+\@x{\@s{16.4} {\p@else}}%
+\@x{\@s{16.4} r\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{}%
+\@y{%
+  reserved a read - now find it
+}%
+\@xx{}%
+\@x{ r\_try\_lock\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} status [ rptr [ i ] ] \.{=} WRITTEN {\p@then}}%
+\@x{\@s{20.5} status [ rptr [ i ] ] \.{:=} READING {\p@semicolon}}%
+\@x{\@s{16.4} {\p@else}}%
+\@x{\@s{16.4} r\_retry\@s{.5}\textrm{:}\@s{3}}%
+ \@x{\@s{32.8} rptr [ i ] \.{:=} ( rptr [ i ] \.{+} 1 ) \.{\%} N
+ {\p@semicolon}}%
+\@x{\@s{32.8} {\p@goto} r\_try\_lock {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{ r\_data\_chk\@s{.5}\textrm{:}\@s{3}}%
+ \@x{\@s{16.4} {\p@assert} buffer [ rptr [ i ] ] \.{=} rptr [ i ] \.{+} 1000
+ {\p@semicolon}}%
+\@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} buffer [ rptr [ i ] ] \.{:=} 0 {\p@semicolon}}%
+\@x{ r\_unlock\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} status [ rptr [ i ] ] \.{:=} UNUSED {\p@semicolon}}%
+\@x{ r\_done\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\@pvspace{8.0pt}%
+\@x{ {\p@procedure} writer {\p@lparen} {\p@rparen} {\p@begin}}%
+\@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} outstanding \.{=} N \.{-} 1 {\p@then}}%
+\@x{\@s{16.4} w\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{ w\_chk\_st\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} status [ wptr ] \.{\neq} UNUSED {\p@then}}%
+\@x{\@s{16.4} w\_early\_ret2\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} buffer [ wptr ] \.{:=} wptr \.{+} 1000 {\p@semicolon}}%
+\@x{ w\_mark\_written\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} status [ wptr ] \.{:=} WRITTEN {\p@semicolon}}%
+\@x{ w\_inc\_wptr\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} wptr \.{:=} ( wptr \.{+} 1 ) \.{\%} N {\p@semicolon}}%
+\@x{ w\_inc\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} outstanding \.{:=} outstanding \.{+} 1 {\p@semicolon}}%
+\@x{ w\_done\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\end{tlatex}
+
+\end{document}

@@ -55,38 +55,55 @@ procedure reader()
 variable 
     i = self;
 begin
-r_chk_empty:        if outstanding # 0 then 
-                        outstanding := outstanding - 1; 
-                    else 
-r_early_ret:            return;
-                    end if;
-                    \* reserved a read - now find it
-r_try_lock:         if status[rptr[i]] = WRITTEN then 
-                        status[rptr[i]] := READING;
-                    else 
-r_retry:                rptr[i] := (rptr[i] + 1) % N;
-                        goto r_try_lock;
-                    end if;
-r_data_chk:         assert buffer[rptr[i]] = rptr[i] + 1000;
-r_read_buf:         buffer[rptr[i]] := 0;
-r_unlock:           status[rptr[i]] := UNUSED;
-r_done:             return;
+r_chk_empty:        
+    if outstanding # 0 then 
+        outstanding := outstanding - 1; 
+    else 
+    r_early_ret:            
+        return;
+    end if;
+\* reserved a read - now find it
+r_try_lock:         
+    if status[rptr[i]] = WRITTEN then 
+        status[rptr[i]] := READING;
+    else 
+    r_retry:                
+        rptr[i] := (rptr[i] + 1) % N;
+            goto r_try_lock;
+    end if;
+r_data_chk:         
+    assert buffer[rptr[i]] = rptr[i] + 1000;
+r_read_buf:         
+    buffer[rptr[i]] := 0;
+r_unlock:           
+    status[rptr[i]] := UNUSED;
+r_done:             
+    return;
 end procedure; 
 
 \* status = 0 is unused, 1 written, 2 reserved for read
 
 procedure writer() begin
-w_chk_full:         if outstanding = N - 1 then 
-w_early_ret:            return; 
-                    end if;
-w_chk_st:           if status[wptr] # UNUSED then 
-w_early_ret2:           return;
-                    end if;
-w_write_buf:        buffer[wptr] := wptr + 1000;
-w_mark_written:     status[wptr] := WRITTEN;
-w_inc_wptr:         wptr := (wptr + 1) % N;
-w_inc:              outstanding := outstanding + 1;
-w_done:             return;
+w_chk_full:         
+    if outstanding = N - 1 then 
+    w_early_ret:            
+        return; 
+    end if;
+w_chk_st:           
+    if status[wptr] # UNUSED then 
+    w_early_ret2:           
+        return;
+    end if;
+w_write_buf:        
+    buffer[wptr] := wptr + 1000;
+w_mark_written:     
+    status[wptr] := WRITTEN;
+w_inc_wptr:         
+    wptr := (wptr + 1) % N;
+w_inc:              
+    outstanding := outstanding + 1;
+w_done:             
+    return;
 end procedure; 
 
 fair process w = WRITER
@@ -106,7 +123,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "95384931" /\ chksum(tla) = "a851dbc")
+\* BEGIN TRANSLATION (chksum(pcal) = "95384931" /\ chksum(tla) = "258d03f2")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -185,7 +202,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 70, column 21.")
+                              "Failure of assertion at line 75, column 5.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << status, rptr, wptr, outstanding, buffer, 
                                     stack, i >>
