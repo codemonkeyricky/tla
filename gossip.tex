@@ -1,0 +1,270 @@
+\chapter{Simple Gossip Protocol}
+
+This section the author's notes on a simple gossip protocol by Andrew Hewler:\newline
+https://ahelwer.ca/post/2023-11-01-tla-finite-monotonic/\newline
+
+\section{Requirement}
+
+In a distributed system, a cluster of nodes collectively provide a serivce. A
+distributed database may have a collection of 10s to 100s of nodes working
+together to offer the service in a geo diverse fashion to be immnue to partial
+outage.  The nodes often have requirements to know about each other. In the
+context of distributed database, a node may need to know the key range another
+of its peers. The cluster needs a way to communicate this information. One such
+mechanism is the gossip protocol.\newline
+
+Gossip protocols are used to communicate cluster information in a distributed
+fashion, (unsurprisingly) in a distributed system. Without gossip protocol, 
+nodes in a cluster learns about its neighbours by contacting a centralized
+server. This introduces a single failure point in the system. As the name
+suggest, gossip protocol relies on nodes to gossip with each other. The nodes in
+the cluster periodically selects a set of neighbors to exchange what it knows
+about the cluster. The recency information is part of the gossip message
+itself, allowing the node and the peer its talking to quickly decide who has the
+latest information on a node, and converge to it. Assume a N node cluster and
+each interal a node selects k neighbours to gossip with, the total amount of
+gossip propagation time is described logrithmticly below:
+
+\begin{equation} 
+    propagation\_time = \log_k N * gossip\_interval
+\end{equation}
+
+With the total number of messages exchanged: 
+\begin{equation} 
+    messages\_exchanged = \log_k N * k
+\end{equation}
+
+Now let's look at how a simple gossip protocol can be described by TLA+.
+
+\section{Spec}
+
+In gossip protocol, every node needs to remember all its peers current
+version. This can be represented as a two dimension array:\newline
+\begin{tla}
+    Init == counter = [n \in Node |-> [o \in Node |-> 0]] 
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Init \.{\defeq} counter \.{=} [ n \.{\in} Node \.{\mapsto} [ o
+ \.{\in} Node \.{\mapsto} 0 ] ]}%
+\end{tlatex}
+\newline
+
+This defines counter a collection of nodes, where each node also contains a
+collection of nodes initialized to 0. The nodes can bump to a new version:\newline
+\begin{tla}
+    Increment(n) == counter' = [counter EXCEPT ![n][n] = @ + 1]
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Increment ( n ) \.{\defeq} counter \.{'} \.{=} [ counter
+ {\EXCEPT} {\bang} [ n ] [ n ] \.{=} @ \.{+} 1 ]}%
+\end{tlatex}
+\newline
+
+Notice increment only bumps node's version. This change needs to be gossiped 
+across the cluster:\newline
+\begin{tla}
+Gossip(n, o) ==                  
+    LET Max(a, b) == IF a > b THEN a ELSE b 
+    IN counter' = [
+        counter EXCEPT ![o] = [
+            nn \in Node |->            
+                Max(counter[n][nn], counter[o][nn])
+            ] 
+    ]
+\end{tla}
+\begin{tlatex}
+\@x{ Gossip ( n ,\, o ) \.{\defeq}}%
+ \@x{\@s{16.4} \.{\LET} Max ( a ,\, b ) \.{\defeq} {\IF} a \.{>} b \.{\THEN} a
+ \.{\ELSE} b}%
+\@x{\@s{16.4} \.{\IN} counter \.{'} \.{=} [}%
+\@x{\@s{40.89} counter {\EXCEPT} {\bang} [ o ] \.{=} [}%
+\@x{\@s{57.29} nn \.{\in} Node \.{\mapsto}}%
+\@x{\@s{73.41} Max ( counter [ n ] [ nn ] ,\, counter [ o ] [ nn ] )}%
+\@x{\@s{57.29} ]}%
+\@x{\@s{16.4} ]}%
+\end{tlatex}
+\newline
+
+A few things to unpack here:
+\begin{itemize}
+    \item $n, o$ are the two nodes exchanging gossip. $o$ is the node to be updated
+    and $n$ is the neighbor $o$ gossips with.
+    \item $LET .. IN$ allows local definition under $LET$ used under
+    $IN$. In this case $Max$ is a local macro defined to return maximum between a and b.
+    \item $counter'$ (or refered to as counter \textit{prime}) is what the
+    variable will be in the next state. TLA+ doesn't provide a way to update a
+    variable in a collection, so the convention is to assign a new array to the variable. 
+    \item $counter\ EXCEPT ![o] = [...]$ return $counter$ with $counter[o]$
+    defined in the bracket. 
+    \item where $[...]$ is a collection of nodes with with counter set to the
+    max between the current node and neighbour.
+\end{itemize}
+
+Finally, the actual spec: \newline
+\begin{tla}
+    Next == \/ \E n \in Node : Increment(n)
+            \/ \E n, o \in Node : Gossip(n, o)
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} Next \.{\defeq} \.{\lor} \E\, n \.{\in} Node \.{:} Increment (
+ n )}%
+\@x{\@s{56.23} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
+\end{tlatex}
+\newline
+
+Next supports two possible next steps describe using disjunctions. The first is
+bumping the version of a random node, the second is select a pair of nodes to
+gossip. Note the \textit{existential qualifier} on both, which basically states
+there exists a node n in nodes, or there exists a pair of nodes n, o in nodes,
+respectively.\newline
+
+There's a minor problem with the definition above. Gossip protocol, like many
+converging protocols, have a \textit{monotonic increasing} requirement. On
+failures, the protocol bumps the version, which increases monotonically. Since
+TLA+ spec models the system as a graph, a monotonic increasing version number
+means the state graph is \textit{infinitely large}. To put the specification back into
+finite space, we can normalize the state:\newline
+
+\begin{tla}
+GarbageCollect ==
+    LET SetMin(s) == CHOOSE e \in s : \A o \in s : e <= o IN
+    LET Transpose == SetMin({counter[n][o] : n, o \in Node}) IN
+        /\ counter' = [
+            n \in Node |-> [
+                o \in Node |-> counter[n][o] - Transpose
+            ]
+          ]
+        /\ UNCHANGED converge
+\end{tla}
+\begin{tlatex}
+\@x{ GarbageCollect \.{\defeq}}%
+ \@x{\@s{16.4} \.{\LET} SetMin ( s ) \.{\defeq} {\CHOOSE} e \.{\in} s \.{:}
+ \A\, o \.{\in} s \.{:} e \.{\leq} o \.{\IN}}%
+ \@x{\@s{16.4} \.{\LET} Transpose\@s{0.58} \.{\defeq} SetMin ( \{ counter [ n
+ ] [ o ] \.{:} n ,\, o \.{\in} Node \} ) \.{\IN}}%
+\@x{\@s{36.79} \.{\land} counter \.{'} \.{=} [}%
+\@x{\@s{52.01} n \.{\in} Node \.{\mapsto} [}%
+ \@x{\@s{66.60} o \.{\in} Node \.{\mapsto} counter [ n ] [ o ] \.{-}
+ Transpose}%
+\@x{\@s{52.01} ]}%
+\@x{\@s{44.99} ]}%
+\@x{\@s{36.79} \.{\land} {\UNCHANGED} converge}%
+\end{tlatex}
+\newline
+
+\textit{GarbageCollect} substracts every version value with set minimum. To
+limit range of version value, the increment function is now updated to: \newline
+\begin{tla}
+Increment(n) ==
+    /\ ~converge
+    /\ counter[n][n] < Divergence
+    /\ S!Increment(n)
+    /\ UNCHANGED converge
+\end{tla}
+\begin{tlatex}
+\@x{ Increment ( n ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} {\lnot} converge}%
+\@x{\@s{16.4} \.{\land} counter [ n ] [ n ] \.{<} Divergence}%
+\@x{\@s{16.4} \.{\land} S {\bang} Increment ( n )}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} converge}%
+\end{tlatex}
+\newline
+
+Finally, the \textit{Next} is updated to the follow:\newline
+
+\begin{tla}
+Next ==
+    \/ \E n \in Node : Increment(n)
+    \/ \E n, o \in Node : Gossip(n, o)
+    \/ Converge
+    \/ GarbageCollect
+\end{tla}
+\begin{tlatex}
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \E\, n \.{\in} Node \.{:} Increment ( n )}%
+\@x{\@s{16.4} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
+\@x{\@s{16.4} \.{\lor} Converge}%
+\@x{\@s{16.4} \.{\lor} GarbageCollect}%
+\end{tlatex}
+
+Note $GarbageCollect$ is a now part of possible state transition. We will
+discuss $Converge$ later, as it is related to liveness check. Lastly:\newline
+
+\begin{tla}
+Fairness == \A n, o \in Node : WF_vars(Gossip(n, o))
+Spec ==
+    /\ Init
+    /\ [][Next]_vars
+    /\ Fairness
+\end{tla}
+\begin{tlatex}
+ \@x{ Fairness \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} {\WF}_{ vars} (
+ Gossip ( n ,\, o ) )}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} Init}%
+\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{16.4} \.{\land} Fairness}%
+\end{tlatex}
+\newline
+
+The \textit{Fairness} definition ensures Gossip runs between every pair of nodes
+gossip.
+
+\section{Safety}
+
+In every state, counter[n][o] next must be larger than counter[n][o] current:\newline
+
+\begin{tla}
+Monotonic == \A n, o \in Node : counter'[n][o] >= counter[n][o] 
+Monotonicity == [][
+    \/ S!Monotonic
+    \/ \A a, b, c, d \in Node :
+        (counter'[a][b] - counter[a][b]) = (counter'[c][d] - counter[c][d])
+]_vars
+\end{tla}
+\begin{tlatex}
+ \@x{ Monotonic \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} counter \.{'} [ n ]
+ [ o ] \.{\geq} counter [ n ] [ o ]}%
+\@x{ Monotonicity \.{\defeq} {\Box} [}%
+\@x{\@s{16.4} \.{\lor} S {\bang} Monotonic}%
+\@x{\@s{16.4} \.{\lor} \A\, a ,\, b ,\, c ,\, d \.{\in} Node \.{:}}%
+ \@x{\@s{31.61} ( counter \.{'} [ a ] [ b ] \.{-} counter [ a ] [ b ] ) \.{=}
+ ( counter \.{'} [ c ] [ d ] \.{-} counter [ c ] [ d ] )}%
+\@x{ ]_{ vars}}%
+\end{tlatex}
+
+\section{Liveness}
+
+For liveness we want to check the version value across all nodes eventually
+converge. \textit{Next} is updated to set Converge to true, which triggers the
+liveness condition and ensure all pair of nodes eventually have the same
+information. \newline
+
+\begin{tla}
+Convergence == \A n, o \in Node : counter[n] = counter[o]
+Liveness == converge ~> S!Convergence
+Converge ==
+    /\ converge' = TRUE
+    /\ UNCHANGED counter  
+Next ==
+  \/ \E n \in Node : Increment(n)
+  \/ \E n, o \in Node : Gossip(n, o)
+  \/ Converge
+  \/ GarbageCollect
+\end{tla}
+\begin{tlatex}
+ \@x{ Convergence \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} counter [ n ]
+ \.{=} counter [ o ]}%
+ \@x{ Liveness\@s{2.98} \.{\defeq} converge \.{\leadsto} S {\bang}
+ Convergence}%
+\@x{ Converge \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} converge \.{'} \.{=} {\TRUE}}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} counter}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} \E\, n \.{\in} Node \.{:} Increment ( n )}%
+ \@x{\@s{8.2} \.{\lor}\@s{1.63} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\,
+ o )}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} Converge}%
+\@x{\@s{8.2} \.{\lor}\@s{1.63} GarbageCollect}%
+\end{tlatex}
+
