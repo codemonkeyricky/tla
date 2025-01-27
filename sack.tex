@@ -514,15 +514,40 @@ server\_tx\_limit allowing it to send more data. The server can also receive a
 retransmit request and send the requested data. \textit{lost} is configurable to
 determine how many packets can be dropped at the same time.
 
-\section{Simplification}
+\section{Model Reduction}
+
+\subsection{Removing Stale Acknowlegement}
 
 TODO: W * 2 < N
-
 TODO: stale ack removal
-
 TODO: describe network empty 
-
 TODO: retransmit is assumed to be reliable, because making it unreliable doesn't make sense.
+
+\section{Safety}
+
+\section{Liveness}
+
+Given the system may randomly drop packets, one possible liveness condition is
+to verify packets of all sequence number are received by the client at some
+point. This can be described as for all possible sequence number value k, k is
+eventually exists in client receive buffer.\newline
+
+\begin{tla}
+Liveness == 
+    \A i \in 0..N-1:
+        client_buffer = {} ~> \E j \in client_buffer: i = j 
+\end{tla}
+\begin{tlatex}
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \A\, i \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+ \@x{\@s{20.5} client\_buffer \.{=} \{ \} \.{\leadsto} \E\, j \.{\in}
+ client\_buffer \.{:} i \.{=} j}%
+\end{tlatex}
+\newline
+
+
+
+
 
 
 % \end{document}

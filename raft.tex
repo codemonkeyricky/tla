@@ -1,5 +1,7 @@
 \chapter{Raft Consensus Protocol}
 
+\section{Requirement}
+
 Raft is a consensus algorithm that enables a cluster of nodes to agree on a
 collective state even in the presence of failures. An application of Raft is
 database replication protocol. With a replication factor of 3 (which means the
@@ -378,7 +380,7 @@ The handling is split into three cases:
     vote if it hasn't voted, or has had voted for the same requester prior 
 \end{itemize}
 
-\section{Simplify Model}
+\section{Model Reduction}
 
 The model checker will run the spec as defined, but due to the expoential growth
 of states it is unlikely to complete in a reasonable amount of time. We need to

@@ -13,7 +13,8 @@ ASSUME W * 2 < N
 ASSUME L < W
 
 Liveness == 
-    server_tx = 0 ~> server_tx = N-1
+    \A i \in 0..N-1:
+        client_buffer = {} ~> \E j \in client_buffer: i = j 
 
 Send == 
     \/ /\ server_tx # server_tx_limit
