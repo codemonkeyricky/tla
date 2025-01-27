@@ -1,4 +1,4 @@
-\chapter{Introduction}
+\chapter{Motivation}
 
 \section{Catching Problems Early}
 
@@ -51,26 +51,25 @@ distributed algorithms, OS scheduler, and more.\newline
 Fast forward to now: I stumbled across TLA+, a formalized solution of what I was
 looking for.\newline
 
-Leslie Lamport invented the TLA+ 1999, but TLA+ didn't appear to have caught on
-until the 2010's. My personal opinion is TLA+ was invented ahead of its time,
-and the problem complexity finally caught up in the past decade or so to allow
-TLA+ to visibly demonstrate its strength.\newline
+The Turing Award winnerLeslie Lamport invented the TLA+ 1999, but TLA+ didn't
+appear to have caught on until the 2010's. My personal opinion is TLA+ was
+invented ahead of its time, and the problem complexity finally caught up in the
+past decade or so, to allow TLA+ to visibly demonstrate its strength.\newline
 
-We are also at a point in the technology curve where vertical scaling is no
-longer practical, with CPU speed plateau'd in the past decade or so. The
-industry is exploring horizontal scaling solution, such as hardware vendor
-focusing adding more CPU cores, or software vendors buying many low end hardware
-instead of a few high end hardware. This shifts the technology complexity from
-hardware to software, demanding software solution to maximize concurrent
-hardware resource utilization. \newline
+We are at a point in the technology curve where vertical scaling is no longer
+practical, with CPU speed plateau'd in the past decade or so. The industry is
+exploring horizontal scaling solution, such as hardware vendor focusing adding
+more CPU cores, or software vendors buying many low end hardware instead of a
+few high end hardware. This shifts the technology complexity from hardware to
+software, demanding software solution to maximize concurrent hardware resource
+utilization. One slight problem:\newline
 
-One slight problem: \textit{The cognitive load of of a person is between 5 to 9
-items at most.}\newline
+\textit{Humans are good at high level reasoning, but not so good at tracking
+many things happening at the same time.}\newline
 
-Humans are good at high level reasoning, but not so good at keeping track of
-many things happening at the same time. It is hard to enumerate all possible
-scenario in one's mind to ensure the design accommodates all the edge cases.
-\newline
+The average cognitive load of of a person is between 5 to 9 items at most. It is
+hard to enumerate all possible scenario in one's mind to ensure the design
+accommodates all the edge cases.\newline
 
 Consider a distributed system. The system is a cluster of independently
 operating entities and need to somehow collectively offer the correct system
@@ -86,12 +85,12 @@ Consider an OS scheduler with locks. Assume all the processes have the same
 priority. Can a process starve the other processes by repeatedly acquire and
 release the lock? How do we ensure scheduling is fair?\newline
 
-The usual \textit{anti-pattern} is to keep bandaiding the design until bugs stop
-comming. This is never ideal. Per Murphy's law, anything that can go wrong will
-go wrong, and a hard to reproduce bug will come in at the most inconvinient
-time. How do we make sure the solution is actually \textit{correct by design}?
-To solve this problem, we must rely on tools to do the reasoning \textit{for
-us}.
+The \textit{anti-pattern} is to keep bandaiding the design until user stops
+filing bug reports. This is never ideal. Per Murphy's law, anything that can go
+wrong \textit{will go wrong}, and a hard to reproduce bug will come in at the
+most inconvinient time. How do we make sure the solution is \textit{correct by
+design}? To solve this problem, we must rely on tools to do the reasoning
+\textit{for us}.
 
 \section{TLA+}
 
@@ -118,7 +117,7 @@ design to provide confidence in \textit{design correctness}. The content to this
 book is appropriate for software designer, hardware designer, system architect,
 and such.\newline 
 
-As for the readers: some computing science knowledge is required. One doesn't
+As for the readers: general computing science knowledge is required. One doesn't
 need to be expert at a particular language to understand this book; TLA+ is
 effectively its own language. This book is example driven and will go through
 designs such as lockless queue, simple task scheduler, consensus algorithm, etc.
@@ -127,16 +126,20 @@ topics.
 
 \section{How to Use This Book}
 
-This book was motivated by the intent to solve problems. The book is designed to
-be example heavy with many chapter each represnting an problem that can be
-modelled using TLA+.\newline
+This book was designed to be used as a reference, providing examples and
+references using TLA+.\newline
 
-Examples are split into two categories: A set of examples written using native
-TLA+ syntax, and another set of examples written using PlusCal (C-like syntax).
-I believe they are useful under different use cases. The differences will be
-highlighted in their respective sections. All examples will follow a similar 
-layout, covering the expected design process (eg. requirement, spec, safety and
-liveness properties). \newline
+Examples are split into two categories: A set of examples written using TLA+,
+and another set of examples written using PlusCal, the C-like syntax that
+transpiles down to TLA+. I believe they are useful for different use cases.  The
+differences will be highlighted in their respective sections. All examples will
+follow a similar layout, covering the expected design process (eg. requirement,
+spec, safety and liveness properties).\newline
+
+All examples in this book will be described using TLA+ \textit{mathemetical
+notation}. Converting between Mathmetical and ASCII notation is assumed
+straightforward due to the one-to-one mapping. Readers are encouraged to consult
+Table 8 in \cite{ss} as needed.\newline
 
 Finally, there will be part that language reference portion that that discuss a
 few topics deserving extra attention. The intent is to be using this section of the 
