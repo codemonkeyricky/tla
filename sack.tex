@@ -55,19 +55,17 @@ algorithm.\newline
 
 \end{center}
 
-\section{Requirement}
-
 Since packets may arrive out-of-order, the server stamps the packets with
 sequence number to allow the client to order the packets as they arrive.
 Once the client has a set of ordered packets, it moves the packets from the 
 receive buffer into the decoding engine to be displayed.\newline
 
-The video packets are often sent to client via unreliable channel to minimize
-network overhead and latency. The client sends acknowledgement back to the
-server via to acknowledge the received packet. This indicates to the server it
-can send more video data to the client. The acknowlegements are not latency
-sensitive in nature, and take up a very small proportion of bandwidth, so they
-are transported through reliable channel.\newline
+The video packets are often sent via unreliable channel to minimize network
+overhead and latency. The client sends acknowledgement back to the server to
+acknowledge the received packet. This indicates to the server it can send more
+video data to the client. Acknowlegements are not latency sensitive in
+nature, and take up a very small proportion of bandwidth, so they are
+transported through reliable channel.\newline
 
 The following illustrates packet reorder handling:
 \begin{center}
@@ -76,41 +74,71 @@ The following illustrates packet reorder handling:
     message/.style={->, >=stealth, dashed},
     activation/.style={rectangle, fill=blue!20, minimum width=0.5cm, minimum height=0.8cm} ]
 
-    % Define lifelines
     \node[] (client) at (0,0) {Client};
     \node[] (server) at (4,0) {Server};
-    % \node[] (database) at (8,0) {Database};
 
-    % Draw lifelines
     \draw[lifeline] (client.south) -- ++(0,-8);
     \draw[lifeline] (server.south) -- ++(0,-8);
-    % \draw[lifeline] (database.south) -- ++(0,-8);
 
-    % Draw messages
     \draw[message] ([yshift=-1cm] client.south) -- node[above] {pkt \#0} ([yshift=-2cm] server.south);
     \draw[message] ([yshift=-2cm] client.south) -- node[above] {pkt \#2} ([yshift=-3cm] server.south);
     \draw[message] ([yshift=-3cm] client.south) -- node[above] {pkt \#1} ([yshift=-4cm] server.south);
-    % \draw[message] ([yshift=-2cm] server.south) -- node[above] {query} ([yshift=-2cm] database.south);
-    % \draw[message] ([yshift=-3cm] database.south) -- node[above] {response} ([yshift=-3cm] server.south);
     \draw[message] ([yshift=-6cm] server.south) -- node[above] {ack \#3} ([yshift=-7cm] client.south);
 
-    % \draw[message] ([yshift=-5cm] server.south) to[out=-90, in=-90, looseness=1.5] node[above] {ack \#3} ([yshift=-6cm] server.south);
-    % \draw[message] ([yshift=-1cm] server.south) to[out=-90, in=-90, looseness=1.5] node[midway, above] {ack \#3} ([yshift=-2cm] server.south);
-
-    % Draw activations
     \node[activation] at ([yshift=-5cm] server.south) {Process pkt \#0..2};
-    % \node[activation] at ([yshift=-2.5cm] database.south) {};
+\end{tikzpicture}
+\end{center}
 
-    % \draw[arrow, out=120, in=60, looseness=8] (server.west) to node[above] {} (server.east);
-    % \begin{umlcallself}[op=c1, return=0]{b} 
-    % \draw[message] ([yshift=-1cm] server.south) to[out=-100, in=100, looseness=1.5] node[midway, above] {ack \#3} ([yshift=-2cm] server.south);
+The following illustrates packet loss handling:
+\begin{center}
+\begin{tikzpicture}[
+    lifeline/.style={thick},
+    message/.style={->, >=stealth, dashed},
+    activation/.style={rectangle, fill=blue!20, minimum width=0.5cm, minimum height=0.8cm} ]
 
-    % Optional: Add dashed lines for return messages
-    % \draw[dashed] ([yshift=-3cm] database.south) -- ++(0,-1);
-    % \draw[dashed] ([yshift=-4cm] server.south) -- ++(0,-1);
+    \node[] (client) at (0,0) {Client};
+    \node[] (server) at (4,0) {Server};
+
+    \draw[lifeline] (client.south) -- ++(0,-11);
+    \draw[lifeline] (server.south) -- ++(0,-11);
+
+    \draw[message] ([yshift=-1cm] client.south) -- node[above] {pkt \#0} ([yshift=-2cm] server.south);
+    \draw[message] ([yshift=-2cm] client.south) -- node[above] {pkt \#2} ([yshift=-3cm] server.south);
+    \draw[message] ([yshift=-4cm] server.south) -- node[above] {req \#1} ([yshift=-5cm] client.south);
+    \draw[message] ([yshift=-6cm] client.south) -- node[above] {pkt \#1} ([yshift=-7cm] server.south);
+    \draw[message] ([yshift=-9cm] server.south) -- node[above] {ack \#3} ([yshift=-10cm] client.south);
+
+    \node[activation] at ([yshift=-8cm] server.south) {Process pkt \#0..2};
  
 \end{tikzpicture}
 \end{center}
 
+There are other design considerations. The server is allowed to send up to W
+packets before getting an acknowledgement, this reduces latency perceived by the
+user. The client also doesn't need to acknowledge all the packets, since the
+server assumes once an acknowledgement of packet N is received, then all packets
+prior to N have also been received.
+
+\section{Requirement}
+
+With the above description, we are now ready to provide a more formal
+description for our requirement:
+
+\begin{itemize}
+    \item Client is the receiver that displays the video stream 
+    \item Server is the sender that sends the video stream 
+    \item Server always sends the packets in-order
+    \item Client may receive the packets out-of-order 
+    \item Client may never receive some packet due to loss
+    \item Server can send up to W packets before an acknowledgement is received
+    \item Per packet sequence number is represented by fixed number of bytes in
+    the network header, the sequence number will eventually wrap around once it
+    hits the maximum representable value. This upper limit will be represented
+    by the constant N 
+    \item Client will remove the packets from the receive buffer once the
+    sequence number of the received packets are contiguous. The client will also
+    send an acknowledgement back to the Server with the most recent sequence
+    number
+\end{itemize}
 
 \section{Spec}
