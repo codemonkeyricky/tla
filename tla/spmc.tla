@@ -8,7 +8,7 @@ CONSTANT M, N, Reader, Writer  \* Fixed size of the array
 
 variables 
     reader_k = 0,
-    rrsvd = [kk \in 0..N-1 |-> 0],
+    rrsvd = [k \in 0..N-1 |-> 0],
     \* rptr_rsvd = [kk \in 0..Reader-1 |-> 100 + kk],
     rptr = [k \in READERS |-> 0],
     wptr = 0,
