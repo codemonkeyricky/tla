@@ -61,15 +61,15 @@ r_chk_empty:        if outstanding # 0 then
 r_early_ret:            return;
                     end if;
                     \* reserved a read - now find it
-r_try_lock:         if rrsvd[rptr[i]] = 1 then 
-                        rrsvd[rptr[i]] := 2;
+r_try_lock:         if rrsvd[rptr[i]] = STATUS_WRITTEN then 
+                        rrsvd[rptr[i]] := STATUS_READING;
                     else 
 r_retry:                rptr[i] := (rptr[i] + 1) % N;
                         goto r_try_lock;
                     end if;
 r_data_chk:         assert buffer[rptr[i]] = rptr[i] + 1000;
 r_read_buf:         buffer[rptr[i]] := 0;
-r_unlock:           rrsvd[rptr[i]] := 0;
+r_unlock:           rrsvd[rptr[i]] := STATUS_UNUSED;
 r_done:             return;
 end procedure; 
 
@@ -84,8 +84,8 @@ w_early_ret2:           return;
                     end if;
 w_write_buf:        buffer[wptr] := wptr + 1000;
 w_mark_written:     rrsvd[wptr] := STATUS_WRITTEN;
-w_inc:              outstanding := outstanding + 1;
 w_inc_wptr:         wptr := (wptr + 1) % N;
+w_inc:              outstanding := outstanding + 1;
 w_done:             return;
 end procedure; 
 
@@ -106,7 +106,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "fd950aea" /\ chksum(tla) = "34ace1f1")
+\* BEGIN TRANSLATION (chksum(pcal) = "1059ca5d" /\ chksum(tla) = "380bb866")
 VARIABLES rrsvd, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -171,8 +171,8 @@ r_early_ret(self) == /\ pc[self] = "r_early_ret"
                      /\ UNCHANGED << rrsvd, rptr, wptr, outstanding, buffer >>
 
 r_try_lock(self) == /\ pc[self] = "r_try_lock"
-                    /\ IF rrsvd[rptr[i[self]]] = 1
-                          THEN /\ rrsvd' = [rrsvd EXCEPT ![rptr[i[self]]] = 2]
+                    /\ IF rrsvd[rptr[i[self]]] = STATUS_WRITTEN
+                          THEN /\ rrsvd' = [rrsvd EXCEPT ![rptr[i[self]]] = STATUS_READING]
                                /\ pc' = [pc EXCEPT ![self] = "r_data_chk"]
                           ELSE /\ pc' = [pc EXCEPT ![self] = "r_retry"]
                                /\ rrsvd' = rrsvd
@@ -196,7 +196,7 @@ r_read_buf(self) == /\ pc[self] = "r_read_buf"
                     /\ UNCHANGED << rrsvd, rptr, wptr, outstanding, stack, i >>
 
 r_unlock(self) == /\ pc[self] = "r_unlock"
-                  /\ rrsvd' = [rrsvd EXCEPT ![rptr[i[self]]] = 0]
+                  /\ rrsvd' = [rrsvd EXCEPT ![rptr[i[self]]] = STATUS_UNUSED]
                   /\ pc' = [pc EXCEPT ![self] = "r_done"]
                   /\ UNCHANGED << rptr, wptr, outstanding, buffer, stack, i >>
 
@@ -242,19 +242,19 @@ w_write_buf(self) == /\ pc[self] = "w_write_buf"
 
 w_mark_written(self) == /\ pc[self] = "w_mark_written"
                         /\ rrsvd' = [rrsvd EXCEPT ![wptr] = STATUS_WRITTEN]
-                        /\ pc' = [pc EXCEPT ![self] = "w_inc"]
+                        /\ pc' = [pc EXCEPT ![self] = "w_inc_wptr"]
                         /\ UNCHANGED << rptr, wptr, outstanding, buffer, stack, 
                                         i >>
 
-w_inc(self) == /\ pc[self] = "w_inc"
-               /\ outstanding' = outstanding + 1
-               /\ pc' = [pc EXCEPT ![self] = "w_inc_wptr"]
-               /\ UNCHANGED << rrsvd, rptr, wptr, buffer, stack, i >>
-
 w_inc_wptr(self) == /\ pc[self] = "w_inc_wptr"
                     /\ wptr' = (wptr + 1) % N
-                    /\ pc' = [pc EXCEPT ![self] = "w_done"]
+                    /\ pc' = [pc EXCEPT ![self] = "w_inc"]
                     /\ UNCHANGED << rrsvd, rptr, outstanding, buffer, stack, i >>
+
+w_inc(self) == /\ pc[self] = "w_inc"
+               /\ outstanding' = outstanding + 1
+               /\ pc' = [pc EXCEPT ![self] = "w_done"]
+               /\ UNCHANGED << rrsvd, rptr, wptr, buffer, stack, i >>
 
 w_done(self) == /\ pc[self] = "w_done"
                 /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
@@ -263,8 +263,8 @@ w_done(self) == /\ pc[self] = "w_done"
 
 writer(self) == w_chk_full(self) \/ w_early_ret(self) \/ w_chk_st(self)
                    \/ w_early_ret2(self) \/ w_write_buf(self)
-                   \/ w_mark_written(self) \/ w_inc(self)
-                   \/ w_inc_wptr(self) \/ w_done(self)
+                   \/ w_mark_written(self) \/ w_inc_wptr(self)
+                   \/ w_inc(self) \/ w_done(self)
 
 w_while == /\ pc[WRITER] = "w_while"
            /\ stack' = [stack EXCEPT ![WRITER] = << [ procedure |->  "writer",
