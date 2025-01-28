@@ -318,9 +318,18 @@ Spec == /\ Init /\ [][Next]_vars
 
 \* END TRANSLATION 
 
+ExclusiveReservation == 
+    \A x, y \in READERS: 
+        (x /= y /\ pc[x] = "r_read_buf" /\ pc[y] = "r_read_buf") => (rptr[x] # rptr[y])
+
+ExclusiveReadWrite == 
+    \A x \in READERS: 
+        (pc[x] = "r_read_buf" /\ pc[WRITER] = "w_write_buf") => (rptr[x] # wptr)
+
 Inv_Basics == 
     /\ Cardinality(reading) <= Cardinality(READERS)
     /\ Cardinality(buffer_filled) <= Cardinality(written) + Cardinality(reading) + 1
+    \* /\ ~(status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN)
     \* /\ Cardinality(written) <= outstanding + Reader
     \* /\ (Cardinality(reading) + Cardinality(written)) <= outstanding + 1
     \* /\ ~(status[0] = 1 /\ status[1] = 0 /\ status[2] = 1)

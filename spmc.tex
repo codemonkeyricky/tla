@@ -216,7 +216,7 @@ end procedure;
 \end{tlatex}
 \newline
 
-The writer first checks outstanding, and early return if queue is full.  After
+The writer first checks outstanding, and early return if queue is full. After
 fullness check, the writer then checks if the current index is UNUSED.  This is
 to account for the edge case where a reader has performed the reservation first
 step to decrement outstanding but haven't done the actual read. If both checks
@@ -224,6 +224,30 @@ pass, then writer now has an UNUSED index it can write to.
 
 \section{Safety}
 
+In a many reader system, we need to ensure when the readers have reserved an index to read, 
+they have exclusvie access to the index. This can be represented as below:
+
+\begin{tla}
+ExclusiveReservation == 
+    \A x, y \in READERS: 
+        (x /= y /\ pc[x] = "r_read_buf" /\ pc[y] = "r_read_buf") => (rptr[x] # rptr[y])
+\end{tla}
+
+Similarly, reader and writer cannot overlap on the same index:
+
 \section{Liveness}
+
+The SPMC algorithm can get into all sorts of weird states. For example:
+\begin{itemize}
+    \item Readers lapsing each other
+    \item A reader attempts to lapse writer 
+    \item A reader starves the other readers
+    \item A reader lapse all other readers
+    \item A slow reader blocks the system
+\end{itemize}
+
+In all of the above case, the system \textit{correctness} need to be maintained.
+
+The liveness property defines the correctness of the algorithm.
 
 % \end{document}
