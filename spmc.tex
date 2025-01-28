@@ -1,6 +1,17 @@
-\begin{document}
+% \begin{document}
 
 \chapter{SPMC Lockless Queue}
+
+As the name suggest, a SPMC lockless queue supports a single producer multiple
+consumer usage topology.\newline
+
+In previously described SPSC, the reader assumes write index is reserved, and
+the writer assumes read index is reserved. While the relationship between read
+and write context remains true in SPMC, the complication is now readers compete
+to reserve an index during read. A few motivating design questions include:
+\begin{itemize}
+    \item Readers may complete in different orders than they reserved the index 
+\end{itemize}
 
 \section{Spec}
 
@@ -17,8 +28,7 @@ r_chk_empty:
         return;
     end if;
 \* reserved a read - now find it
-r_try_lock:         
-    if status[rptr[i]] = WRITTEN then 
+r_try_lock:        
         status[rptr[i]] := READING;
     else 
     r_retry:                
@@ -119,4 +129,4 @@ end procedure;
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
 
-\end{document}
+% \end{document}
