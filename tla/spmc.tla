@@ -27,7 +27,7 @@ buffer_filled ==
 \* all index eventually become reserved
 Liveness == 
     \A k \in 0..N-1:
-    <>(buffer[k] # 0)
+        buffer[k] = 0 ~> buffer[k] # 0
 
 \* we can get weird interleaving patterns with spmc, a later reserved index done
 \* before an earlier reserved index. Confirms the earlier reserved index eventually 
@@ -120,7 +120,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "8b386899" /\ chksum(tla) = "d75a17a")
+\* BEGIN TRANSLATION (chksum(pcal) = "59d99ee0" /\ chksum(tla) = "2ecb39ea")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -136,7 +136,7 @@ buffer_filled ==
 
 Liveness ==
     \A k \in 0..N-1:
-    <>(buffer[k] # 0)
+        buffer[k] = 0 ~> buffer[k] # 0
 
 
 

@@ -216,8 +216,14 @@ end procedure;
 \end{tlatex}
 \newline
 
-The writer first checks outstanding, and early return if queue is full.\newline  The
-writer then checks if the current index is UNUSED.
+The writer first checks outstanding, and early return if queue is full.  After
+fullness check, the writer then checks if the current index is UNUSED.  This is
+to account for the edge case where a reader has performed the reservation first
+step to decrement outstanding but haven't done the actual read. If both checks
+pass, then writer now has an UNUSED index it can write to.
 
+\section{Safety}
+
+\section{Liveness}
 
 % \end{document}
