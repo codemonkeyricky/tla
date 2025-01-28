@@ -118,20 +118,20 @@ entire state space (either per state or a sequence of states).\newline
 This book was initially a set of notes I took as I was learning TLA+. To my
 surprise, there's not as much material on TLA+ as I had assumed for such a
 critical tool in the designer toolbox. I decided to formalize the notes into
-this short book, which I hope the readers find this helpful in their journey to
-master TLA+.  \newline
+this short book, which I hope the readers find this helpful in their journey
+TLA+ journey.\newline
 
 The intent for the book is to teach reader how to write TLA+ spec for their
-design to provide confidence in \textit{design correctness}. The content to this
-book is appropriate for software designer, hardware designer, system architect,
-and such.\newline 
+design to provide confidence in \textit{design correctness}. This book is
+targeted to software designer, hardware designer, system architect, and in
+general anyone who is interested in designing correct system.\newline 
 
-As for the readers: general computing science knowledge is required. One doesn't
-need to be expert at a particular language to understand this book; TLA+ is
-effectively its own language. This book is example driven and will go through
-designs such as lockless queue, simple task scheduler, consensus algorithm, etc.
-Reader will likely enjoy a deeper insight if she has some familiarity with these
-topics.
+To get the most out of the book, one should have general computing science
+knowledge. One doesn't need to be expert at a particular language to understand
+this book; TLA+ is effectively its own language. This book is example driven and
+will go through designs such as lockless queue, simple task scheduler, consensus
+algorithm, etc. Reader will likely enjoy a deeper insight if she has some
+familiarity with these topics.
 
 \section{How to Use This Book}
 
@@ -139,18 +139,17 @@ This book was designed to be used as a reference, providing examples and
 references using TLA+.\newline
 
 Examples are split into two categories: A set of examples written using TLA+,
-and another set of examples written using PlusCal, the C-like syntax that
-transpiles down to TLA+. I believe they are useful for different use cases.  The
-differences will be highlighted in their respective sections. All examples will
-follow a similar layout, covering the expected design process (eg. requirement,
-spec, safety and liveness properties).\newline
+and another set of examples written using PlusCal (the C-like syntax that
+transpiles down to TLA+). I believe they are useful for different use cases.
+The differences will be highlighted in their respective sections. All examples
+will follow a similar layout, covering the requirements, design, spec, and 
+safety properties.\newline
 
-All examples in this book will be described using TLA+ \textit{mathemetical
+All examples in this book will be presented using TLA+ \textit{mathemetical
 notation}. Converting between Mathmetical and ASCII notation is assumed
 straightforward due to the one-to-one mapping. Readers are encouraged to consult
 Table 8 in \cite{ss} as needed.\newline
 
-Finally, there will be part that language reference portion that that discuss a
-few topics deserving extra attention. The intent is to be using this section of the 
-book as a \textit{reference}.
+The last part of the book provides that language reference and some focused
+topic. Reader can use the last part of the book as a general reference. 
 
