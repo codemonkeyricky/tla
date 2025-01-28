@@ -220,21 +220,22 @@ The writer first checks outstanding, and early return if queue is full. After
 fullness check, the writer then checks if the current index is UNUSED.  This is
 to account for the edge case where a reader has performed the reservation first
 step to decrement outstanding but haven't done the actual read. If both checks
-pass, then writer now has an UNUSED index it can write to.
+pass, then writer now has an UNUSED index it can write to.\newline
+
+The SPMC algorithm can be tricky yo get right. There's plenty of possible
+pitfall in the design. For example:
+\begin{itemize}
+    \item Readers can lapse each other
+    \item A reader can attempt to lapse writer 
+    \item A reader can starve the other readers
+    \item A slow reader can block the system
+\end{itemize}
+
+In all of the above case, the system \textit{correctness} need to be maintained.
 
 \section{Safety}
 
-The SPMC algorithm can get into all sorts of weird states. For example:
-\begin{itemize}
-    \item Readers lapsing each other
-    \item A reader attempts to lapse writer 
-    \item A reader starves the other readers
-    \item A reader lapse all other readers
-    \item A slow reader blocks the system
-\end{itemize}
-
-In a many reader system, we need to ensure when the readers have reserved an index to read, 
-they have exclusvie access to the index. This can be represented as below:\newline
+When a reader reserves an index to read, the reader must have exclusive access: \newline
 
 \begin{tla}
 ExclusiveReservation == 
@@ -250,7 +251,7 @@ ExclusiveReservation ==
 \end{tlatex}
 \newline
 
-Similarly, reader and writer cannot overlap on the same index:\newline
+Similarly, reader and writer cannot operate on the same index at the same time:\newline
 \begin{tla}
 ExclusiveReadWrite == 
     \A x \in READERS: 
@@ -265,10 +266,9 @@ ExclusiveReadWrite ==
 
 \section{Liveness}
 
-In all of the above case, the system \textit{correctness} need to be maintained.
-
-The liveness property defines the correctness of the algorithm.
-
+All indices must be used as the system runs. The following verifies all unused
+indices are eventually used, and all used indicies are eventually unused:
+\newline
 \begin{tla}
 Liveness ==
     /\ \A k \in 0..N-1:
@@ -276,11 +276,34 @@ Liveness ==
     /\ \A k \in 0..N-1:
         buffer[k] # 0 ~> buffer[k] = 0
 \end{tla}
+\begin{tlatex}
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{20.5} buffer [ k ] \.{=} 0 \.{\leadsto} buffer [ k ] \.{\neq} 0}%
+\@x{\@s{16.4} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{20.5} buffer [ k ] \.{\neq} 0 \.{\leadsto} buffer [ k ] \.{=} 0}%
+\end{tlatex}
+\newline
+
+The following describes a more subtle scenario. We need to ensure the system
+remains functional even if readers complete out-of-order. The following describe such 
+scenario, where 
 
 \begin{tla}
 Liveness2 == 
-    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[0] = UNUSED)
-    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[2] = UNUSED)
+    \A k \in 0..N-3:
+    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k] = UNUSED)
+    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k+2] = UNUSED)
 \end{tla}
+\begin{tlatex}
+\@x{ Liveness2 \.{\defeq}}%
+\@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 3 \.{:}}%
+ \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} WRITTEN \.{\land} status [ k
+ \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} WRITTEN )
+ \.{\leadsto} ( status [ k ] \.{=} UNUSED )}%
+ \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} WRITTEN \.{\land} status [ k
+ \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} WRITTEN )
+ \.{\leadsto} ( status [ k \.{+} 2 ] \.{=} UNUSED )}%
+\end{tlatex}
 
 % \end{document}

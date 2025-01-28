@@ -40,8 +40,8 @@ Liveness ==
 \* clear. 
 Liveness2 == 
     \A k \in 0..N-3:
-    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k] = UNUSED)
-    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k+2] = UNUSED)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k] = WRITTEN)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k+2] = WRITTEN)
 
 WRITER == "w0"
 
@@ -124,7 +124,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "9cbbf8ce" /\ chksum(tla) = "44bedb62")
+\* BEGIN TRANSLATION (chksum(pcal) = "59795823" /\ chksum(tla) = "50474a3c")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -153,8 +153,8 @@ Liveness ==
 
 Liveness2 ==
     \A k \in 0..N-3:
-    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k] = UNUSED)
-    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k+2] = UNUSED)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k] = WRITTEN)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k+2] = WRITTEN)
 
 WRITER == "w0"
 
