@@ -7,7 +7,7 @@ CONSTANT N, READERS \* Fixed size of the array
 (*--algorithm spmc 
 
 variables 
-    status = [k \in 0..N-1 |-> 0],
+    status = [k \in 0..N-1 |-> "unused"],
     rptr = [k \in READERS |-> 0],
     wptr = 0,
     outstanding = 0,
@@ -15,11 +15,15 @@ variables
 
 define
 
+UNUSED == "unused" 
+WRITTEN == "written"
+READING == "reading"
+
 reading == 
-    {k \in 0..N-1: status[k] = 2}
+    {k \in 0..N-1: status[k] = READING}
 
 written == 
-    {k \in 0..N-1: status[k] = 1}
+    {k \in 0..N-1: status[k] = WRITTEN}
 
 buffer_filled == 
     {k \in 0..N-1: buffer[k] # 0}
@@ -33,16 +37,13 @@ Liveness ==
 \* before an earlier reserved index. Confirms the earlier reserved index eventually 
 \* clear. 
 Liveness2 == 
-    /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[0] = 0)
-    /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[2] = 0)
+    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[0] = UNUSED)
+    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[2] = UNUSED)
 
 WRITER == "w0"
 
 Perms == Permutations(READERS) 
 
-UNUSED == 0
-WRITTEN == 1
-READING == 2
 
 end define;
 
@@ -120,15 +121,19 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "59d99ee0" /\ chksum(tla) = "2ecb39ea")
+\* BEGIN TRANSLATION (chksum(pcal) = "c2209f36" /\ chksum(tla) = "18466047")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
+UNUSED == "unused"
+WRITTEN == "written"
+READING == "reading"
+
 reading ==
-    {k \in 0..N-1: status[k] = 2}
+    {k \in 0..N-1: status[k] = READING}
 
 written ==
-    {k \in 0..N-1: status[k] = 1}
+    {k \in 0..N-1: status[k] = WRITTEN}
 
 buffer_filled ==
     {k \in 0..N-1: buffer[k] # 0}
@@ -142,16 +147,12 @@ Liveness ==
 
 
 Liveness2 ==
-    /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[0] = 0)
-    /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[2] = 0)
+    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[0] = UNUSED)
+    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[2] = UNUSED)
 
 WRITER == "w0"
 
 Perms == Permutations(READERS)
-
-UNUSED == 0
-WRITTEN == 1
-READING == 2
 
 VARIABLE i
 
@@ -160,7 +161,7 @@ vars == << status, rptr, wptr, outstanding, buffer, pc, stack, i >>
 ProcSet == {WRITER} \cup (READERS)
 
 Init == (* Global variables *)
-        /\ status = [k \in 0..N-1 |-> 0]
+        /\ status = [k \in 0..N-1 |-> "unused"]
         /\ rptr = [k \in READERS |-> 0]
         /\ wptr = 0
         /\ outstanding = 0
@@ -200,7 +201,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 72, column 5.")
+                              "Failure of assertion at line 73, column 5.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << status, rptr, wptr, outstanding, buffer, 
                                     stack, i >>
