@@ -294,18 +294,20 @@ system remains functional after such scenario.\newline
 \begin{tla}
 Liveness2 == 
     \A k \in 0..N-3:
-    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k] = WRITTEN)
-    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k+2] = WRITTEN)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) 
+        ~> (status[k] = WRITTEN)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) 
+        ~> (status[k+2] = WRITTEN)
 \end{tla}
 \begin{tlatex}
 \@x{ Liveness2 \.{\defeq}}%
 \@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 3 \.{:}}%
- \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} WRITTEN \.{\land} status [ k
- \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} WRITTEN )
- \.{\leadsto} ( status [ k ] \.{=} UNUSED )}%
- \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} WRITTEN \.{\land} status [ k
- \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} WRITTEN )
- \.{\leadsto} ( status [ k \.{+} 2 ] \.{=} UNUSED )}%
+ \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} READING \.{\land} status [ k
+ \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} READING )}%
+\@x{\@s{16.4} \.{\leadsto} ( status [ k ] \.{=} WRITTEN )}%
+ \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} READING \.{\land} status [ k
+ \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} READING )}%
+\@x{\@s{16.4} \.{\leadsto} ( status [ k \.{+} 2 ] \.{=} WRITTEN )}%
 \end{tlatex}
 
 % \end{document}
