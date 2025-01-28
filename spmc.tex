@@ -15,16 +15,17 @@ to reserve an index during read. Some design considerations include:
     \item Readers can perform the reads independently
 \end{itemize}
 
-One of the primitives in modern CPU architecture is compare-and-swap (CAS). In
-short, to issue a CAS the issuer needs to specify a memory address, an old value
-and a new value. Only when value in the memory location matches the old value,
-the new value will be writen. The instruction ensure this is done atomically.
-Assume two CPUs issuing CAS at the same time, only one CPU will \textit{win} as 
-the other CPU's old value check will fail. This will be a key part of our SPMC design.
+A primitive in modern CPU architecture is the compare-and-swap (CAS)
+instruction. To use CAS, issuer needs to specify a memory location, a current
+value and a new value. Only when value in the memory location matches the
+current value, the new value will be writen. The instruction ensure this is done
+atomically. If multiple CPUs issue CAS at the same time to the same memory
+location, only one CPU will \textit{win} as the other CPU's current value check
+will fail. Many of the concurrent algorithms are built ontop of this primitive. 
 
 \section{Design}
 
-Our solution space is bound by a few requirements driven by the primitives provided by modern CPU:
+Some of the design limitation include:
 \begin{itemize}
     \item A resource is exclusively updated by one owner, and read by one or more readers
     \item For shared resource that can be updated by multiple owners, the CPU
@@ -41,23 +42,41 @@ For the design:
     and decremented by the reader when it reserves a read
 \end{itemize}
 
-Whenever the write finishes a write, it updates the ready to indicate some
-buffer is ready to read. To read, a reader performs a two-step reservation: 
+Whenever the write finishes a write, it increments \textit{outstanding} to
+indicate some buffer is ready to read.\newline 
+
+To read, a reader performs a two-step reservation: 
 \begin{itemize}
-    \item The reader first decrement \textit{outstanding}. A successful decrement means
-    the reader is \textit{gauranteed} a read index
+    \item The reader decrements \textit{outstanding}. A successful decrement means
+    the reader is \textit{gauranteed} a read index.
     \item After successful decrement of \textit{outstanding}, the reader walk
     its read pointer until it successfully reserve the next available index to
-    read. A This is done by issuing CAS to update an index from WRITTEN to READING
+    read. A This is done by attempting to CAS update an index from WRITTEN to
+    READING. If the update fails, then the index was already reserved by another 
+    reader.
 \end{itemize}
 
-One of the complication is writer full check. In SPSC, when write pointer
-catches up to read pointer, the queue is full. In SPMC, there's multiple
-readers, making this check difficult to implement without a separate atomic
-variable.
+There may be more than one approach in implementing SPMC, the above description
+is what we will implement in this chapter.
+
+% \subsection{Side Note}
+
+% I initially started with a three pointer approach: r, rnxt, w. r to rnxt being 
+% the range of indicies where one or more reader may be actively reading, and rnxt
+% being the next element available to read. The challenge was in the case fo 
+% multiple reader competing to reserve rnext, 
+
+% A complication with the 
+
+% A complication in the design is writer's queue full check. In SPSC, when write
+% pointer catches up to read pointer, the queue is full. In SPMC with multiple
+% readers, the writer will need to check \textit{all} read pointer. Adding a 
+% separate \textit{outstanding} counter simplifies the design. 
 
 \section{Spec}
 
+The following is the core reader implementation:
+\newline
 \begin{pcal}
 procedure reader() 
 variable 
@@ -70,8 +89,8 @@ r_chk_empty:
     r_early_ret:            
         return;
     end if;
-\* reserved a read - now find it
-r_try_lock:        
+r_try_lock:         
+    if status[rptr[i]] = WRITTEN then 
         status[rptr[i]] := READING;
     else 
     r_retry:                
@@ -87,7 +106,67 @@ r_unlock:
 r_done:             
     return;
 end procedure; 
+\end{pcal}
+\begin{tlatex}
+\@x{ {\p@procedure} reader {\p@lparen} {\p@rparen}}%
+\@x{ {\p@variable}}%
+\@x{\@s{16.4} i \.{=} self {\p@semicolon}}%
+\@x{ {\p@begin}}%
+\@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} outstanding \.{\neq} 0 {\p@then}}%
+\@x{\@s{20.5} outstanding \.{:=} outstanding \.{-} 1 {\p@semicolon}}%
+\@x{\@s{16.4} {\p@else}}%
+\@x{\@s{16.4} r\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{ r\_try\_lock\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} status [ rptr [ i ] ] \.{=} WRITTEN {\p@then}}%
+\@x{\@s{20.5} status [ rptr [ i ] ] \.{:=} READING {\p@semicolon}}%
+\@x{\@s{16.4} {\p@else}}%
+\@x{\@s{16.4} r\_retry\@s{.5}\textrm{:}\@s{3}}%
+ \@x{\@s{32.8} rptr [ i ] \.{:=} ( rptr [ i ] \.{+} 1 ) \.{\%} N
+ {\p@semicolon}}%
+\@x{\@s{32.8} {\p@goto} r\_try\_lock {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{ r\_data\_chk\@s{.5}\textrm{:}\@s{3}}%
+ \@x{\@s{16.4} {\p@assert} buffer [ rptr [ i ] ] \.{=} rptr [ i ] \.{+} 1000
+ {\p@semicolon}}%
+\@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} buffer [ rptr [ i ] ] \.{:=} 0 {\p@semicolon}}%
+\@x{ r\_unlock\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} status [ rptr [ i ] ] \.{:=} UNUSED {\p@semicolon}}%
+\@x{ r\_done\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\end{tlatex}
+\newline
 
+The reader performs a non-zero check on outstanding. If outstanding is zero,
+queue is empty and reader early returns.\newline 
+
+If outstanding is K, then at most K readers can reserve a index to read. If system 
+has M readers, then M-K readers will fail to reserve a read index. The readers now 
+compete to reserve a read. More specifically: 
+\begin{itemize}
+    \item Reader loads outstanding, stores that onto local variable A
+    \item Reader early returns if A is zero 
+    \item Reader calls rv = CAS(A, A-1)
+    \item If rv is non-success, go back to the top
+\end{itemize}
+
+If rv is non-success, another reader has \textit{won} the reservation. The
+current reader can attempt to reserve again if \textit{outstanding} is
+non-zero.\newline
+
+If rv is success, the reader is \textit{gauranteed} a read. However, readers may
+need to compete to reserve an available index. This is done by attempting to CAS
+update the index status from WRITTEN to READING. Failing the CAS indicate
+another reader has reserved this index, and the reader will bump the read
+pointer and try to reserve the next index.\newline
+
+Now let us take a look at the writer implementation:\newline
+
+\begin{pcal}
 procedure writer() begin
 w_chk_full:         
     if outstanding = N - 1 then 
@@ -112,42 +191,6 @@ w_done:
 end procedure; 
 \end{pcal}
 \begin{tlatex}
-\@x{ {\p@procedure} reader {\p@lparen} {\p@rparen}}%
-\@x{ {\p@variable}}%
-\@x{\@s{16.4} i \.{=} self {\p@semicolon}}%
-\@x{ {\p@begin}}%
-\@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} {\p@if} outstanding \.{\neq} 0 {\p@then}}%
-\@x{\@s{20.5} outstanding \.{:=} outstanding \.{-} 1 {\p@semicolon}}%
-\@x{\@s{16.4} {\p@else}}%
-\@x{\@s{16.4} r\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
-\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
-\@x{}%
-\@y{%
-  reserved a read - now find it
-}%
-\@xx{}%
-\@x{ r\_try\_lock\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} {\p@if} status [ rptr [ i ] ] \.{=} WRITTEN {\p@then}}%
-\@x{\@s{20.5} status [ rptr [ i ] ] \.{:=} READING {\p@semicolon}}%
-\@x{\@s{16.4} {\p@else}}%
-\@x{\@s{16.4} r\_retry\@s{.5}\textrm{:}\@s{3}}%
- \@x{\@s{32.8} rptr [ i ] \.{:=} ( rptr [ i ] \.{+} 1 ) \.{\%} N
- {\p@semicolon}}%
-\@x{\@s{32.8} {\p@goto} r\_try\_lock {\p@semicolon}}%
-\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
-\@x{ r\_data\_chk\@s{.5}\textrm{:}\@s{3}}%
- \@x{\@s{16.4} {\p@assert} buffer [ rptr [ i ] ] \.{=} rptr [ i ] \.{+} 1000
- {\p@semicolon}}%
-\@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} buffer [ rptr [ i ] ] \.{:=} 0 {\p@semicolon}}%
-\@x{ r\_unlock\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} status [ rptr [ i ] ] \.{:=} UNUSED {\p@semicolon}}%
-\@x{ r\_done\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
-\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
-\@pvspace{8.0pt}%
 \@x{ {\p@procedure} writer {\p@lparen} {\p@rparen} {\p@begin}}%
 \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}}%
 \@x{\@s{16.4} {\p@if} outstanding \.{=} N \.{-} 1 {\p@then}}%
@@ -171,5 +214,10 @@ end procedure;
 \@x{\@s{16.4} {\p@return} {\p@semicolon}}%
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
+\newline
+
+The writer first checks outstanding, and early return if queue is full.\newline  The
+writer then checks if the current index is UNUSED.
+
 
 % \end{document}
