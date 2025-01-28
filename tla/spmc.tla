@@ -29,9 +29,11 @@ buffer_filled ==
     {k \in 0..N-1: buffer[k] # 0}
 
 \* all index eventually become reserved
-Liveness == 
-    \A k \in 0..N-1:
+Liveness ==
+    /\ \A k \in 0..N-1:
         buffer[k] = 0 ~> buffer[k] # 0
+    /\ \A k \in 0..N-1:
+        buffer[k] # 0 ~> buffer[k] = 0
 
 \* we can get weird interleaving patterns with spmc, a later reserved index done
 \* before an earlier reserved index. Confirms the earlier reserved index eventually 
@@ -121,7 +123,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "c2209f36" /\ chksum(tla) = "18466047")
+\* BEGIN TRANSLATION (chksum(pcal) = "ff771c8d" /\ chksum(tla) = "2e3569d5")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -140,8 +142,10 @@ buffer_filled ==
 
 
 Liveness ==
-    \A k \in 0..N-1:
+    /\ \A k \in 0..N-1:
         buffer[k] = 0 ~> buffer[k] # 0
+    /\ \A k \in 0..N-1:
+        buffer[k] # 0 ~> buffer[k] = 0
 
 
 
@@ -201,7 +205,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 73, column 5.")
+                              "Failure of assertion at line 75, column 5.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << status, rptr, wptr, outstanding, buffer, 
                                     stack, i >>
