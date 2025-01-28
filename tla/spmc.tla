@@ -2,20 +2,16 @@
 
 EXTENDS TLC, Naturals, Sequences, FiniteSets
 
-CONSTANT M, N, Reader, Writer  \* Fixed size of the array
+CONSTANT N  \* Fixed size of the array
 
 (*--algorithm spmc 
 
 variables 
-    \* reader_k = 0,
     status = [k \in 0..N-1 |-> 0],
-    \* rptr_rsvd = [kk \in 0..Reader-1 |-> 100 + kk],
     rptr = [k \in READERS |-> 0],
     wptr = 0,
     outstanding = 0,
-    \* rstate = [kk \in 0..Reader-1 |-> "read_init"],
     buffer = [kk \in 0..N-1 |-> 0],
-    \* wstate = "write_init";
 
 define
 
@@ -40,8 +36,8 @@ Liveness2 ==
     /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[0] = 0)
     /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[2] = 0)
 
-WRITER == "writer0"
-READERS == {"reader0", "reader1"}
+WRITER == "w0"
+READERS == {"r0", "r1"}
 
 UNUSED == 0
 WRITTEN == 1
@@ -123,7 +119,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "95384931" /\ chksum(tla) = "258d03f2")
+\* BEGIN TRANSLATION (chksum(pcal) = "b4f4d303" /\ chksum(tla) = "eef2089c")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -148,8 +144,8 @@ Liveness2 ==
     /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[0] = 0)
     /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[2] = 0)
 
-WRITER == "writer0"
-READERS == {"reader0", "reader1"}
+WRITER == "w0"
+READERS == {"r0", "r1"}
 
 UNUSED == 0
 WRITTEN == 1
@@ -202,7 +198,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 75, column 5.")
+                              "Failure of assertion at line 71, column 5.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << status, rptr, wptr, outstanding, buffer, 
                                     stack, i >>
@@ -316,7 +312,7 @@ Spec == /\ Init /\ [][Next]_vars
 \* END TRANSLATION 
 
 Inv_Basics == 
-    /\ Cardinality(reading) <= Reader
+    /\ Cardinality(reading) <= Cardinality(READERS)
     /\ Cardinality(buffer_filled) <= Cardinality(written) + Cardinality(reading) + 1
     \* /\ Cardinality(written) <= outstanding + Reader
     \* /\ (Cardinality(reading) + Cardinality(written)) <= outstanding + 1

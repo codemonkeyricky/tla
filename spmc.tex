@@ -8,10 +8,53 @@ consumer usage topology.\newline
 In previously described SPSC, the reader assumes write index is reserved, and
 the writer assumes read index is reserved. While the relationship between read
 and write context remains true in SPMC, the complication is now readers compete
-to reserve an index during read. A few motivating design questions include:
+to reserve an index during read. Some design considerations include:
 \begin{itemize}
-    \item Readers may complete in different orders than they reserved the index 
+    \item Readers must have a way to reserve an index to read
+    \item Readers may complete the read in order different from when they reserve the indices 
+    \item Readers can perform the reads independently
 \end{itemize}
+
+One of the primitives in modern CPU architecture is compare-and-swap (CAS). In
+short, to issue a CAS the issuer needs to specify a memory address, an old value
+and a new value. Only when value in the memory location matches the old value,
+the new value will be writen. The instruction ensure this is done atomically.
+Assume two CPUs issuing CAS at the same time, only one CPU will \textit{win} as 
+the other CPU's old value check will fail. This will be a key part of our SPMC design.
+
+\section{Design}
+
+Our solution space is bound by a few requirements driven by the primitives provided by modern CPU:
+\begin{itemize}
+    \item A resource is exclusively updated by one owner, and read by one or more readers
+    \item For shared resource that can be updated by multiple owners, the CPU
+    can gaurantees exclusive update from a single resource 
+\end{itemize}
+
+For the design:
+\begin{itemize}
+    \item SPMC is implemented as a circular queue with size of N
+    \item The status of indvidual index is represented as an status array of size N
+    \item The status of each index is either UNUSED, WRITTEN, or READING
+    \item Each reader maintain its own read pointer
+    \item A \textit{outstanding} counter is incremented by the writer when write is complete, 
+    and decremented by the reader when it reserves a read
+\end{itemize}
+
+Whenever the write finishes a write, it updates the ready to indicate some
+buffer is ready to read. To read, a reader performs a two-step reservation: 
+\begin{itemize}
+    \item The reader first decrement \textit{outstanding}. A successful decrement means
+    the reader is \textit{gauranteed} a read index
+    \item After successful decrement of \textit{outstanding}, the reader walk
+    its read pointer until it successfully reserve the next available index to
+    read. A This is done by issuing CAS to update an index from WRITTEN to READING
+\end{itemize}
+
+One of the complication is writer full check. In SPSC, when write pointer
+catches up to read pointer, the queue is full. In SPMC, there's multiple
+readers, making this check difficult to implement without a separate atomic
+variable.
 
 \section{Spec}
 
