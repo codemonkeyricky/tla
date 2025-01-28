@@ -224,19 +224,6 @@ pass, then writer now has an UNUSED index it can write to.
 
 \section{Safety}
 
-In a many reader system, we need to ensure when the readers have reserved an index to read, 
-they have exclusvie access to the index. This can be represented as below:
-
-\begin{tla}
-ExclusiveReservation == 
-    \A x, y \in READERS: 
-        (x /= y /\ pc[x] = "r_read_buf" /\ pc[y] = "r_read_buf") => (rptr[x] # rptr[y])
-\end{tla}
-
-Similarly, reader and writer cannot overlap on the same index:
-
-\section{Liveness}
-
 The SPMC algorithm can get into all sorts of weird states. For example:
 \begin{itemize}
     \item Readers lapsing each other
@@ -246,8 +233,54 @@ The SPMC algorithm can get into all sorts of weird states. For example:
     \item A slow reader blocks the system
 \end{itemize}
 
+In a many reader system, we need to ensure when the readers have reserved an index to read, 
+they have exclusvie access to the index. This can be represented as below:\newline
+
+\begin{tla}
+ExclusiveReservation == 
+    \A x, y \in READERS: 
+        (x /= y /\ pc[x] = "r_read_buf" /\ pc[y] = "r_read_buf") => (rptr[x] # rptr[y])
+\end{tla}
+\begin{tlatex}
+\@x{ ExclusiveReservation \.{\defeq}}%
+\@x{\@s{16.4} \A\, x ,\, y \.{\in} READERS \.{:}}%
+ \@x{\@s{16.4} ( x \.{\neq} y \.{\land} pc [ x ] \.{=}\@w{r\_read\_buf}
+ \.{\land} pc [ y ] \.{=}\@w{r\_read\_buf} ) \.{\implies} ( rptr [ x ]
+ \.{\neq} rptr [ y ] )}%
+\end{tlatex}
+\newline
+
+Similarly, reader and writer cannot overlap on the same index:\newline
+\begin{tla}
+ExclusiveReadWrite == 
+    \A x \in READERS: 
+        (pc[x] = "r_read_buf" /\ pc[WRITER] = "w_write_buf") => (rptr[x] # wptr)
+\end{tla}
+\begin{tlatex}
+\@x{ ExclusiveReadWrite \.{\defeq}}%
+\@x{\@s{16.4} \A\, x \.{\in} READERS \.{:}}%
+ \@x{\@s{20.5} ( pc [ x ] \.{=}\@w{r\_read\_buf} \.{\land} pc [ WRITER ]
+ \.{=}\@w{w\_write\_buf} ) \.{\implies} ( rptr [ x ] \.{\neq} wptr )}%
+\end{tlatex}
+
+\section{Liveness}
+
 In all of the above case, the system \textit{correctness} need to be maintained.
 
 The liveness property defines the correctness of the algorithm.
+
+\begin{tla}
+Liveness ==
+    /\ \A k \in 0..N-1:
+        buffer[k] = 0 ~> buffer[k] # 0
+    /\ \A k \in 0..N-1:
+        buffer[k] # 0 ~> buffer[k] = 0
+\end{tla}
+
+\begin{tla}
+Liveness2 == 
+    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[0] = UNUSED)
+    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[2] = UNUSED)
+\end{tla}
 
 % \end{document}

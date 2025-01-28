@@ -39,8 +39,9 @@ Liveness ==
 \* before an earlier reserved index. Confirms the earlier reserved index eventually 
 \* clear. 
 Liveness2 == 
-    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[0] = UNUSED)
-    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[2] = UNUSED)
+    \A k \in 0..N-3:
+    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k] = UNUSED)
+    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k+2] = UNUSED)
 
 WRITER == "w0"
 
@@ -123,7 +124,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "ff771c8d" /\ chksum(tla) = "2e3569d5")
+\* BEGIN TRANSLATION (chksum(pcal) = "9cbbf8ce" /\ chksum(tla) = "44bedb62")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -151,8 +152,9 @@ Liveness ==
 
 
 Liveness2 ==
-    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[0] = UNUSED)
-    /\ (status[0] = WRITTEN /\ status[1] = UNUSED /\ status[2] = WRITTEN) ~> (status[2] = UNUSED)
+    \A k \in 0..N-3:
+    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k] = UNUSED)
+    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k+2] = UNUSED)
 
 WRITER == "w0"
 
@@ -205,7 +207,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 75, column 5.")
+                              "Failure of assertion at line 76, column 5.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << status, rptr, wptr, outstanding, buffer, 
                                     stack, i >>
