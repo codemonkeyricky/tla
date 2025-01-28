@@ -2,7 +2,7 @@
 
 EXTENDS TLC, Naturals, Sequences, FiniteSets
 
-CONSTANT N  \* Fixed size of the array
+CONSTANT N, READERS \* Fixed size of the array
 
 (*--algorithm spmc 
 
@@ -37,7 +37,8 @@ Liveness2 ==
     /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[2] = 0)
 
 WRITER == "w0"
-READERS == {"r0", "r1"}
+
+Perms == Permutations(READERS) 
 
 UNUSED == 0
 WRITTEN == 1
@@ -119,7 +120,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "b4f4d303" /\ chksum(tla) = "eef2089c")
+\* BEGIN TRANSLATION (chksum(pcal) = "8b386899" /\ chksum(tla) = "d75a17a")
 VARIABLES status, rptr, wptr, outstanding, buffer, pc, stack
 
 (* define statement *)
@@ -145,7 +146,8 @@ Liveness2 ==
     /\ (status[0] = 1 /\ status[1] = 0 /\ status[2] = 1) ~> (status[2] = 0)
 
 WRITER == "w0"
-READERS == {"r0", "r1"}
+
+Perms == Permutations(READERS)
 
 UNUSED == 0
 WRITTEN == 1
@@ -198,7 +200,7 @@ r_retry(self) == /\ pc[self] = "r_retry"
 
 r_data_chk(self) == /\ pc[self] = "r_data_chk"
                     /\ Assert(buffer[rptr[i[self]]] = rptr[i[self]] + 1000, 
-                              "Failure of assertion at line 71, column 5.")
+                              "Failure of assertion at line 72, column 5.")
                     /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
                     /\ UNCHANGED << status, rptr, wptr, outstanding, buffer, 
                                     stack, i >>
