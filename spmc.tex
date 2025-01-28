@@ -286,14 +286,16 @@ Liveness ==
 \newline
 
 The following describes a more subtle scenario. We need to ensure the system
-remains functional even if readers complete out-of-order. The following describe such 
-scenario, where 
+remains functional even if readers complete out-of-order. The following describe
+such scenario, where two non-contiguous indicies have been reserved for reading.
+In this case we expect the indicies to eventually be re-used. This means the
+system remains functional after such scenario.\newline
 
 \begin{tla}
 Liveness2 == 
     \A k \in 0..N-3:
-    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k] = UNUSED)
-    /\ (status[k] = WRITTEN /\ status[k+1] = UNUSED /\ status[k+2] = WRITTEN) ~> (status[k+2] = UNUSED)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k] = WRITTEN)
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) ~> (status[k+2] = WRITTEN)
 \end{tla}
 \begin{tlatex}
 \@x{ Liveness2 \.{\defeq}}%
