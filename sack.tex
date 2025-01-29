@@ -121,28 +121,32 @@ user. The client also doesn't need to acknowledge all the packets, since the
 server assumes once an acknowledgement of packet N is received, then all packets
 prior to N have also been received.
 
-\section{Requirement}
+\section{Design}
 
 With the above description, we are now ready to provide a more formal
-description for our requirement:
+description for our design:
 
 \begin{itemize}
-    \item Client is the receiver that displays the video stream 
-    \item Server is the sender that sends the video stream 
-    \item Server always sends the packets in-order
-    \item Client may receive the packets out-of-order 
-    \item Client may never receive some packet due to loss
+    \item Client is the receiver that displays the video stream.
+    \item Server is the sender that sends the video stream.
+    \item Server always sends the packets in-order.
+    \item Client may receive the packets out-of-order.
+    \item Client may never receive some packet due to loss.
     \item Server can send up to W packets before an acknowledgement is received
-    \item Per packet sequence number is represented by fixed number of bytes in
+    \item Packet sequence number is represented by a fixed number of bytes in
     the network header, the sequence number will eventually wrap around once it
-    hits the maximum representable value. This upper limit will be represented
-    by the constant N 
+    hits the maximum representable value. The maximum sequence number is
+    represented as N-1. 
+    \item Client puts a received packet in its receive buffer. Packets in the 
+    receive buffer may be out-of-order due to network conditions.
     \item Client will remove the packets from the receive buffer once the
     sequence number of the received packets are contiguous. The client will also
-    send an acknowledgement back to the Server with the most recent sequence
-    number
-    \item Server to Client data packets are assumed unreliable due to bulk bandwidth
-    \item Client to Server control packets are assumed to be reliable
+    send an acknowledgement back to the Server with the most recently
+    acknowledged sequence number.
+    \item Data patckets are transported using unreliable channel due to
+    bandwidth and latency requirement.
+    \item Control packets are transported using reliable channel due to relaxed 
+    and latency requirement. 
 \end{itemize}
 
 We are now ready to implement the \textit{Spec}. 
@@ -326,7 +330,10 @@ ClientAcknowledgement ==
     /\ MergeReady 
     /\ client_buffer' = {}
     /\ client_rx' = MaxIndex
-    /\ network' = AddMessage([dst |-> "server", type |-> "ack", ack |-> MaxIndex], network)
+    /\ network' = AddMessage([dst |-> "server",
+                              type |-> "ack",
+                              ack |-> MaxIndex], 
+                                network)
     /\ UNCHANGED <<server_tx, server_tx_ack, server_tx_limit, lost>>
 \end{tla}
 \begin{tlatex}
