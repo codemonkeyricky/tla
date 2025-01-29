@@ -8,8 +8,8 @@ VARIABLES
     version, network
 
 MaxDivergence == 1
-MaxVersion == 3
-MaxNetworkOutstanding == 2
+MaxVersion == 2
+MaxNetworkOutstanding == 1
 
 vars == <<version, network>> 
 
@@ -67,6 +67,10 @@ Drop(m) ==
     /\ network' = RemoveMsg(m, network)    
     /\ UNCHANGED version
 
+Restart(i) == 
+    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 0]]
+    /\ UNCHANGED network
+
 Next ==
     \/ \E i \in Servers:
         Bump(i)
@@ -75,8 +79,10 @@ Next ==
         /\ Send(i, j)
     \/ \E msg \in network:
         Receive(msg)
-    \/ \E msg \in network:
-        Drop(msg)
+    \* \/ \E msg \in network:
+    \*     Drop(msg)
+    \/ \E i \in Servers:
+        Restart(i)
 
 Spec ==
   /\ Init
