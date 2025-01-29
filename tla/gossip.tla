@@ -1,5 +1,5 @@
 --------------------------- MODULE gossip ----------------------------
-EXTENDS Naturals
+EXTENDS Naturals, FiniteSets
 
 CONSTANTS 
     Servers
@@ -7,9 +7,11 @@ CONSTANTS
 VARIABLES 
     version, network
 
-\* Servers == {"s0", "s1", "s2"}
+MaxDivergence == 1
+MaxVersion == 3
+MaxNetworkOutstanding == 2
 
-vars == <<version>> 
+vars == <<version, network>> 
 
 Init ==
     /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
@@ -28,6 +30,22 @@ Send(i, j) ==
         data |-> version[i]], network)
     /\ UNCHANGED version
 
+HighestVersion ==
+    LET Values == {version[i][j] : i \in Servers, j \in Servers}
+    IN IF Values = {} THEN 0 ELSE CHOOSE x \in Values : \A y \in Values : y <= x
+
+LowestVersion ==
+    LET Values == {version[i][j] : i \in Servers, j \in Servers}
+    IN IF Values = {} THEN 0 ELSE CHOOSE x \in Values : \A y \in Values : y >= x
+
+LimitDivergence(i) == 
+    \/ version[i][i] # HighestVersion
+    \/ /\ version[i][i] = HighestVersion
+       /\ HighestVersion - LowestVersion < MaxDivergence
+
+LimitNetworkOutstanding ==
+    Cardinality(network) < MaxNetworkOutstanding
+
 Receive(m) == 
     LET 
         i == m.dst
@@ -39,6 +57,8 @@ Receive(m) ==
         /\ network' = RemoveMsg(m, network)
 
 Bump(i) == 
+    /\ version[i][i] # MaxVersion 
+    /\ LimitDivergence(i)
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
         IF i # k THEN version[i][k] ELSE version[i][k] + 1]]
     /\ UNCHANGED network
@@ -47,7 +67,8 @@ Next ==
     \/ \E i \in Servers:
         Bump(i)
     \/ \E i, j \in Servers:
-        Send(i, j)
+        /\ LimitNetworkOutstanding
+        /\ Send(i, j)
     \/ \E msg \in network:
         Receive(msg)
 
