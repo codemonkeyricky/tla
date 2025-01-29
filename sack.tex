@@ -12,7 +12,7 @@ to get to the client, they may arrive out-of-order. The client may need to
 maintain a receive buffer for the packets, re-order the packets back into
 sequence before pushing the packets down to decoding engine.\newline
 
-The network may also drop packets if any of the switches along the way gets 
+The network may also drop packets if any of the switches along the way get
 busy. In the case of a packet drop, the client has a few options. The client can
 either discard the frame and let the decoding engine downstream to deal with it
 (which may ressult in visible artifacts during playback). The client can

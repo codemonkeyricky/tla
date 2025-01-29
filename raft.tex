@@ -1,18 +1,17 @@
 \chapter{Raft Consensus Protocol}
 
-\section{Requirement}
+\section{Design}
 
 Raft is a consensus algorithm that enables a cluster of nodes to agree on a
 collective state even in the presence of failures. An application of Raft is
-database replication protocol. With a replication factor of 3 (which means the
-data is replicated across 3 nodes) and hard drive failure rate of 0.81\% per
-year, the possibility of the total failure where the entire replication group
-goes down is $1-0.0081^3 = 99.9999\%$ uptime \cite{backblaze}.\newline
+database replication protocol. With a replication factor of 3 (eg. data is
+replicated across 3 nodes) and hard drive failure rate of 0.81\% per year, the
+possibility of the total failure where the entire replication group goes down is
+$1-0.0081^3 = 99.9999\%$ uptime \cite{backblaze}.\newline
 
-Since the purpose of the book is to learn TLA+, this chapter will only implement
-a portion of the Raft protocol, namely leader election. For a full description
-of the the Raft protocol, please refer to the original paper
-\cite{raft}.\newline
+This chapter implements only the leader election portion of the protocol to
+limit the scope of the discussion. For a full description of the the Raft
+protocol, please refer to the original paper \cite{raft}.\newline
 
 We will briefly describe Raft and its leader election process below: 
 \begin{itemize}

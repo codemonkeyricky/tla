@@ -51,6 +51,7 @@ a few simple requirements:
 
 The \textit{Init} state of such system can be described as: \newline
 \begin{tla}
+    vars == <<hour, minute>>
     Init ==
         /\ hour = 0
         /\ minute = 0
@@ -109,14 +110,13 @@ Here's a breakdown of what the spec does:
     \textit{NextHour} increments \textit{hour} modulus 24 and sets \textit{minute} to 0.
 \end{itemize}
 
-Note that the formula are \textit{state descriptions}, not \textit{assignment}.
+Note that the formulas are \textit{state descriptions}, not \textit{assignment}.
 \textit{minute = 59} describes the state transition takes when minute
 \textit{equals} 59. Since this is an equality description, \textit{minute = 59}
-and \textit{59 = minute} are equivalent in TLA+ spec. 
+and \textit{59 = minute} are equivalent in TLA+.\newline
 
-Finally, the spec itself is formally defined as:\newline
+Finally, the Spec itself is formally defined as:\newline
 \begin{tla}
-    vars == <<hour, minute>>
     Spec ==
         /\ Init
         /\ [][Next]_vars
@@ -129,11 +129,15 @@ Finally, the spec itself is formally defined as:\newline
 \end{tlatex}
 \newline
 
+Note this forms the basis for \textbf{all} TLA+ Spec. Every example in this book
+will include a Spec definition similar to this. \newline
+
 $\Box[Next]_{vars}$ deserves some special attention:
 \begin{itemize}
-    \item $vars$ is defined to be \textit{all} variables in the spec. Different
-    combination of these variables constitute the states of the system (eg.
-    23:59 and 00:00 are both states in the system).
+    \item $vars$ is defined earlier to be \textit{all} variables in the spec, in
+    this case hour and minute. Combination of these variables at different
+    values constitute the states of the system (eg. 23:59 and 00:00 are differente
+    states in the system).
     \item $\Box[Next]_{vars}$ is a box-action formula, where \textit{Next} is an
     action and \textit{vars} is a state function.
     \item $\Box$ operator asserts the formula is always true for every step in the behaviour.
@@ -141,11 +145,8 @@ $\Box[Next]_{vars}$ deserves some special attention:
     describe the action and $vars$ capturing all variables representing the state.
 \end{itemize}
 
-%  $,  The formula is true iff every
-% successive pair of steps in behaviour is a $[Next]_{vars}$. Finally $Spec$ is
-% conjunction between $Init$ and $\Box[Next]_{vars}$. Note \textbf{all} TLA+
-% specification follows very similar template. There are situation we will need to
-% provide \textit{fairness} description - this will be covered later. \newline
+This can be roughly translate to: the system is valid for for every step
+\textit{Next} can take, forming the basis of the Spec.
 
 \section{Safety}
 
@@ -166,8 +167,8 @@ of 0 to 59:\newline
 \end{tlatex}
 \newline
 
-When hour or minute falls outside of the specified range, the model checker will
-report failure.
+When hour or minute falls outside of the specified range, the model checker 
+reports failure.
 
 \section{Liveness}
 
@@ -192,8 +193,8 @@ true. TLA+ provides a set of operators to describe liveness property.\newline
 To verify liveness, we need to modify the spec slightly to enable
 \textit{fairness} to prevent \textit{stuttering}. In plain terms, fairness
 ensure a state always transition to \textit{some other state}. Without fairness
-the spec is allowed to \textit{stutter}, or \textit{not transition} to a next
-state. This by definition fails liveness property check as the model checker is
+the spec is allowed to \textit{stutter}, or \textit{not transition} to any state. 
+This by definition fails liveness property check as the model checker is
 unable to verify the behaviour across a sequence of states. To get a more 
 comprehensive description of fairness, refer to the last part of the
 book.\newline
@@ -222,16 +223,15 @@ The TLA+ spec can be verified using TLC model checker. The model checker runs
 the spec and verifies all configured safety and liveness properties are
 satisfied. In short, the model checker a library written in Java, and can be
 invoked using command line java. For instruction on installing the model checker
-and other tools, please see \cite{toolbox}.\newline
+and related tools, please see \cite{toolbox}.\newline
 
-After the model checker is installed, we need two things to verify the spec:
+After installing the model checker, we need two things to verify the spec:
 \begin{itemize}
-    \item clock.tla - spec 
-    \item clock.cfg - config file
+    \item clock.tla: spec 
+    \item clock.cfg: config file
 \end{itemize}
 
-For reference, clock.tla spec is listed below:
-\newline
+For reference, clock.tla is listed below:\newline
 
 \begin{tla}
 --------------------------- MODULE clock ----------------------------
