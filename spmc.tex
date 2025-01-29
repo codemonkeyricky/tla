@@ -222,20 +222,22 @@ to account for the edge case where a reader has performed the reservation first
 step to decrement outstanding but haven't done the actual read. If both checks
 pass, then writer now has an UNUSED index it can write to.\newline
 
-The SPMC algorithm can be tricky yo get right. There's plenty of possible
-pitfall in the design. For example:
+The SPMC algorithm can be tricky to get right. There are many things to consider when 
+designing a SPMC queue. Considerations include:
 \begin{itemize}
     \item Readers can lapse each other
-    \item A reader can attempt to lapse writer 
-    \item A reader can starve the other readers
+    \item Readers can lapse writer 
+    \item One reader can starve other readers
     \item A slow reader can block the system
 \end{itemize}
 
-In all of the above case, the system \textit{correctness} need to be maintained.
+And under all circumstances, system \textit{correctness} must be maintained.
 
 \section{Safety}
 
-When a reader reserves an index to read, the reader must have exclusive access: \newline
+When a reader reserves an index to read, the reader must have exclusive access. 
+This can be described as: For any pair of readers inside critical section, they
+must operate on different indices:\newline
 
 \begin{tla}
 ExclusiveReservation == 
@@ -252,7 +254,8 @@ ExclusiveReservation ==
 \end{tlatex}
 \newline
 
-Similarly, reader and writer cannot operate on the same index at the same time:\newline
+Similarly, for any reader and writer inside critical section, they musut operate
+on different indices as well:\newline
 \begin{tla}
 ExclusiveReadWrite == 
     \A x \in READERS: 
@@ -295,9 +298,9 @@ system remains functional after such scenario.\newline
 \begin{tla}
 Liveness2 == 
     \A k \in 0..N-3:
-    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) 
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING)
         ~> (status[k] = WRITTEN)
-    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING) 
+    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING)
         ~> (status[k+2] = WRITTEN)
 \end{tla}
 \begin{tlatex}
