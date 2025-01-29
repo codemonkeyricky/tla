@@ -17,21 +17,18 @@ Init ==
     /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
     /\ ready = [i \in Servers |-> 1]
 
-HighestVersion ==
-    LET Values == {version[i][j] : i \in Servers, j \in Servers}
-    IN IF Values = {} THEN 0 ELSE CHOOSE x \in Values : \A y \in Values : y <= x
+\* HighestVersion ==
+\*     LET Values == {version[i][j] : i \in Servers, j \in Servers}
+\*     IN IF Values = {} THEN 0 ELSE CHOOSE x \in Values : \A y \in Values : y <= x
 
-LowestVersion ==
-    LET Values == {version[i][j] : i \in Servers, j \in Servers}
-    IN IF Values = {} THEN 0 ELSE CHOOSE x \in Values : \A y \in Values : y >= x
+\* LowestVersion ==
+\*     LET Values == {version[i][j] : i \in Servers, j \in Servers}
+\*     IN IF Values = {} THEN 0 ELSE CHOOSE x \in Values : \A y \in Values : y >= x
 
-LimitDivergence(i) == 
-    \/ version[i][i] # HighestVersion
-    \/ /\ version[i][i] = HighestVersion
-       /\ HighestVersion - LowestVersion < MaxDivergence
-
-\* LimitNetworkOutstanding ==
-\*     Cardinality(network) < MaxNetworkOutstanding
+\* LimitDivergence(i) == 
+\*     \/ version[i][i] # HighestVersion
+\*     \/ /\ version[i][i] = HighestVersion
+\*        /\ HighestVersion - LowestVersion < MaxDivergence
 
 ExchangeGossip(i, j) == 
     LET 
@@ -70,8 +67,8 @@ Liveness ==
     \A i,j \in Servers: 
         <>[](version[i][j] = MaxVersion)
 
-CheckDivergence == 
-    HighestVersion - LowestVersion <= MaxDivergence + 1
+\* CheckDivergence == 
+\*     HighestVersion - LowestVersion <= MaxDivergence + 1
 
 Spec ==
   /\ Init
