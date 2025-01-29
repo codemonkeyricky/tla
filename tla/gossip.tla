@@ -63,6 +63,10 @@ Bump(i) ==
         IF i # k THEN version[i][k] ELSE version[i][k] + 1]]
     /\ UNCHANGED network
 
+Drop(m) == 
+    /\ network' = RemoveMsg(m, network)    
+    /\ UNCHANGED version
+
 Next ==
     \/ \E i \in Servers:
         Bump(i)
@@ -71,6 +75,8 @@ Next ==
         /\ Send(i, j)
     \/ \E msg \in network:
         Receive(msg)
+    \/ \E msg \in network:
+        Drop(msg)
 
 Spec ==
   /\ Init
