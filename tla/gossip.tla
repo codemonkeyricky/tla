@@ -38,7 +38,14 @@ Receive(m) ==
         /\ version' = [version EXCEPT ![i] = [k \in Servers |-> Max(version[i][k], v[k])]]
         /\ network' = RemoveMsg(m, network)
 
+Bump(i) == 
+    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
+        IF i # k THEN version[i][k] ELSE version[i][k] + 1]]
+    /\ UNCHANGED network
+
 Next ==
+    \/ \E i \in Servers:
+        Bump(i)
     \/ \E i, j \in Servers:
         Send(i, j)
     \/ \E msg \in network:
