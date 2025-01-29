@@ -69,8 +69,8 @@ Next ==
         /\ Restart(i)
 
 Liveness == 
-    \E i \in Servers: 
-        []<>(version[i][i] = MaxVersion)
+    \A i,j \in Servers: 
+        <>[](version[i][j] = MaxVersion)
 
 CheckDivergence == 
     HighestVersion - LowestVersion <= MaxDivergence + 1

@@ -8,14 +8,16 @@ database, a node may need to know the key range another of its peers. The
 cluster needs a way to communicate this information. One such mechanism is the
 gossip protocol.\newline
 
-Gossip protocol is used to communicate cluster information in a distributed
-fashion. Prior to gossip protocol, nodes in a cluster learns about its
-neighbours by contacting a centralized server. This introduces a single failure
-point in the system. Gossip protocol relies on nodes to gossip with each other.
-The nodes in the cluster periodically selects a set of neighbors to exchange
-what it knows about the cluster. Assume a N node cluster and each interal a node
-selects k neighbours to gossip with, the total amount of gossip propagation time
-is described logrithmticly below:
+Gossip protocol allows nodes to fetch the latest cluster information in a
+distributed fashion. Prior to gossip protocol, nodes in a cluster learn about
+its neighbours by contacting a centralized server. This introduces a single
+failure point in the system. Gossip protocol relies on nodes to initiate 
+the data exchange, and the nodes in the cluster periodically selects a set of neighbors to
+gossip with. \newline
+
+Assume a N node cluster, at some periodic interval a node selects k neighbours
+to gossip with. The total amount of gossip propagation time is described
+logrithmticly below:
 
 \begin{equation} 
     propagation\_time = \log_k N * gossip\_interval
@@ -28,7 +30,21 @@ With the total number of messages exchanged:
 
 \section{Design}
 
-Now let's look at how a simple gossip protocol can be described by TLA+.
+In this chapter we will implement a simplified gossip model where: 
+\begin{itemize}
+    \item Each node has a version.
+    \item Each node has a ready status.
+    \item Each node caches the version of all other nodes.
+    \item A node will randomly initiate gossip with another node.
+    \item Only a ready node can initiate gossip. 
+    \item Nodes can restart randomly, restart clears the node's version cache of
+    all other nodes and puts the node into not ready.
+    \item A restarted node becomes ready again after a ready node gossip with it.
+    \item A ready node can bump its version.
+\end{itemize}
+
+If the gossip protocol works correctly, every node should eventually have the
+latest version of all the nodes.
 
 \section{Spec}
 
