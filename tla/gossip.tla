@@ -1,5 +1,5 @@
 --------------------------- MODULE gossip ----------------------------
-EXTENDS Naturals, FiniteSets
+EXTENDS Naturals, FiniteSets, TLC
 
 CONSTANTS 
     Servers
@@ -14,7 +14,7 @@ MaxNetworkOutstanding == 1
 vars == <<version, network>> 
 
 Init ==
-    /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
+    /\ version = [i \in Servers |-> [j \in Servers |-> 1]]
     /\ network = {}
 
 AddMsg(m, msgs) == 
@@ -23,12 +23,9 @@ AddMsg(m, msgs) ==
 RemoveMsg(m, msgs) ==
     msgs \ {m}
 
-Send(i, j) == 
+InitiateGossip(i, j) == 
     /\ i # j
-    /\ network' = AddMsg([
-        src |-> i, 
-        dst |-> j, 
-        data |-> version[i]], network)
+    /\ network' = AddMsg([src |-> i, dst |-> j], network)
     /\ UNCHANGED version
 
 HighestVersion ==
@@ -47,17 +44,20 @@ LimitDivergence(i) ==
 LimitNetworkOutstanding ==
     Cardinality(network) < MaxNetworkOutstanding
 
-Receive(m) == 
+ExchangeGossip(m) == 
     LET 
         i == m.dst
         j == m.src
-        v == m.data
         Max(a, b) == IF a > b THEN a ELSE b
+        updated == [k \in Servers |-> Max(version[i][k], version[j][k])]
+        version_a == [version EXCEPT ![i] = updated]
+        version_ab == [version_a EXCEPT ![j] = updated]
     IN 
-        /\ version' = [version EXCEPT ![i] = [k \in Servers |-> Max(version[i][k], v[k])]]
+        /\ version' = version_ab 
         /\ network' = RemoveMsg(m, network)
 
 Bump(i) == 
+    /\ Assert(i # 2, "")
     /\ version[i][i] # MaxVersion 
     /\ LimitDivergence(i)
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
@@ -69,7 +69,7 @@ Drop(m) ==
     /\ UNCHANGED version
 
 Restart(i) == 
-    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> IF i # k THEN 0 ELSE version[i][i]]]
+    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> IF i # k THEN version[i][i] - MaxDivergence ELSE version[i][i]]]
     /\ UNCHANGED network
 
 Next ==
@@ -77,25 +77,26 @@ Next ==
         Bump(i)
     \/ \E i, j \in Servers:
         /\ LimitNetworkOutstanding
-        /\ Send(i, j)
+        /\ InitiateGossip(i, j)
     \/ \E msg \in network:
-        Receive(msg)
+        ExchangeGossip(msg)
     \/ \E i \in Servers:
-        /\ version[i][i] # HighestVersion
         /\ Restart(i)
 
 Liveness == 
     \E i \in Servers: 
-        <>[](version[i][i] = MaxVersion)
+        []<>(version[i][i] = MaxVersion)
+
+CheckDivergence == 
+    HighestVersion - LowestVersion <= MaxDivergence + 1
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-  /\ \A v \in 0..MaxVersion-1:
-        \A i \in Servers: 
-        SF_vars(version[i][i] = v /\ Bump(i))
+  /\ \A i \in Servers: 
+    SF_vars(Bump(i))
   /\ \A i, j \in Servers: 
-        SF_vars(Send(i, j))
-  /\ SF_vars(\E m \in network: Receive(m))
+    SF_vars(InitiateGossip(i, j))
+  /\ SF_vars(\E m \in network: ExchangeGossip(m))
 =============================================================================
