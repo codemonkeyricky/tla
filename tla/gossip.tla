@@ -8,7 +8,7 @@ VARIABLES
     version, network
 
 MaxDivergence == 1
-MaxVersion == 2
+MaxVersion == 3
 MaxNetworkOutstanding == 1
 
 vars == <<version, network>> 
@@ -69,8 +69,7 @@ Drop(m) ==
     /\ UNCHANGED version
 
 Restart(i) == 
-    /\ version[i][i] # MaxVersion 
-    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 0]]
+    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> IF i # k THEN 0 ELSE version[i][i]]]
     /\ UNCHANGED network
 
 Next ==
@@ -86,9 +85,8 @@ Next ==
         /\ Restart(i)
 
 Liveness == 
-    \A i, j \in Servers: 
-        \* version[i][j] = 0 ~> version[i][j] = 1
-          <>[](version[i][j] = MaxVersion)
+    \E i \in Servers: 
+        <>[](version[i][i] = MaxVersion)
 
 Spec ==
   /\ Init
