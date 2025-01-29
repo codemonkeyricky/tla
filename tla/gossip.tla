@@ -5,28 +5,44 @@ CONSTANTS
     Servers
 
 VARIABLES 
-    version
+    version, network
 
 \* Servers == {"s0", "s1", "s2"}
 
 vars == <<version>> 
-\* Type_OK == 
-\*     /\ hour \in 0..23
-\*     /\ minute \in 0..59
-\* Liveness ==
-\*     /\ hour = 23 /\ minute = 59 ~> hour = 0 /\ minute = 0
+
 Init ==
     /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
-\* NextMinute ==
-\*     /\ minute = 59 
-\*     /\ hour' = (hour + 1) % 24
-\*     /\ minute' = 0
-\* NextHour == 
-\*     /\ minute # 59
-\*     /\ hour' = hour 
-\*     /\ minute' = minute + 1 
+    /\ network = {}
+
+AddMsg(m, msgs) == 
+    msgs \cup {m}
+
+RemoveMsg(m, msgs) ==
+    msgs \ {m}
+
+Send(i, j) == 
+    /\ i # j
+    /\ network' = AddMsg([
+        src |-> i, dst |-> j, 
+        data |-> version[i]], network)
+    /\ UNCHANGED version
+
+Receive(m) == 
+    LET 
+        i == m.dst
+        j == m.src
+        v == m.data
+        Max(a, b) == IF a > b THEN a ELSE b
+    IN 
+        /\ version' = [version EXCEPT ![i] = [k \in Servers |-> Max(version[i][k], v[k])]]
+        /\ network' = RemoveMsg(m, network)
+
 Next ==
-    \/ TRUE
+    \/ \E i, j \in Servers:
+        Send(i, j)
+    \/ \E msg \in network:
+        Receive(msg)
 
 Spec ==
   /\ Init
