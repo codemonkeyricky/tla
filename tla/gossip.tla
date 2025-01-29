@@ -82,12 +82,13 @@ Next ==
     \/ \E msg \in network:
         Receive(msg)
     \/ \E i \in Servers:
-        Restart(i)
+        /\ version[i][i] # HighestVersion
+        /\ Restart(i)
 
 Liveness == 
-    \E i, j \in Servers: 
+    \A i, j \in Servers: 
         \* version[i][j] = 0 ~> version[i][j] = 1
-          []<>(version[i][j] = MaxVersion)
+          <>[](version[i][j] = MaxVersion)
 
 Spec ==
   /\ Init
