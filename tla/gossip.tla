@@ -14,7 +14,7 @@ MaxNetworkOutstanding == 1
 vars == <<version, ready >> 
 
 Init ==
-    /\ version = [i \in Servers |-> [j \in Servers |-> 1]]
+    /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
     /\ ready = [i \in Servers |-> 1]
 
 HighestVersion ==
@@ -44,7 +44,7 @@ ExchangeGossip(i, j) ==
         /\ ready' = [ready EXCEPT ![i] = 1]
 
 Bump(i) == 
-    /\ Assert(i # 2, "")
+    \* /\ Assert(i # 2, "")
     /\ version[i][i] # MaxVersion 
     /\ LimitDivergence(i)
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
@@ -53,7 +53,7 @@ Bump(i) ==
 
 Restart(i) == 
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
-        IF i # k THEN version[i][i] - MaxDivergence ELSE version[i][i]]]
+        IF i # k THEN 0 ELSE version[i][i]]]
     /\ ready' = [ready EXCEPT ![i] = 0]
 
 Next ==
@@ -64,7 +64,8 @@ Next ==
         /\ ready[i] = 1
         /\ ExchangeGossip(i, j)
     \/ \E i \in Servers:
-        /\ \A s \in Servers: ready[s] = 1
+        /\ ready[i] = 1
+        /\ Cardinality({s \in Servers : ready[s] = 1}) > 1
         /\ Restart(i)
 
 Liveness == 
