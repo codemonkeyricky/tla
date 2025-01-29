@@ -8,7 +8,7 @@ VARIABLES
     version, network
 
 MaxDivergence == 1
-MaxVersion == 3
+MaxVersion == 2
 MaxNetworkOutstanding == 1
 
 vars == <<version, network>> 
