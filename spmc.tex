@@ -240,14 +240,15 @@ When a reader reserves an index to read, the reader must have exclusive access: 
 \begin{tla}
 ExclusiveReservation == 
     \A x, y \in READERS: 
-        (x /= y /\ pc[x] = "r_read_buf" /\ pc[y] = "r_read_buf") => (rptr[x] # rptr[y])
+        (x /= y /\ pc[x] = "r_read_buf" /\ pc[y] = "r_read_buf") 
+            => (rptr[x] # rptr[y])
 \end{tla}
 \begin{tlatex}
 \@x{ ExclusiveReservation \.{\defeq}}%
 \@x{\@s{16.4} \A\, x ,\, y \.{\in} READERS \.{:}}%
  \@x{\@s{16.4} ( x \.{\neq} y \.{\land} pc [ x ] \.{=}\@w{r\_read\_buf}
- \.{\land} pc [ y ] \.{=}\@w{r\_read\_buf} ) \.{\implies} ( rptr [ x ]
- \.{\neq} rptr [ y ] )}%
+ \.{\land} pc [ y ] \.{=}\@w{r\_read\_buf} )}%
+\@x{\@s{20.5} \.{\implies} ( rptr [ x ] \.{\neq} rptr [ y ] )}%
 \end{tlatex}
 \newline
 

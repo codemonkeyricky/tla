@@ -54,24 +54,24 @@ Fast forward to now: I stumbled across TLA+, a formalized solution of what I was
 looking for.\newline
 
 The Turing Award winner Leslie Lamport invented the TLA+ 1999, but TLA+ didn't
-appear to have caught on until the 2010's. My personal opinion is TLA+ was
-invented ahead of its time, and the problem complexity finally caught up in the
-past decade or so, to allow TLA+ to visibly demonstrate its strength.\newline
+appear to have caught on until the 2010's. My opinion is TLA+ was invented ahead
+of its time, and the problem complexity finally caught up in the past decade or
+so, to allow TLA+ to demonstrate its strength.\newline
 
 We are at a point in the technology curve where vertical scaling is no longer
 practical, with CPU speed plateau'd in the past decade or so. The industry is
 exploring horizontal scaling solution, such as hardware vendor focusing adding
 more CPU cores, or software vendors buying many low end hardware instead of a
-few high end hardware. This shifts the technology complexity from hardware to
-software, demanding software solution to maximize concurrent hardware resource
-utilization. One slight problem:\newline
+few high end hardware. This shifts the technology complexity from vertical to
+horizontal, demanding solution to maximize concurrent resource utilization.
+There is one slight problem though:\newline
 
-\textit{Humans are good at high level reasoning, but not so good at reasoning
-about many things happening at the same time.}\newline
+\textit{Humans are not good at reasoning about things happening
+concurrently.}\newline
 
-The average cognitive load of of a person is between 5 to 9 items. It is hard to
-enumerate all possible scenario in one's mind to ensure the design accommodates
-all the edge cases.\newline
+Our cognitive system is optimized for sequential reasoning. Enumerating all
+scenarios in one's mind to ensure an arbitrary design accommodates all the
+corner cases is challenging.\newline
 
 Consider a low power processor execution hundreds of instruction, how does the 
 designer ensure the invariants are upheld after every instruction?\newline
