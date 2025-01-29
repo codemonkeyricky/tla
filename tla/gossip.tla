@@ -26,7 +26,8 @@ RemoveMsg(m, msgs) ==
 Send(i, j) == 
     /\ i # j
     /\ network' = AddMsg([
-        src |-> i, dst |-> j, 
+        src |-> i, 
+        dst |-> j, 
         data |-> version[i]], network)
     /\ UNCHANGED version
 
@@ -68,6 +69,7 @@ Drop(m) ==
     /\ UNCHANGED version
 
 Restart(i) == 
+    /\ version[i][i] # MaxVersion 
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 0]]
     /\ UNCHANGED network
 
@@ -79,13 +81,22 @@ Next ==
         /\ Send(i, j)
     \/ \E msg \in network:
         Receive(msg)
-    \* \/ \E msg \in network:
-    \*     Drop(msg)
     \/ \E i \in Servers:
         Restart(i)
+
+Liveness == 
+    \E i, j \in Servers: 
+        \* version[i][j] = 0 ~> version[i][j] = 1
+          []<>(version[i][j] = MaxVersion)
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
+  /\ \A v \in 0..MaxVersion-1:
+        \A i \in Servers: 
+        SF_vars(version[i][i] = v /\ Bump(i))
+  /\ \A i, j \in Servers: 
+        SF_vars(Send(i, j))
+  /\ SF_vars(\E m \in network: Receive(m))
 =============================================================================
