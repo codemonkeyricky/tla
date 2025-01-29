@@ -44,9 +44,7 @@ ExchangeGossip(i, j) ==
         /\ ready' = [ready EXCEPT ![i] = 1]
 
 Bump(i) == 
-    \* /\ Assert(i # 2, "")
     /\ version[i][i] # MaxVersion 
-    /\ LimitDivergence(i)
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
         IF i # k THEN version[i][k] ELSE version[i][k] + 1]]
     /\ UNCHANGED <<ready>>
