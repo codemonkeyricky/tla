@@ -1,9 +1,9 @@
 --------------------------- MODULE scheduler ----------------------------
-EXTENDS Naturals, TLC, Sequences, FiniteSets
+EXTENDS Naturals, TLC, Sequences, FiniteSets, SequencesExt
 
 CONSTANTS 
-    N,
-    Tasks
+    N, Tasks
+
 
 VARIABLES 
     ready_q,
@@ -13,17 +13,9 @@ VARIABLES
 
 vars == <<ready_q, cpus, lock_owner>>
 
-RECURSIVE S2T(_)
-S2T(S) == IF Cardinality(S) = 0 THEN <<>>
-          ELSE
-          LET
-            x == CHOOSE x \in S : TRUE
-          IN
-            <<x>> \o S2T(S \ {x})
-
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
-    /\ ready_q = S2T(Tasks)
+    /\ ready_q = SetToSeq(Tasks)
     /\ blocked_q = <<>>
     /\ lock_owner = ""
 
