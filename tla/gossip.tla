@@ -7,9 +7,7 @@ CONSTANTS
 VARIABLES 
     version
 
-MaxDivergence == 1
 MaxVersion == 3
-MaxNetworkOutstanding == 1
 
 vars == <<version>> 
 
@@ -42,14 +40,16 @@ Next ==
     \/ \E i \in Servers:
         /\ Restart(i)
 
+\* Ensure multiple modes have made it to MaxVersion and communicated at least once
 Liveness == 
-    \E i \in Servers: 
-        []<>(version[i][i] = MaxVersion)
+    \E i, j \in Servers: 
+        /\ i # j
+        /\ []<>(version[i][i] = MaxVersion /\ version[i][i] = MaxVersion /\ version[i][j] = MaxVersion)
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-  /\ \E i \in Servers: 
+  /\ \A i \in Servers: 
     SF_vars(Bump(i))
 =============================================================================
