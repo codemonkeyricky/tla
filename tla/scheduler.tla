@@ -86,6 +86,11 @@ Next ==
 HoldingLock(t) == 
     /\ lock_owner = t
 
+Safety ==
+    \A t \in Tasks: 
+        \A k \in 0..N-1:
+            cpus[k] = t => blocked[t] = 0
+
 Fairness ==
     \A t \in Tasks :
         \A n \in 0..(N-1) :
