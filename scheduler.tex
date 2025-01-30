@@ -46,7 +46,7 @@ We will model scheduler using the following variables:\newline
 \begin{tla}
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
-    /\ ready_q = S2T(Tasks)
+    /\ ready_q = SetToSeq(Tasks)
     /\ blocked_q = <<>>
     /\ lock_owner = ""
 \end{tla}
@@ -54,7 +54,7 @@ Init ==
 \@x{ Init \.{\defeq}}%
  \@x{\@s{16.4} \.{\land} cpus \.{=} [ i \.{\in} 0 \.{\dotdot} N \.{-} 1
  \.{\mapsto}\@w{} ]}%
-\@x{\@s{16.4} \.{\land} ready\_q \.{=} S2T ( Tasks )}%
+\@x{\@s{16.4} \.{\land} ready\_q \.{=} SetToSeq ( Tasks )}%
 \@x{\@s{16.4} \.{\land} blocked\_q \.{=} {\langle} {\rangle}}%
 \@x{\@s{16.4} \.{\land} lock\_owner \.{=}\@w{}}%
 \end{tlatex}
@@ -62,22 +62,26 @@ Init ==
 
 A few things to note:
 \begin{itemize}
-    \item The system has $N$ executing context, represented as number of CPUs.
-    When a task is running, $cpus[k]$ is set to $taskName$. When CPU is idle,
-    $cpus[k]$ is set to an empty string. 
-    \item $ready\_q$ and $blocked\_q$ are initialized as \textit{ordered tuple},
+    \item The system has \textit{N} executing context, represented as number of CPUs.
+    When a task is running, \textit{cpus[k]} is set to \textit{taskName}. When CPU is idle,
+    \textit{tcpus[k]} is set to an empty string. 
+    \item \textit{ready\_q} and \textit{blocked\_q} are initialized as \textit{ordered tuple},
     due to the cooperative scheduling requirement.
-    \item $S2T$ is a macro that converts a set into a ordered tuple. This is to
-    accommodate the fact it appears I cannot define tuple in .cfg file.
+    \item \textit{SetToSeq} is a macro from the community module \cite{tla_comm}
+    to converts a set into a ordered tuple. To use community module, one can
+    install required .tla files into the tla project source directly.
     \item Finally, the single system lock is represented as $lock\_owner$. 
 \end{itemize}
 
-A task can be in three possible state: Ready, Blocked and Running. The $Next$
-box-action fomula will define a Ready and Running action, and the implementation
-will include related lock contention handling.\newline
+A task can be in three possible state: \textit{Ready}, \textit{Blocked} and
+\textit{Running}. The Spec includes required lock contention handling.\newline
 
 \begin{tla}
-------- MODULE scheduler ---- 
+
+Next == 
+    \/ Running
+    \/ Ready
+
 MoveToReady(k) == 
     /\ cpus[k] # "" 
     /\ lock_owner # cpus[k]
@@ -111,10 +115,8 @@ Running ==
         /\ \/ MoveToReady(k)
            \/ Lock(k)
            \/ Unlock(k)
-=============================================================================
 \end{tla}
 \begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} scheduler}\moduleRightDash\@xx{}%
 \@x{ MoveToReady ( k ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
 \@x{\@s{16.4} \.{\land} lock\_owner \.{\neq} cpus [ k ]}%
@@ -169,7 +171,6 @@ Running ==
 \@x{\@s{20.5} \.{\land} \.{\lor} MoveToReady ( k )}%
 \@x{\@s{20.5} \.{\lor} Lock ( k )}%
 \@x{\@s{20.5} \.{\lor} Unlock ( k )}%
-\@x{}\bottombar\@xx{}%
 \end{tlatex}
 
 \section{Safety}

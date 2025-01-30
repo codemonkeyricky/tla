@@ -62,10 +62,9 @@ Unlock(k) ==
 
 Running == 
     \E k \in DOMAIN cpus:
-        /\ cpus[k] # "" 
-        /\ \/ MoveToReady(k)
-           \/ Lock(k)
-           \/ Unlock(k)
+        \/ MoveToReady(k)
+        \/ Lock(k)
+        \/ Unlock(k)
 
 \* verify pid0 is eventually scheduled
 Liveness == 
