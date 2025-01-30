@@ -113,7 +113,8 @@ Next ==
 \@x{\@s{16.4} \.{\lor} Ready}%
 \end{tlatex}
 
-Next can update either a task that is running, or a task waiting to be scheduled.\newline
+Next can update either a task that is running, or a task waiting to be
+scheduled.\newline
 
 A \textit{Ready} task is popped off the ready queue and put onto a idle CPU.
 Since ready\_q is implemented as an ordered tuple, fetching and popping the
@@ -129,25 +130,7 @@ MoveToReady(k) ==
     /\ lock_owner # cpus[k]
     /\ ready_q' = Append(ready_q, cpus[k]) 
     /\ cpus' = [cpus EXCEPT ![k] = ""]
-    /\ UNCHANGED <<lock_owner, blocked_q>>
-Lock(k) == 
-    \/  /\ cpus[k] # "" 
-        /\ lock_owner = ""
-        /\ lock_owner' = cpus[k]
-        /\ UNCHANGED <<ready_q, cpus, blocked_q>>
-    \/  /\ cpus[k] # "" 
-        /\ lock_owner # ""
-        /\ lock_owner # cpus[k] \* cannot double lock
-        /\ blocked_q' = Append(blocked_q, cpus[k])
-        /\ cpus' = [cpus EXCEPT ![k] = ""]
-        /\ UNCHANGED <<ready_q, lock_owner>>
-Unlock(k) == 
-    /\ cpus[k] # "" 
-    /\ lock_owner = cpus[k]
-    /\ lock_owner' = ""
-    /\ cpus' = [cpus EXCEPT ![k] = ""]
-    /\ ready_q' = ready_q \o blocked_q \o <<cpus[k]>>
-    /\ blocked_q' = <<>>
+    /\ UNCHANGED <<lock_owner, blocked_q, blocked>>
 \end{tla}
 \begin{tlatex}
 \@x{ MoveToReady ( k ) \.{\defeq}}%
@@ -157,14 +140,35 @@ Unlock(k) ==
  )}%
  \@x{\@s{16.4} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ]
  \.{=}\@w{} ]}%
- \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} lock\_owner ,\, blocked\_q
- {\rangle}}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} lock\_owner ,\, blocked\_q ,\,
+ blocked {\rangle}}%
+\end{tlatex}
+\newline
+
+\textit{MoveToReady} defines the where task voluntarily go back to ready
+queue.\newline
+
+\begin{tla}
+Lock(k) == 
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner = ""
+        /\ lock_owner' = cpus[k]
+        /\ UNCHANGED <<ready_q, cpus, blocked_q, blocked>> 
+    \/  /\ cpus[k] # "" 
+        /\ lock_owner # ""
+        /\ lock_owner # cpus[k] \* cannot double lock
+        /\ blocked_q' = Append(blocked_q, cpus[k])
+        /\ blocked' = [blocked EXCEPT ![cpus[k]] = 1]
+        /\ cpus' = [cpus EXCEPT ![k] = ""]
+        /\ UNCHANGED <<ready_q, lock_owner>>
+\end{tla}
+\begin{tlatex}
 \@x{ Lock ( k ) \.{\defeq}}%
 \@x{ \.{\lor}\@s{4.1} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{=}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{'} \.{=} cpus [ k ]}%
  \@x{\@s{4.1} \.{\land} {\UNCHANGED} {\langle} ready\_q ,\, cpus ,\,
- blocked\_q {\rangle}}%
+ blocked\_q ,\, blocked {\rangle}}%
 \@x{ \.{\lor}\@s{4.1} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{\neq}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{\neq} cpus [ k ]}%
@@ -174,69 +178,79 @@ Unlock(k) ==
 \@xx{}%
  \@x{\@s{4.1} \.{\land} blocked\_q \.{'} \.{=} Append ( blocked\_q ,\, cpus [
  k ] )}%
+ \@x{\@s{4.1} \.{\land} blocked \.{'} \.{=} [ blocked {\EXCEPT} {\bang} [ cpus
+ [ k ] ] \.{=} 1 ]}%
  \@x{\@s{4.1} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ]
  \.{=}\@w{} ]}%
  \@x{\@s{4.1} \.{\land} {\UNCHANGED} {\langle} ready\_q ,\, lock\_owner
  {\rangle}}%
-\@x{ Unlock ( k ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
-\@x{\@s{16.4} \.{\land} lock\_owner \.{=} cpus [ k ]}%
-\@x{\@s{16.4} \.{\land} lock\_owner \.{'} \.{=}\@w{}}%
- \@x{\@s{16.4} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ]
- \.{=}\@w{} ]}%
- \@x{\@s{16.4} \.{\land} ready\_q \.{'} \.{=} ready\_q \.{\circ} blocked\_q
- \.{\circ} {\langle} cpus [ k ] {\rangle}}%
-\@x{\@s{16.4} \.{\land} blocked\_q \.{'} \.{=} {\langle} {\rangle}}%
 \end{tlatex}
 \newline
-
-\textit{MoveToReady} defines the where task voluntarily go back to ready
-queue.\newline
 
 \textit{Lock} represents when a running task attempts to acquire the global
 lock. When the lock is free, the task grabs the lock and move on. When the lock 
 is already held, the task moves into blocked queue to be scheduled when the lock
 is released. If multiple tasks attempt to acquire the lock while the lock is
 being held, the tasks will be inserted in the block queue in request order.
-
 \newline
 
-\textit{Unlock} represents when a running task release the lock. If there are no
-blocked tasks, the running task carries on as before. If there are blocked
-tasks, they are inserted to the beginning of the ready queue (to maintain the 
-lock request ordering) and the running task is forced to give up the CPU and
-inserted at the end of the ready queue. 
+\begin{tla}
+Unlock(k) == 
+    \/  /\ cpus[k] # "" 
+        /\ Len(blocked_q) # 0
+        /\ lock_owner = cpus[k]
+        /\ lock_owner' = Head(blocked_q)
+        /\ cpus' = [cpus EXCEPT ![k] = Head(blocked_q)]
+        /\ ready_q' = ready_q \o <<cpus[k]>>
+        /\ blocked_q' = Tail(blocked_q)
+        /\ blocked' = [blocked EXCEPT ![Head(blocked_q)] = 0]
+    \/  /\ cpus[k] # "" 
+        /\ Len(blocked_q) = 0
+        /\ lock_owner' = ""
+        /\ UNCHANGED <<ready_q, blocked_q, blocked, cpus>>
+\end{tla}
+\begin{tlatex}
+\@x{ Unlock ( k ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor}\@s{4.1} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
+\@x{\@s{20.5} \.{\land} Len ( blocked\_q ) \.{\neq} 0}%
+\@x{\@s{20.5} \.{\land} lock\_owner \.{=} cpus [ k ]}%
+\@x{\@s{20.5} \.{\land} lock\_owner \.{'} \.{=} Head ( blocked\_q )}%
+ \@x{\@s{20.5} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ] \.{=}
+ Head ( blocked\_q ) ]}%
+ \@x{\@s{20.5} \.{\land} ready\_q \.{'} \.{=} ready\_q \.{\circ} {\langle}
+ cpus [ k ] {\rangle}}%
+\@x{\@s{20.5} \.{\land} blocked\_q \.{'} \.{=} Tail ( blocked\_q )}%
+ \@x{\@s{20.5} \.{\land} blocked \.{'} \.{=} [ blocked {\EXCEPT} {\bang} [
+ Head ( blocked\_q ) ] \.{=} 0 ]}%
+\@x{\@s{16.4} \.{\lor}\@s{4.10} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
+\@x{\@s{20.5} \.{\land} Len ( blocked\_q ) \.{=} 0}%
+\@x{\@s{20.5} \.{\land} lock\_owner \.{'} \.{=}\@w{}}%
+ \@x{\@s{20.5} \.{\land} {\UNCHANGED} {\langle} ready\_q ,\, blocked\_q ,\,
+ blocked ,\, cpus {\rangle}}%
+\end{tlatex}
+\newline
+
+\textit{Unlock} represents when a running task releases the lock. If there are
+no blocked tasks, the running task carries on as before. If there are blocked
+tasks, the first blocked task is scheduled to run immediately and running task
+is inserted at the end of the ready queue. 
 
 \section{Safety}
 
 \section{Liveness}
 
-I believe this is the most important part of cooperative scheduler design. While
-the scheduler can't \textit{force} a task to relinquish a lock (the scheduler
-doesn't dictate when the task is \textit{done}), the scheduler can ensure
-scheduling fairness by scheduling the next lock requester intsead of the task 
-that just relinquished the lock.\newline
+For any tasks that attempts to lock and are blocked, they need to eventually 
+acquire the lock and run:\newline
 
 \begin{tla}
------ MODULE scheduler ---- 
 Liveness == 
     \A t \in Tasks:
-        LET 
-            b == {x \in DOMAIN blocked_q : blocked_q[x] = t}
-        IN 
-            /\ b # {} ~> b = {}
-==========
+        blocked[t] = 1 ~> lock_owner = t
 \end{tla}
 \begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} scheduler}\moduleRightDash\@xx{}%
 \@x{ Liveness \.{\defeq}}%
 \@x{\@s{16.4} \A\, t \.{\in} Tasks \.{:}}%
-\@x{\@s{20.5} \.{\LET}}%
- \@x{\@s{36.9} b \.{\defeq} \{ x \.{\in} {\DOMAIN} blocked\_q \.{:} blocked\_q
- [ x ] \.{=} t \}}%
-\@x{\@s{20.5} \.{\IN}}%
-\@x{\@s{36.9} \.{\land} b \.{\neq} \{ \} \.{\leadsto} b \.{=} \{ \}}%
-\@x{}\bottombar\@xx{}%
+\@x{\@s{20.5} blocked [ t ] \.{=} 1 \.{\leadsto} lock\_owner \.{=} t}%
 \end{tlatex}
 \newline
 
