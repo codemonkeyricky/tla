@@ -77,8 +77,7 @@ Running ==
 
 Liveness == 
     \A t \in Tasks:
-        blocked[t] = 1 ~> lock_owner = t
-    \* blocked["pid0"] = 1 ~> lock_owner = "pid0"
+        blocked[t] = 1 ~> FALSE \*lock_owner = t
 
 Next == 
     \/ Running
