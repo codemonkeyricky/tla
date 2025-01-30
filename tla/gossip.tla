@@ -37,7 +37,7 @@ ExchangeGossip(i, j) ==
         version_a == [version EXCEPT ![i] = updated]
         version_ab == [version_a EXCEPT ![j] = updated]
     IN 
-        /\ ready[i] = 1
+        \* /\ ready[i] = 1
         /\ version' = version_ab 
         /\ ready' = [ready EXCEPT ![j] = 1]
 
@@ -49,7 +49,7 @@ Bump(i) ==
     /\ UNCHANGED <<ready>>
 
 Restart(i) == 
-    /\ ready[i] = 1
+    \* /\ ready[i] = 1
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
         IF i # k THEN 0 ELSE version[i][i]]]
     /\ ready' = [ready EXCEPT ![i] = 0]
