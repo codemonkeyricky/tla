@@ -239,13 +239,10 @@ is inserted at the end of the ready queue.
 
 \section{Liveness}
 
-As usual, before we setup liveness property, we must ensure the system doesn't get 
-stuck in a loop. In this case, we need to make 
-
 For any tasks that attempts to lock and are blocked, they need to eventually 
-acquire the lock and run. However, before we describe this liveness property, 
-we first need to make sure lock holder cannot hold onto the lock indefinitely.
-This is described as a fairness requirement:\newline
+acquire the lock and run. However, before we describe this liveness property, we
+first need to make sure lock holder \textit{cannot} hold onto the lock
+indefinitely. This is described as a fairness requirement:\newline
 
 \begin{tla}
 Fairness ==
