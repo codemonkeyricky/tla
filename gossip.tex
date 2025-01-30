@@ -58,7 +58,7 @@ Next ==
     \/ \E i \in Servers:
         /\ Bump(i)
     \/ \E i, j \in Servers:
-        /\ ExchangeGossip(i, j)
+        /\ Gossip(i, j)
     \/ \E i \in Servers:
         /\ Restart(i)
 \end{tla}
@@ -70,7 +70,7 @@ Next ==
 \@x{\@s{16.4} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
 \@x{\@s{20.5} \.{\land} Bump ( i )}%
 \@x{\@s{16.4} \.{\lor} \E\, i ,\, j \.{\in} Servers \.{:}}%
-\@x{\@s{20.5} \.{\land} ExchangeGossip ( i ,\, j )}%
+\@x{\@s{20.5} \.{\land} Gossip ( i ,\, j )}%
 \@x{\@s{16.4} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
 \@x{\@s{20.5} \.{\land} Restart ( i )}%
 \end{tlatex}
@@ -83,7 +83,7 @@ of a server, pick a pair of nodes to gossip, or restart a server.\newline
 The following provides definition to these steps:\newline
 
 \begin{tla}
-ExchangeGossip(i, j) == 
+Gossip(i, j) == 
     LET 
         Max(a, b) == IF a > b THEN a ELSE b
         updated == [k \in Servers |-> Max(version[i][k], version[j][k])]
@@ -93,7 +93,7 @@ ExchangeGossip(i, j) ==
         /\ version' = version_ab 
 \end{tla}
 \begin{tlatex}
-\@x{ ExchangeGossip ( i ,\, j ) \.{\defeq}}%
+\@x{ Gossip ( i ,\, j ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\LET}}%
  \@x{\@s{32.8} Max ( a ,\, b ) \.{\defeq} {\IF} a \.{>} b \.{\THEN} a
  \.{\ELSE} b}%
@@ -130,11 +130,9 @@ Bump(i) ==
 \end{tlatex}
 \newline
 
-The first conjunction bounds the search space until a node is at
-\textit{MaxVersion}. The second conjunction describes what \textit{version'}
-should be: \textit{version'} is the same as \textit{version}, except for
-\textit{version[i]}. The updated \textit{version[i]} is the same as
-\textit{version[i]}, except \textit{version[i][i]} is bumped. \newline
+The action only permits version bump if the Server hasn't made it to 
+\textit{MaxVersion}. When the Server bumps the version, it only bumps its own 
+version and keeps all other version in its version cache as is. \newline
 
 \begin{tla}
 Restart(i) == 
@@ -152,20 +150,57 @@ Restart(i) ==
 
 Upon \textit{Restart}, a server reloads from its local storage (so it's own
 version persist), but the server needs to re-learn the cluster status (all other
-entries in its version cache is wiped). 
+entries in its version cache is wiped).\newline
+
+The \textit{Spec} defines three actions: \textit{Bump}, \textit{Restart},
+\textit{Gossip}. Without any fairness description, \textit{Any} permutation of
+these actions are allowed by the Spec, and \textit{will} be checked by the model
+checker:
+\begin{itemize}
+    \item Restart, Restart, Restart,...
+    \item Bump, Bump, Bump, Bump ...
+    \item Restart, Gossip, Restart, Gossip, ... 
+\end{itemize}
+
+We will discuss how to specify fairness in the Liveness section of this chapter.
 
 \section{Safety}
 
 \section{Liveness}
 
-The intent of gossip protocol is to ensure the cluster remains up-to-date in the
-presence of failure (represented by \textit{Restart}). The following describes 
-the expected system behaviour:
-\begin{itemize}
-    \item Since the state graph is bound by MaxVersion, one or more Server
-    should eventually make it to MaxVersion
-    \item However, verifying one Server makes it to 
-\end{itemize}
+The expected behaviour of a system using gossip protocol is to ensure the
+cluster converges towards higher version number for all servers even in the
+presence of failure (represented by \textit{Restart}). This means we need to
+gaurantee \textit{Bump} is always being called. Without this gaurantee, the Spec
+can trap in a \textit{Restart} and \textit{Gossip} loop. To ensure \textit{Bump}
+is always called, we need to add fairness description:\newline 
+
+\begin{tla}
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+  /\ \A i \in Servers: 
+    WF_vars(Bump(i))
+\end{tla}
+\begin{tlatex}
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} Init}%
+\@x{\@s{8.2} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land} {\WF}_{ vars} ( Next )}%
+\@x{\@s{8.2} \.{\land} \A\, i \.{\in} Servers \.{:}}%
+\@x{\@s{16.4} {\WF}_{ vars} ( Bump ( i ) )}%
+\end{tlatex}
+
+The the model checker explores all possible transitions permitted by the Spec.
+This includes calling Restart repeatedly, calling Gossip repeatedly, calling any
+subset of the actions repeatedly. The fairness description gaurantees that if
+the enabling condition of an action is true, the action will take. If the system
+is trapped in a Restart and Gossip loop when Bump can be called, specifying fairness 
+for Bump ensures Bump is called, breaking the loop.\newline
+
+With the Spec ensuring the system always mgirate torwards higher version number, 
+we can now define the Liveness property:\newline
 
 \begin{tla}
 Liveness == 
@@ -181,5 +216,7 @@ Liveness ==
  MaxVersion \.{\land} version [ i ] [ i ] \.{=} MaxVersion \.{\land} version
  [ i ] [ j ] \.{=} MaxVersion )}%
 \end{tlatex}
+
+Since the system is 
 
 % \end{document}

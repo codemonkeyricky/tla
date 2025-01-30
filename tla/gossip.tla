@@ -14,7 +14,7 @@ vars == <<version>>
 Init ==
     /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
 
-ExchangeGossip(i, j) == 
+Gossip(i, j) == 
     LET 
         Max(a, b) == IF a > b THEN a ELSE b
         updated == [k \in Servers |-> Max(version[i][k], version[j][k])]
@@ -36,7 +36,7 @@ Next ==
     \/ \E i \in Servers:
         /\ Bump(i)
     \/ \E i, j \in Servers:
-        /\ ExchangeGossip(i, j)
+        /\ Gossip(i, j)
     \/ \E i \in Servers:
         /\ Restart(i)
 
@@ -51,5 +51,5 @@ Spec ==
   /\ [][Next]_vars
   /\ WF_vars(Next)
   /\ \A i \in Servers: 
-    SF_vars(Bump(i))
+    WF_vars(Bump(i))
 =============================================================================
