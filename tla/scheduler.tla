@@ -12,7 +12,7 @@ VARIABLES
     cpus,
     lock_owner
 
-vars == <<ready_q, cpus, lock_owner, blocked>>
+vars == <<ready_q, blocked_q, blocked, cpus, lock_owner>>
 
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
@@ -44,7 +44,7 @@ Lock(k) ==
     \/  /\ cpus[k] # "" 
         /\ lock_owner = ""
         /\ lock_owner' = cpus[k]
-        /\ UNCHANGED <<ready_q, cpus, blocked_q, blocked>>
+        /\ UNCHANGED <<ready_q, cpus, blocked_q, blocked>> 
     \* someone else has the lock
     \/  /\ cpus[k] # "" 
         /\ lock_owner # ""
@@ -56,13 +56,18 @@ Lock(k) ==
 
 \* unlock
 Unlock(k) == 
-    /\ cpus[k] # "" 
-    /\ lock_owner = cpus[k]
-    /\ lock_owner' = ""
-    /\ cpus' = [cpus EXCEPT ![k] = ""]
-    /\ ready_q' = blocked_q \o ready_q \o <<cpus[k]>>
-    /\ blocked_q' = <<>>
-    /\ blocked' = [t \in Tasks |-> 0]
+    \/  /\ cpus[k] # "" 
+        /\ Len(blocked_q) # 0
+        /\ lock_owner = cpus[k]
+        /\ lock_owner' = Head(blocked_q)
+        /\ cpus' = [cpus EXCEPT ![k] = Head(blocked_q)]
+        /\ ready_q' = ready_q \o <<cpus[k]>>
+        /\ blocked_q' = Tail(blocked_q)
+        /\ blocked' = [blocked EXCEPT ![Head(blocked_q)] = 0]
+    \/  /\ cpus[k] # "" 
+        /\ Len(blocked_q) = 0
+        /\ lock_owner' = ""
+        /\ UNCHANGED <<ready_q, blocked_q, blocked, cpus>>
 
 Running == 
     \E k \in DOMAIN cpus:
@@ -73,6 +78,7 @@ Running ==
 Liveness == 
     \A t \in Tasks:
         blocked[t] = 1 ~> lock_owner = t
+    \* blocked["pid0"] = 1 ~> lock_owner = "pid0"
 
 Next == 
     \/ Running
