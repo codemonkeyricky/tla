@@ -239,8 +239,41 @@ is inserted at the end of the ready queue.
 
 \section{Liveness}
 
+As usual, before we setup liveness property, we must ensure the system doesn't get 
+stuck in a loop. In this case, we need to make 
+
 For any tasks that attempts to lock and are blocked, they need to eventually 
-acquire the lock and run:\newline
+acquire the lock and run. However, before we describe this liveness property, 
+we first need to make sure lock holder cannot hold onto the lock indefinitely.
+This is described as a fairness requirement:\newline
+
+\begin{tla}
+Fairness ==
+    \A t \in Tasks :
+        \A n \in 0..(N-1) :
+            WF_vars(HoldingLock(t) /\ Unlock(n))
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+  /\ Fairness 
+\end{tla}
+\begin{tlatex}
+\@x{ Fairness \.{\defeq}}%
+\@x{\@s{16.4} \A\, t \.{\in} Tasks \.{:}}%
+\@x{\@s{20.5} \A\, n \.{\in} 0 \.{\dotdot} ( N \.{-} 1 ) \.{:}}%
+\@x{\@s{24.6} {\WF}_{ vars} ( HoldingLock ( t ) \.{\land} Unlock ( n ) )}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} Init}%
+\@x{\@s{8.2} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land} {\WF}_{ vars} ( Next )}%
+\@x{\@s{8.2} \.{\land} Fairness}%
+\end{tlatex}
+\newline
+
+This ensure whomever holds the lock must release the lock eventually. Now we 
+can define or liveness property, where a tasked blocked waiting for the lock 
+eventually gets the lock:\newline
 
 \begin{tla}
 Liveness == 
@@ -253,55 +286,3 @@ Liveness ==
 \@x{\@s{20.5} blocked [ t ] \.{=} 1 \.{\leadsto} lock\_owner \.{=} t}%
 \end{tlatex}
 \newline
-
-The formula defines set b to be either an empty set or a set of one task. Assume
-a set of \{"p0", "p1", "p2\}. Possible value of b include: \{\}, \{"p0"\},
-\{"p1"\} and \{"p2"\}. The fomula then states an non empty set of b leads to an
-\textit{empty set} of b. In other words: \newline
-
-\textit{If a task ever becomes blocked, it will eventually become unblocked}.\newline
-
-However, when we actually run the model checker, we will find the liveness
-property is \textit{violated}. The failure scenario is basically one task
-holding onto the lock in one CPU, while the scheduler repeatedly
-schedule/deschedule a separate task in another CPU. While this is perfectly
-allowed, the model checker detects a possible path for the the system to trap in
-a local state and fail the liveness property.\newline 
-
-Perhaps not surprisingly, if you construct similar liveness property to verify 
-a task is \textit{eventually} always scheduled, it will also fail. The model
-checker will provide a counter case where a task is never scheduled because
-another task is repeatedly acquire/release the global lock.\newline
-
-We need \textit{Strong Fairness} to solve this problem:
-\begin{tla}
------ MODULE scheduler ---- 
-L ==
-    \A t \in Tasks :
-        \A n \in 0..(N-1) :
-            WF_vars(HoldingLock(t) /\ Unlock(n))
-Spec ==
-  /\ Init
-  /\ [][Next]_vars
-  /\ WF_vars(Next)
-  /\ L 
-======= 
-\end{tla}
-\begin{tlatex}
-\@x{}\moduleLeftDash\@xx{ {\MODULE} scheduler}\moduleRightDash\@xx{}%
-\@x{ L \.{\defeq}}%
-\@x{\@s{8.2} \A\, t \.{\in} Tasks \.{:}}%
-\@x{\@s{12.29} \A\, n \.{\in} 0 \.{\dotdot} ( N \.{-} 1 ) \.{:}}%
-\@x{\@s{16.4} {\WF}_{ vars} ( HoldingLock ( t ) \.{\land} Unlock ( n ) )}%
-\@x{ Spec \.{\defeq}}%
-\@x{\@s{8.2} \.{\land} Init}%
-\@x{\@s{8.2} \.{\land} {\Box} [ Next ]_{ vars}}%
-\@x{\@s{8.2} \.{\land} {\WF}_{ vars} ( Next )}%
-\@x{\@s{8.2} \.{\land} L}%
-\@x{}\bottombar\@xx{}%
-\end{tlatex}
-\newline
-
-Fairness ensures that we are never stuck in a repeated state.
-
-% \end{document}
