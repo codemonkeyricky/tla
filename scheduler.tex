@@ -2,6 +2,29 @@
 
 \chapter{Simple Scheduler}
 
+Task schedulers are fairly ubiquitous. Every device implements
+\textit{something} to manage tasks. Modern desktop or mobile device processes
+non-trivial OS abstractions and with every process maintains its own virtual
+memory space for security reasons. Context switching process requires the OS to
+"clean" the hardware before running the new process.\newline
+
+For emedded devices such as hard drives or network cards, the security
+consideration may be relaxed as users are typically not allowed to run arbitrary
+code on the device. Sometimes these products don't have full blown operating
+system to save on memory and storage footprint, but still need some sort of
+scheduler to manage the tasks.\newline
+
+To solve the c10k \cite{c10k} problem, some languages (eg. Rust) supports
+asynchronous programming, allowing the user to enable task switching 
+\textit{within} the same process to scale up system throughput.  However,
+language like Rust only provides the \textit{language support} for asynchronous
+programming, and user must supply their own async runtime. The async runtime
+must also must include a scheduler to manage the tasks.\newline
+
+Hopefully this provides enough context to why implementing a scheduler may be of
+interest. In this chapter we will implement a very simple cooperative
+scheduler.
+
 \section{Design}
 
 In this section we will define a spec for a simple task scheduler. The task sechdeuler has the following
