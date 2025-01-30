@@ -1,3 +1,6 @@
+% \begin{document}
+
+
 \chapter{Simple Gossip Protocol}
 
 In a distributed system, a cluster of nodes collectively provide a serivce. A
@@ -33,14 +36,11 @@ With the total number of messages exchanged:
 In this chapter we will implement a simplified gossip model where: 
 \begin{itemize}
     \item Each node has a version.
-    \item Each node has a ready status.
     \item Each node caches the version of all other nodes.
-    \item A node will randomly initiate gossip with another node.
-    \item Only a ready node can initiate gossip. 
-    \item Nodes can restart randomly, restart clears the node's version cache of
-    all other nodes and puts the node into not ready.
-    \item A restarted node becomes ready again after a ready node gossip with it.
-    \item A ready node can bump its version.
+    \item A pair of nodes are randomly selected to gossip 
+    \item A node can restart. Restarting a node clears the node's version cache
+    of the other nodes.
+    \item A node can bump its own version.
 \end{itemize}
 
 If the gossip protocol works correctly, every node should eventually have the
@@ -49,232 +49,137 @@ latest version of all the nodes.
 \section{Spec}
 
 In gossip protocol, every node needs to remember all its peers current
-version. This can be represented as a two dimension array:\newline
-\begin{tla}
-    Init == counter = [n \in Node |-> [o \in Node |-> 0]] 
-\end{tla}
-\begin{tlatex}
- \@x{\@s{16.4} Init \.{\defeq} counter \.{=} [ n \.{\in} Node \.{\mapsto} [ o
- \.{\in} Node \.{\mapsto} 0 ] ]}%
-\end{tlatex}
-\newline
-
-This defines counter a collection of nodes, where each node also contains a
-collection of nodes initialized to 0. The nodes can bump to a new version:\newline
-\begin{tla}
-    Increment(n) == counter' = [counter EXCEPT ![n][n] = @ + 1]
-\end{tla}
-\begin{tlatex}
- \@x{\@s{16.4} Increment ( n ) \.{\defeq} counter \.{'} \.{=} [ counter
- {\EXCEPT} {\bang} [ n ] [ n ] \.{=} @ \.{+} 1 ]}%
-\end{tlatex}
-\newline
-
-Notice increment only bumps node's version. This change needs to be gossiped 
-across the cluster:\newline
-\begin{tla}
-Gossip(n, o) ==                  
-    LET Max(a, b) == IF a > b THEN a ELSE b 
-    IN counter' = [
-        counter EXCEPT ![o] = [
-            nn \in Node |->            
-                Max(counter[n][nn], counter[o][nn])
-            ] 
-    ]
-\end{tla}
-\begin{tlatex}
-\@x{ Gossip ( n ,\, o ) \.{\defeq}}%
- \@x{\@s{16.4} \.{\LET} Max ( a ,\, b ) \.{\defeq} {\IF} a \.{>} b \.{\THEN} a
- \.{\ELSE} b}%
-\@x{\@s{16.4} \.{\IN} counter \.{'} \.{=} [}%
-\@x{\@s{40.89} counter {\EXCEPT} {\bang} [ o ] \.{=} [}%
-\@x{\@s{57.29} nn \.{\in} Node \.{\mapsto}}%
-\@x{\@s{73.41} Max ( counter [ n ] [ nn ] ,\, counter [ o ] [ nn ] )}%
-\@x{\@s{57.29} ]}%
-\@x{\@s{16.4} ]}%
-\end{tlatex}
-\newline
-
-A few things to unpack here:
-\begin{itemize}
-    \item $n, o$ are the two nodes exchanging gossip. $o$ is the node to be updated
-    and $n$ is the neighbor $o$ gossips with.
-    \item $LET .. IN$ allows local definition under $LET$ used under
-    $IN$. In this case $Max$ is a local macro defined to return maximum between a and b.
-    \item $counter'$ (or refered to as counter \textit{prime}) is what the
-    variable will be in the next state. TLA+ doesn't provide a way to update a
-    variable in a collection, so the convention is to assign a new array to the variable. 
-    \item $counter\ EXCEPT ![o] = [...]$ return $counter$ with $counter[o]$
-    defined in the bracket. 
-    \item where $[...]$ is a collection of nodes with with counter set to the
-    max between the current node and neighbour.
-\end{itemize}
-
-Finally, the actual spec: \newline
-\begin{tla}
-    Next == \/ \E n \in Node : Increment(n)
-            \/ \E n, o \in Node : Gossip(n, o)
-\end{tla}
-\begin{tlatex}
- \@x{\@s{16.4} Next \.{\defeq} \.{\lor} \E\, n \.{\in} Node \.{:} Increment (
- n )}%
-\@x{\@s{56.23} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
-\end{tlatex}
-\newline
-
-Next supports two possible next steps describe using disjunctions. The first is
-bumping the version of a random node, the second is select a pair of nodes to
-gossip. Note the \textit{existential qualifier} on both, which basically states
-there exists a node n in nodes, or there exists a pair of nodes n, o in nodes,
-respectively.\newline
-
-There's a minor problem with the definition above. Gossip protocol, like many
-converging protocols, have a \textit{monotonic increasing} requirement. On
-failures, the protocol bumps the version, which increases monotonically. Since
-TLA+ spec models the system as a graph, a monotonic increasing version number
-means the state graph is \textit{infinitely large}. To put the specification back into
-finite space, we can normalize the state:\newline
+version:\newline
 
 \begin{tla}
-GarbageCollect ==
-    LET SetMin(s) == CHOOSE e \in s : \A o \in s : e <= o IN
-    LET Transpose == SetMin({counter[n][o] : n, o \in Node}) IN
-        /\ counter' = [
-            n \in Node |-> [
-                o \in Node |-> counter[n][o] - Transpose
-            ]
-          ]
-        /\ UNCHANGED converge
-\end{tla}
-\begin{tlatex}
-\@x{ GarbageCollect \.{\defeq}}%
- \@x{\@s{16.4} \.{\LET} SetMin ( s ) \.{\defeq} {\CHOOSE} e \.{\in} s \.{:}
- \A\, o \.{\in} s \.{:} e \.{\leq} o \.{\IN}}%
- \@x{\@s{16.4} \.{\LET} Transpose\@s{0.58} \.{\defeq} SetMin ( \{ counter [ n
- ] [ o ] \.{:} n ,\, o \.{\in} Node \} ) \.{\IN}}%
-\@x{\@s{36.79} \.{\land} counter \.{'} \.{=} [}%
-\@x{\@s{52.01} n \.{\in} Node \.{\mapsto} [}%
- \@x{\@s{66.60} o \.{\in} Node \.{\mapsto} counter [ n ] [ o ] \.{-}
- Transpose}%
-\@x{\@s{52.01} ]}%
-\@x{\@s{44.99} ]}%
-\@x{\@s{36.79} \.{\land} {\UNCHANGED} converge}%
-\end{tlatex}
-\newline
-
-\textit{GarbageCollect} substracts every version value with set minimum. To
-limit range of version value, the increment function is now updated to: \newline
-\begin{tla}
-Increment(n) ==
-    /\ ~converge
-    /\ counter[n][n] < Divergence
-    /\ S!Increment(n)
-    /\ UNCHANGED converge
-\end{tla}
-\begin{tlatex}
-\@x{ Increment ( n ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} {\lnot} converge}%
-\@x{\@s{16.4} \.{\land} counter [ n ] [ n ] \.{<} Divergence}%
-\@x{\@s{16.4} \.{\land} S {\bang} Increment ( n )}%
-\@x{\@s{16.4} \.{\land} {\UNCHANGED} converge}%
-\end{tlatex}
-\newline
-
-Finally, the \textit{Next} is updated to the follow:\newline
-
-\begin{tla}
+Init ==
+    /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
 Next ==
-    \/ \E n \in Node : Increment(n)
-    \/ \E n, o \in Node : Gossip(n, o)
-    \/ Converge
-    \/ GarbageCollect
+    \/ \E i \in Servers:
+        /\ Bump(i)
+    \/ \E i, j \in Servers:
+        /\ ExchangeGossip(i, j)
+    \/ \E i \in Servers:
+        /\ Restart(i)
 \end{tla}
 \begin{tlatex}
+\@x{ Init \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} version \.{=} [ i \.{\in} Servers \.{\mapsto} [ j
+ \.{\in} Servers \.{\mapsto} 0 ] ]}%
 \@x{ Next \.{\defeq}}%
-\@x{\@s{16.4} \.{\lor} \E\, n \.{\in} Node \.{:} Increment ( n )}%
-\@x{\@s{16.4} \.{\lor} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\, o )}%
-\@x{\@s{16.4} \.{\lor} Converge}%
-\@x{\@s{16.4} \.{\lor} GarbageCollect}%
-\end{tlatex}
-
-Note $GarbageCollect$ is a now part of possible state transition. We will
-discuss $Converge$ later, as it is related to liveness check. Lastly:\newline
-
-\begin{tla}
-Fairness == \A n, o \in Node : WF_vars(Gossip(n, o))
-Spec ==
-    /\ Init
-    /\ [][Next]_vars
-    /\ Fairness
-\end{tla}
-\begin{tlatex}
- \@x{ Fairness \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} {\WF}_{ vars} (
- Gossip ( n ,\, o ) )}%
-\@x{ Spec \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} Init}%
-\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
-\@x{\@s{16.4} \.{\land} Fairness}%
+\@x{\@s{16.4} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
+\@x{\@s{20.5} \.{\land} Bump ( i )}%
+\@x{\@s{16.4} \.{\lor} \E\, i ,\, j \.{\in} Servers \.{:}}%
+\@x{\@s{20.5} \.{\land} ExchangeGossip ( i ,\, j )}%
+\@x{\@s{16.4} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
+\@x{\@s{20.5} \.{\land} Restart ( i )}%
 \end{tlatex}
 \newline
 
-The \textit{Fairness} definition ensures Gossip runs between every pair of nodes
-gossip.
+The \textit{Init} formula simply declares version to be a two dimension array
+with all elements initialized to 0. \textit{Next} allows either bumping version
+of a server, pick a pair of nodes to gossip, or restart a server.\newline
+
+The following provides definition to these steps:\newline
+
+\begin{tla}
+ExchangeGossip(i, j) == 
+    LET 
+        Max(a, b) == IF a > b THEN a ELSE b
+        updated == [k \in Servers |-> Max(version[i][k], version[j][k])]
+        version_a == [version EXCEPT ![i] = updated]
+        version_ab == [version_a EXCEPT ![j] = updated]
+    IN 
+        /\ version' = version_ab 
+\end{tla}
+\begin{tlatex}
+\@x{ ExchangeGossip ( i ,\, j ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} Max ( a ,\, b ) \.{\defeq} {\IF} a \.{>} b \.{\THEN} a
+ \.{\ELSE} b}%
+ \@x{\@s{32.8} updated \.{\defeq} [ k \.{\in} Servers \.{\mapsto} Max (
+ version [ i ] [ k ] ,\, version [ j ] [ k ] ) ]}%
+ \@x{\@s{32.8} version\_a \.{\defeq} [ version {\EXCEPT} {\bang} [ i ] \.{=}
+ updated ]}%
+ \@x{\@s{32.8} version\_ab \.{\defeq} [ version\_a {\EXCEPT} {\bang} [ j ]
+ \.{=} updated ]}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} \.{\land} version \.{'} \.{=} version\_ab}%
+\end{tlatex}
+\newline
+
+When two server gossip, they gossip about all the nodes (including themselves)
+and update both of their version cache with the more up-to-date entry between
+the two. The \textit{LET..IN} syntax enables local macro definition. In this
+example, we use temporary variables defined inside \textit{LET}, and update the
+primed variable inside the \textit{IN} clause.\newline
+
+\begin{tla}
+Bump(i) == 
+    /\ version[i][i] # MaxVersion 
+    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
+        IF i # k THEN version[i][k] ELSE version[i][k] + 1]]
+\end{tla}
+\begin{tlatex}
+\@x{ Bump ( i ) \.{\defeq}}%
+\@x{ \.{\land} version [ i ] [ i ] \.{\neq} MaxVersion}%
+ \@x{ \.{\land} version \.{'} \.{=} [ version {\EXCEPT} {\bang} [ i ] \.{=} [
+ k \.{\in} Servers \.{\mapsto}}%
+ \@x{\@s{4.1} {\IF} i \.{\neq} k \.{\THEN} version [ i ] [ k ] \.{\ELSE}
+ version [ i ] [ k ] \.{+} 1 ] ]}%
+\end{tlatex}
+\newline
+
+The first conjunction bounds the search space until a node is at
+\textit{MaxVersion}. The second conjunction describes what \textit{version'}
+should be: \textit{version'} is the same as \textit{version}, except for
+\textit{version[i]}. The updated \textit{version[i]} is the same as
+\textit{version[i]}, except \textit{version[i][i]} is bumped. \newline
+
+\begin{tla}
+Restart(i) == 
+    /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
+        IF i # k THEN 0 ELSE version[i][i]]]
+\end{tla}
+\begin{tlatex}
+\@x{ Restart ( i ) \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} version \.{'} \.{=} [ version {\EXCEPT} {\bang} [ i ]
+ \.{=} [ k \.{\in} Servers \.{\mapsto}}%
+ \@x{\@s{20.5} {\IF} i \.{\neq} k \.{\THEN} 0 \.{\ELSE} version [ i ] [ i ] ]
+ ]}%
+\end{tlatex}
+\newline
+
+Upon \textit{Restart}, a server reloads from its local storage (so it's own
+version persist), but the server needs to re-learn the cluster status (all other
+entries in its version cache is wiped). 
 
 \section{Safety}
 
-In every state, counter[n][o] next must be larger than counter[n][o] current:\newline
-
-\begin{tla}
-Monotonic == \A n, o \in Node : counter'[n][o] >= counter[n][o] 
-Monotonicity == [][
-    \/ S!Monotonic
-    \/ \A a, b, c, d \in Node :
-        (counter'[a][b] - counter[a][b]) = (counter'[c][d] - counter[c][d])
-]_vars
-\end{tla}
-\begin{tlatex}
- \@x{ Monotonic \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} counter \.{'} [ n ]
- [ o ] \.{\geq} counter [ n ] [ o ]}%
-\@x{ Monotonicity \.{\defeq} {\Box} [}%
-\@x{\@s{16.4} \.{\lor} S {\bang} Monotonic}%
-\@x{\@s{16.4} \.{\lor} \A\, a ,\, b ,\, c ,\, d \.{\in} Node \.{:}}%
- \@x{\@s{31.61} ( counter \.{'} [ a ] [ b ] \.{-} counter [ a ] [ b ] ) \.{=}
- ( counter \.{'} [ c ] [ d ] \.{-} counter [ c ] [ d ] )}%
-\@x{ ]_{ vars}}%
-\end{tlatex}
-
 \section{Liveness}
 
-For liveness we want to check the version value across all nodes eventually
-converge. \textit{Next} is updated to set Converge to true, which triggers the
-liveness condition and ensure all pair of nodes eventually have the same
-information. \newline
+The intent of gossip protocol is to ensure the cluster remains up-to-date in the
+presence of failure (represented by \textit{Restart}). The following describes 
+the expected system behaviour:
+\begin{itemize}
+    \item Since the state graph is bound by MaxVersion, one or more Server
+    should eventually make it to MaxVersion
+    \item However, verifying one Server makes it to 
+\end{itemize}
 
 \begin{tla}
-Convergence == \A n, o \in Node : counter[n] = counter[o]
-Liveness == converge ~> S!Convergence
-Converge ==
-    /\ converge' = TRUE
-    /\ UNCHANGED counter  
-Next ==
-  \/ \E n \in Node : Increment(n)
-  \/ \E n, o \in Node : Gossip(n, o)
-  \/ Converge
-  \/ GarbageCollect
+Liveness == 
+    \E i, j \in Servers: 
+        /\ i # j
+        /\ []<>(version[i][i] = MaxVersion /\ version[i][i] = MaxVersion /\ version[i][j] = MaxVersion)
 \end{tla}
 \begin{tlatex}
- \@x{ Convergence \.{\defeq} \A\, n ,\, o \.{\in} Node \.{:} counter [ n ]
- \.{=} counter [ o ]}%
- \@x{ Liveness\@s{2.98} \.{\defeq} converge \.{\leadsto} S {\bang}
- Convergence}%
-\@x{ Converge \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} converge \.{'} \.{=} {\TRUE}}%
-\@x{\@s{16.4} \.{\land} {\UNCHANGED} counter}%
-\@x{ Next \.{\defeq}}%
-\@x{\@s{8.2} \.{\lor}\@s{1.63} \E\, n \.{\in} Node \.{:} Increment ( n )}%
- \@x{\@s{8.2} \.{\lor}\@s{1.63} \E\, n ,\, o \.{\in} Node \.{:} Gossip ( n ,\,
- o )}%
-\@x{\@s{8.2} \.{\lor}\@s{1.63} Converge}%
-\@x{\@s{8.2} \.{\lor}\@s{1.63} GarbageCollect}%
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \E\, i ,\, j \.{\in} Servers \.{:}}%
+\@x{\@s{16.4} \.{\land} i \.{\neq} j}%
+ \@x{\@s{16.4} \.{\land} {\Box} {\Diamond} ( version [ i ] [ i ] \.{=}
+ MaxVersion \.{\land} version [ i ] [ i ] \.{=} MaxVersion \.{\land} version
+ [ i ] [ j ] \.{=} MaxVersion )}%
 \end{tlatex}
 
+% \end{document}
