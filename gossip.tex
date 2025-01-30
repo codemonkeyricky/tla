@@ -206,17 +206,37 @@ we can now define the Liveness property:\newline
 Liveness == 
     \E i, j \in Servers: 
         /\ i # j
-        /\ []<>(version[i][i] = MaxVersion /\ version[i][i] = MaxVersion /\ version[i][j] = MaxVersion)
+        /\ []<>(version[i][i] = MaxVersion
+             /\ version[i][i] = MaxVersion 
+             /\ version[i][j] = MaxVersion)
 \end{tla}
 \begin{tlatex}
 \@x{ Liveness \.{\defeq}}%
 \@x{\@s{16.4} \E\, i ,\, j \.{\in} Servers \.{:}}%
 \@x{\@s{16.4} \.{\land} i \.{\neq} j}%
  \@x{\@s{16.4} \.{\land} {\Box} {\Diamond} ( version [ i ] [ i ] \.{=}
- MaxVersion \.{\land} version [ i ] [ i ] \.{=} MaxVersion \.{\land} version
- [ i ] [ j ] \.{=} MaxVersion )}%
-\end{tlatex}
+ MaxVersion}%
+\@x{\@s{16.4} \.{\land} version [ i ] [ i ] \.{=} MaxVersion}%
+\@x{\@s{16.4} \.{\land} version [ i ] [ j ] \.{=} MaxVersion )}%
+\end{tlatex}\newline
 
-Since the system is 
+The $\Box\Diamond$ represents \textit{always eventually}. The liveness condition
+specifies that there exists a pair of Servers such that both of them
+\textit{always eventually} makes it to MaxVersion and have Gossip with each
+other.\newline
+
+Since the Spec permits \textit{Restart} to be called anytime, a liveness
+property where \textit{all} Servers are up-to-date cannot be true. The model
+checker can always \textit{Restart} one of the Servers before this property is
+met.\newline
+
+Likewise, replacing \textit{always eventually} with \textit{eventually always}
+($\Diamond\Box$) also fails. $\Diamond\Box$ checks that once the system
+\textit{eventually} enters a specified state, it \textit{always} remains in that
+state. This cannot be true as the liveness condition is transient, since the
+model checker can always disturb any condition with a \textit{Restart}.\newline
+
+For a more comprehensive discussion of fairness, refer to the last section of
+the book.
 
 % \end{document}
