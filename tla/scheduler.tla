@@ -86,7 +86,7 @@ Next ==
 HoldingLock(t) == 
     /\ lock_owner = t
 
-L ==
+Fairness ==
     \A t \in Tasks :
         \A n \in 0..(N-1) :
             WF_vars(HoldingLock(t) /\ Unlock(n))
@@ -95,5 +95,5 @@ Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-\*   /\ L 
+  /\ Fairness 
 =============================================================================
