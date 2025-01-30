@@ -8,15 +8,17 @@ CONSTANTS
 VARIABLES 
     ready_q,
     blocked_q,
+    blocked,
     cpus,
     lock_owner
 
-vars == <<ready_q, cpus, lock_owner>>
+vars == <<ready_q, cpus, lock_owner, blocked>>
 
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
     /\ ready_q = SetToSeq(Tasks)
     /\ blocked_q = <<>>
+    /\ blocked = [t \in Tasks |-> 0]
     /\ lock_owner = ""
 
 \* schedule a task to a free CPU
@@ -26,7 +28,7 @@ Ready ==
         /\ cpus[k] = "" 
         /\ cpus' = [cpus EXCEPT ![k] = Head(ready_q)]
         /\ ready_q' = Tail(ready_q)
-        /\ UNCHANGED <<lock_owner, blocked_q>>
+        /\ UNCHANGED <<lock_owner, blocked_q, blocked>>
 
 \* can only move to ready if not holding a lock
 MoveToReady(k) == 
@@ -34,7 +36,7 @@ MoveToReady(k) ==
     /\ lock_owner # cpus[k]
     /\ ready_q' = Append(ready_q, cpus[k]) 
     /\ cpus' = [cpus EXCEPT ![k] = ""]
-    /\ UNCHANGED <<lock_owner, blocked_q>>
+    /\ UNCHANGED <<lock_owner, blocked_q, blocked>>
 
 \* get the lock
 Lock(k) == 
@@ -42,12 +44,13 @@ Lock(k) ==
     \/  /\ cpus[k] # "" 
         /\ lock_owner = ""
         /\ lock_owner' = cpus[k]
-        /\ UNCHANGED <<ready_q, cpus, blocked_q>>
+        /\ UNCHANGED <<ready_q, cpus, blocked_q, blocked>>
     \* someone else has the lock
     \/  /\ cpus[k] # "" 
         /\ lock_owner # ""
         /\ lock_owner # cpus[k] \* cannot double lock
         /\ blocked_q' = Append(blocked_q, cpus[k])
+        /\ blocked' = [blocked EXCEPT ![cpus[k]] = 1]
         /\ cpus' = [cpus EXCEPT ![k] = ""]
         /\ UNCHANGED <<ready_q, lock_owner>>
 
@@ -59,6 +62,7 @@ Unlock(k) ==
     /\ cpus' = [cpus EXCEPT ![k] = ""]
     /\ ready_q' = blocked_q \o ready_q \o <<cpus[k]>>
     /\ blocked_q' = <<>>
+    /\ blocked' = [t \in Tasks |-> 0]
 
 Running == 
     \E k \in DOMAIN cpus:
@@ -66,22 +70,9 @@ Running ==
         \/ Lock(k)
         \/ Unlock(k)
 
-\* verify pid0 is eventually scheduled
 Liveness == 
     \A t \in Tasks:
-        LET 
-            b == {x \in DOMAIN blocked_q : blocked_q[x] = t}
-        IN 
-            /\ b # {} ~> b = {}
-
-Liveness2 == 
-    \A t \in Tasks:
-        LET 
-            s == {x \in DOMAIN ready_q : ready_q[x] = t}
-            b == {x \in DOMAIN blocked_q : blocked_q[x] = t}
-        IN 
-            /\ s # {} ~> s = {}
-            /\ b # {} ~> b = {}
+        blocked[t] = 1 ~> lock_owner = t
 
 Next == 
     \/ Running
