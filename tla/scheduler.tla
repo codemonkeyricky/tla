@@ -57,7 +57,7 @@ Unlock(k) ==
     /\ lock_owner = cpus[k]
     /\ lock_owner' = ""
     /\ cpus' = [cpus EXCEPT ![k] = ""]
-    /\ ready_q' = ready_q \o blocked_q \o <<cpus[k]>>
+    /\ ready_q' = blocked_q \o ready_q \o <<cpus[k]>>
     /\ blocked_q' = <<>>
 
 Running == 
