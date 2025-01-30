@@ -5,17 +5,16 @@ CONSTANTS
     Servers
 
 VARIABLES 
-    version, ready
+    version
 
 MaxDivergence == 1
 MaxVersion == 3
 MaxNetworkOutstanding == 1
 
-vars == <<version, ready>> 
+vars == <<version>> 
 
 Init ==
     /\ version = [i \in Servers |-> [j \in Servers |-> 0]]
-    /\ ready = [i \in Servers |-> 1]
 
 HighestVersion ==
     LET Values == {version[i][j] : i \in Servers, j \in Servers}
@@ -37,22 +36,19 @@ ExchangeGossip(i, j) ==
         version_a == [version EXCEPT ![i] = updated]
         version_ab == [version_a EXCEPT ![j] = updated]
     IN 
-        \* /\ ready[i] = 1
         /\ version' = version_ab 
-        /\ ready' = [ready EXCEPT ![j] = 1]
+        \* /\ ready' = [ready EXCEPT ![j] = 1]
 
 Bump(i) == 
     /\ version[i][i] # MaxVersion 
-    \* /\ ready[i] = 1
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
         IF i # k THEN version[i][k] ELSE version[i][k] + 1]]
-    /\ UNCHANGED <<ready>>
+    \* /\ UNCHANGED <<ready>>
 
 Restart(i) == 
-    \* /\ ready[i] = 1
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
         IF i # k THEN 0 ELSE version[i][i]]]
-    /\ ready' = [ready EXCEPT ![i] = 0]
+    \* /\ ready' = [ready EXCEPT ![i] = 0]
 
 Next ==
     \/ \E i \in Servers:
@@ -61,7 +57,7 @@ Next ==
         /\ ExchangeGossip(i, j)
     \/ \E i \in Servers:
         \* /\ version[i][i] # HighestVersion
-        /\ Cardinality({s \in Servers : ready[s] = 1}) > 1
+        \* /\ Cardinality({s \in Servers : ready[s] = 1}) > 1
         /\ Restart(i)
 
 Liveness == 
