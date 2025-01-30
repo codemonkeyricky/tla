@@ -77,11 +77,53 @@ A task can be in three possible state: \textit{Ready}, \textit{Blocked} and
 \textit{Running}. The Spec includes required lock contention handling.\newline
 
 \begin{tla}
-
+Ready == 
+    \E t \in DOMAIN ready_q:
+        \E k \in DOMAIN cpus:
+        /\ cpus[k] = "" 
+        /\ cpus' = [cpus EXCEPT ![k] = Head(ready_q)]
+        /\ ready_q' = Tail(ready_q)
+        /\ UNCHANGED <<lock_owner, blocked_q>>
+Running == 
+    \E k \in DOMAIN cpus:
+        \/ MoveToReady(k)
+        \/ Lock(k)
+        \/ Unlock(k)
 Next == 
     \/ Running
     \/ Ready
+\end{tla}
+\begin{tlatex}
+\@x{ Ready \.{\defeq}}%
+\@x{\@s{16.4} \E\, t \.{\in} {\DOMAIN} ready\_q \.{:}}%
+\@x{\@s{20.5} \E\, k \.{\in} {\DOMAIN} cpus \.{:}}%
+\@x{\@s{20.5} \.{\land} cpus [ k ] \.{=}\@w{}}%
+ \@x{\@s{20.5} \.{\land} cpus \.{'} \.{=} [ cpus {\EXCEPT} {\bang} [ k ] \.{=}
+ Head ( ready\_q ) ]}%
+\@x{\@s{20.5} \.{\land} ready\_q \.{'} \.{=} Tail ( ready\_q )}%
+ \@x{\@s{20.5} \.{\land} {\UNCHANGED} {\langle} lock\_owner ,\, blocked\_q
+ {\rangle}}%
+\@x{ Running \.{\defeq}}%
+\@x{\@s{16.4} \E\, k \.{\in} {\DOMAIN} cpus \.{:}}%
+\@x{\@s{20.5} \.{\lor} MoveToReady ( k )}%
+\@x{\@s{20.5} \.{\lor} Lock ( k )}%
+\@x{\@s{20.5} \.{\lor} Unlock ( k )}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} Running}%
+\@x{\@s{16.4} \.{\lor} Ready}%
+\end{tlatex}
 
+Next can update either a task that is running, or a task waiting to be scheduled.\newline
+
+A \textit{Ready} task is popped off the ready queue and put onto a idle CPU.
+Since ready\_q is implemented as an ordered tuple, fetching and popping the
+front is done using \textit{Head} and \textit{Tail}, respectively.\newline
+
+A \textit{Running} task can either go back to the ready queue (done for now),
+acquire the global lock, or release the global lock.  The sub-actions are
+defined below:\newline
+
+\begin{tla}
 MoveToReady(k) == 
     /\ cpus[k] # "" 
     /\ lock_owner # cpus[k]
@@ -89,12 +131,10 @@ MoveToReady(k) ==
     /\ cpus' = [cpus EXCEPT ![k] = ""]
     /\ UNCHANGED <<lock_owner, blocked_q>>
 Lock(k) == 
-    \* lock is empty
     \/  /\ cpus[k] # "" 
         /\ lock_owner = ""
         /\ lock_owner' = cpus[k]
         /\ UNCHANGED <<ready_q, cpus, blocked_q>>
-    \* someone else has the lock
     \/  /\ cpus[k] # "" 
         /\ lock_owner # ""
         /\ lock_owner # cpus[k] \* cannot double lock
@@ -108,13 +148,6 @@ Unlock(k) ==
     /\ cpus' = [cpus EXCEPT ![k] = ""]
     /\ ready_q' = ready_q \o blocked_q \o <<cpus[k]>>
     /\ blocked_q' = <<>>
-
-Running == 
-    \E k \in DOMAIN cpus:
-        /\ cpus[k] # "" 
-        /\ \/ MoveToReady(k)
-           \/ Lock(k)
-           \/ Unlock(k)
 \end{tla}
 \begin{tlatex}
 \@x{ MoveToReady ( k ) \.{\defeq}}%
@@ -127,21 +160,11 @@ Running ==
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} lock\_owner ,\, blocked\_q
  {\rangle}}%
 \@x{ Lock ( k ) \.{\defeq}}%
-\@x{}%
-\@y{%
-  lock is empty
-}%
-\@xx{}%
 \@x{ \.{\lor}\@s{4.1} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{=}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{'} \.{=} cpus [ k ]}%
  \@x{\@s{4.1} \.{\land} {\UNCHANGED} {\langle} ready\_q ,\, cpus ,\,
  blocked\_q {\rangle}}%
-\@x{}%
-\@y{%
-  someone else has the lock
-}%
-\@xx{}%
 \@x{ \.{\lor}\@s{4.1} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{\neq}\@w{}}%
 \@x{\@s{4.1} \.{\land} lock\_owner \.{\neq} cpus [ k ]}%
@@ -164,14 +187,22 @@ Running ==
  \@x{\@s{16.4} \.{\land} ready\_q \.{'} \.{=} ready\_q \.{\circ} blocked\_q
  \.{\circ} {\langle} cpus [ k ] {\rangle}}%
 \@x{\@s{16.4} \.{\land} blocked\_q \.{'} \.{=} {\langle} {\rangle}}%
-\@pvspace{8.0pt}%
-\@x{ Running \.{\defeq}}%
-\@x{\@s{16.4} \E\, k \.{\in} {\DOMAIN} cpus \.{:}}%
-\@x{\@s{20.5} \.{\land} cpus [ k ] \.{\neq}\@w{}}%
-\@x{\@s{20.5} \.{\land} \.{\lor} MoveToReady ( k )}%
-\@x{\@s{20.5} \.{\lor} Lock ( k )}%
-\@x{\@s{20.5} \.{\lor} Unlock ( k )}%
 \end{tlatex}
+\newline
+
+\textit{MoveToReady} defines the where task voluntarily go back to ready
+queue.\newline
+
+\textit{Lock} represents when a running task attempts to acquire the global
+lock. When the lock is free, the task grabs the lock and move on. When the lock 
+is already held, the task moves into blocked queue to be scheduled when the lock
+is released.\newline
+
+\textit{Unlock} represents when a running task release the lock. If there are tasks 
+in blocked queue, now they may be scheduled. 
+If the task attempts to acquire the global lock while the lock is taken,
+it'll be moved to the blocked\_q using \textit{Append}. The task then joins the queue of tasks that
+want to access the resource.
 
 \section{Safety}
 
