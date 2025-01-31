@@ -139,22 +139,22 @@ end procedure;
 \end{tlatex}
 \\
 
-The writer checks if queue is full checking if it there's more space to write
-to.  If queue is full, the writer early exists. If queue is not full, writer
+The writer checks if the queue is full checking if there's more space to write
+to. If the queue is full, the writer early exists. If the queue is not full, a writer
 writes to the queue and advances the write pointer.\\
 
 The key insight here is the read and write pointer effectively \textit{reserves}
-the index they are pointing to. The state of the indices are unknown to the
-other context.  Assume a reader index of k, the writer cannot write to index k
-since the reader might be reading from it. The only time writer can write to k
-is when read index is no longer k, suggesting the reader is done with the index. 
+the index they are pointing to. The state of the indices is unknown to the
+other context. Assume a reader index of k, the writer cannot write to index k
+since the reader might be reading from it. The only time a writer can write to k
+is when the read index is no longer k, suggesting the reader is done with the index. 
 The reason works symmetrically with the write index.
 
 \section{Safety}
 
-A correctness property for a lockless algorithm is to ensure reader and writer 
-cannot access the same index at the same time. It is possible for both reader and writer
-to be both working inside their critical section, but they \textit{cannot} be 
+A correctness property for a lockless algorithm is to ensure reader and writer
+cannot access the same index at the same time. Both reader and writer can be
+working inside their critical section, but they \textit{cannot} be
 working on the same index. The following formula describes this safety property:\\
 
 \begin{tla}
