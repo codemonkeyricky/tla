@@ -14,7 +14,7 @@ code on the device. Sometimes these products don't have a full-blown operating
 system to save on memory and storage footprint, but still need some sort of
 scheduler to manage the tasks.\newline
 
-To solve the c10k \cite{c10k} problem, some languages (eg. Rust) support 
+To solve the C10k \cite{c10k} problem, some languages (eg. Rust) support 
 asynchronous programming, allowing the user to enable task switching \textit{within} in the same process to scale up system throughput. However,
 language like Rust only provides the \textit{language support} for asynchronous
 programming, and user must supply their async runtime. The async runtime
@@ -252,7 +252,6 @@ Safety ==
 \@x{\@s{20.5} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
 \@x{\@s{24.6} cpus [ k ] \.{=} t \.{\implies} blocked [ t ] \.{=} 0}%
 \end{tlatex}
-\newline
 
 \section{Liveness}
 
@@ -291,7 +290,7 @@ The weakness fairness description states that if the enabling condition for
 \textit{HoldingLock} and \textit{Unlock} continuously stays true (eg. a lock is
 being held and the task can unlock), the associated action, \textit{Unlock},
 must \textit{always eventually} be called to satisfy the weak fairness
-requirement. We can now define the liveness property: a tasked blocked waiting
+requirement. We can now define the liveness property: a task blocked waiting
 for the lock \textit{leads to} the task acquiring the lock:\newline
 
 \begin{tla}
