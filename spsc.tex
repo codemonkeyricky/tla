@@ -2,22 +2,20 @@
 
 \chapter{SPSC Lockless Queue}
 
-
 A single producer single consumer (SPSC) lockless queue is a data exchange queue
 between a producer and a consumer. The SPSC lockless queue enables data exchange
 between producer and consumer without the use of a lock, allowing both producer
-and consumer to make progress in all scenarios.\newline
+and consumer to make progress in all scenarios.\\
 
 An example application of an SPSC queue is a data exchange interface between the ASIC
-and the CPU in a driver implementation.\newline
+and the CPU in a driver implementation.\\
 
 A real implementation needs to account for memory ordering effects specific to
 the architecture. For example, ARM has a weak memory ordering model where
 read/write may appear out-of-order between CPUs. In this chapter, we will assume
 \textit{logical} execution order where each command is perceived as issued
 sequentially (even across CPUs) to focus the discussion on describing the system
-using TLA+.
-\newline
+using TLA+.\\
 
 \section{Requirement}
 
@@ -25,10 +23,10 @@ The following describes the SPSC queue requirements:
 
 \begin{itemize}
     \item Two executing context, reader and writer
-    \item Writer advances wtpr after writes
-    \item Reader advances rtpr after reads
-    \item If rtpr equals wptr, queue is empty
-    \item If (wtpr + 1) \% N equals rptr, queue is full
+    \item Writer pointer advances after write 
+    \item Reader pointer advances after read
+    \item If read pointer equals write pointer, queue is empty
+    \item If writer pointer + 1 equals read pointer, queue is full
 \end{itemize}
 
 The following is an example of a SPSC queue:
@@ -64,9 +62,9 @@ or a C-like syntax called PlusCal (which transpires down to its native form).
 In this example, I chose to implement the specification using PlusCal, since the
 content to be verified is pseudo implementation. While it is possible to specify
 SPSC in native TLA+, I find the approach more error-prone as each line is
-effectively an individual state to be modeled.\newline
+effectively an individual state to be modeled.\\
 
-The following is a snippet of the \textit{Spec} written in PlusCal:\newline
+The following is a snippet of the \textit{Spec} written in PlusCal:\\
 \begin{ppcal}
 procedure reader()
 begin
@@ -139,7 +137,7 @@ end procedure;
 
 \section{Safety}
 
-Some safety requirement we can enforce include:\newline
+Some safety requirement we can enforce include:\\
 
 \begin{tla}
 MUTEX ==
@@ -176,11 +174,11 @@ Inv_Basics ==
  reading )}%
 \@x{\@s{16.4} \.{\land} MUTEX}%
 \end{tlatex}
-\newline
+\\
 
 \section{Liveness}
 
-All indicies are eventually used:
+All indices are eventually used:
 
 \begin{tla}
     Liveness ==
