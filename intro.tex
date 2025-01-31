@@ -13,6 +13,13 @@ support.\newline
 An experienced reader may start to notice some redflags.\newline
 
 If the microcode attempts to access the memory interface when the power island
+has been shut off, processor would hang. Since the power island has been shut
+off, the physical hardware debug port is also unavailable, leaving the developer
+with \textit{no way} of live debugging related problem. At this point the
+developer needs to siphon through (possibly hundreds) of instructions to catch
+invariant violation \textit{manually}.
+
+If the microcode attempts to access the memory interface when the power island
 has been shut off, the processor would hang. Since the power island has been
 shut off, the physical hardware debug port is also unavailable, leaving the
 developer with no way of live debugging related problems. At this point, the
