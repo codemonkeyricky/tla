@@ -55,24 +55,34 @@ end define;
 
 procedure reader()
 begin
-r_chk_empty:        if rptr = wptr then 
-r_early_ret:            return;
-                    end if;
-r_read_buf:         assert buffer[rptr] # 0;
-r_cs:               buffer[rptr] := 0;
-r_upd_rtpr:         rptr := (rptr + 1) % N;
-                    return;
+r_chk_empty:        
+    if rptr = wptr then 
+    r_early_ret:            
+        return;
+    end if;
+r_read_buf:         
+    assert buffer[rptr] # 0;
+r_cs:               
+    buffer[rptr] := 0;
+r_upd_rtpr:         
+    rptr := (rptr + 1) % N;
+    return;
 end procedure; 
 
 procedure writer() 
 begin
-w_chk_full:         if (wptr + 1) % N = rptr then 
-w_early_ret:            return; 
-                    end if;
-w_write_buf:        assert buffer[wptr] = 0;
-w_cs:               buffer[wptr] := wptr + 1000;
-w_upd_wptr:         wptr := (wptr + 1) % N;
-                    return;
+w_chk_full:         
+    if (wptr + 1) % N = rptr then 
+    w_early_ret:
+        return; 
+    end if;
+w_write_buf:
+    assert buffer[wptr] = 0;
+w_cs:
+    buffer[wptr] := wptr + 1000;
+w_upd_wptr:
+    wptr := (wptr + 1) % N;
+    return;
 end procedure; 
 
 fair process WriterP = WRITER

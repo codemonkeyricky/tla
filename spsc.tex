@@ -2,18 +2,19 @@
 
 \chapter{SPSC Lockless Queue}
 
+
 A single producer single consumer (SPSC) lockless queue is a data exchange queue
-between a producer and a consumer. The SPSC lockfree queue enables data exchange
+between a producer and a consumer. The SPSC lockless queue enables data exchange
 between producer and consumer without the use of a lock, allowing both producer
 and consumer to make progress in all scenarios.\newline
 
-An example application of SPSC queue is a data exchange interface between ASIC
+An example application of an SPSC queue is a data exchange interface between the ASIC
 and the CPU in a driver implementation.\newline
 
-A real implementation need to account for memory ordering effects specific to
-the architecture. For example, ARM has weak memory ordering model where
-read/write may appear out-of-order between CPUs. In this chapter we will assume
-\textit{logical} execution order where each command is perceived issued
+A real implementation needs to account for memory ordering effects specific to
+the architecture. For example, ARM has a weak memory ordering model where
+read/write may appear out-of-order between CPUs. In this chapter, we will assume
+\textit{logical} execution order where each command is perceived as issued
 sequentially (even across CPUs) to focus the discussion on describing the system
 using TLA+.
 \newline
@@ -42,110 +43,65 @@ The following is an example of a SPSC queue:
 \end{tikzpicture}
 \end{center}
 
-Since reader and writer execute in different context, the instructions in read
+Since the reader and writer execute in different contexts, the instructions in a read
 and write can interleave in \textit{any} way imaginable:
 \begin{itemize}
-    \item Reader empty check can happen just as writer is writing data
-    \item Writer full check can happen just as reader is reading data
+    \item Reader empty check can happen just as the writer is writing data
+    \item Writer full check can happen just as the reader is reading data
     \item Reading and writing can occur concurrently
 \end{itemize}
 
-The key observations is the index held by write pointer is reserved by the
-writer. Similarly, index held by the read pointer is reserved by the reader. The
-only exception is when read pointer equals to write pointer, then the queue is
+The key observation is the index held by the write pointer is reserved by the
+writer. Similarly, the index held by the read pointer is reserved by the reader. The
+only exception is when the read pointer equals to write pointer, then the queue is
 empty. Given the possible ways the reader and writer execution can interleave, 
 we can use TLA+ to verify the design.
 
 \section{Spec}
 
-TLA+ specification can be writen using its native formal specification language,
-or a C-like syntax called PlusCal (which transpiles down to itse native form).
+TLA+ specification can be written using its native formal specification language,
+or a C-like syntax called PlusCal (which transpires down to its native form).
 In this example, I chose to implement the specification using PlusCal, since the
-content to be verified is psuedo implementation. While it is possible specify
-SPSC in native TLA+, I find the approach more error prone as each line is
+content to be verified is pseudo implementation. While it is possible to specify
+SPSC in native TLA+, I find the approach more error-prone as each line is
 effectively an individual state to be modeled.\newline
 
 The following is a snippet of the \textit{Spec} written in PlusCal:\newline
 \begin{ppcal}
 procedure reader()
 begin
-r_chk_empty:        if rptr = wptr then 
-r_early_ret:            return;
-                    end if;
-r_read_buf:         assert buffer[rptr] # 0;
-r_cs:               buffer[rptr] := 0;
-r_upd_rtpr:         rptr := (rptr + 1) % N;
-                    return;
-end procedure; 
-
-procedure writer() 
-begin
-w_chk_full:         if (wptr + 1) % N = rptr then 
-w_early_ret:            return; 
-                    end if;
-w_write_buf:        assert buffer[wptr] = 0;
-w_cs:               buffer[wptr] := wptr + 1000;
-w_upd_wptr:         wptr := (wptr + 1) % N;
-                    return;
+r_chk_empty:        
+    if rptr = wptr then 
+    r_early_ret:            
+        return;
+    end if;
+r_read_buf:         
+    assert buffer[rptr] # 0;
+r_cs:               
+    buffer[rptr] := 0;
+r_upd_rtpr:         
+    rptr := (rptr + 1) % N;
+    return;
 end procedure; 
 \end{ppcal}\newline
-\begin{tlatex}
-\@x{ {\p@procedure} reader ( )}%
-\@x{ {\p@begin}}%
- \@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}\@s{28.7} {\p@if} rptr \.{=} wptr
- {\p@then}}%
- \@x{ r\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@return}
- {\p@semicolon}}%
-\@x{\@s{32.8} {\p@end} {\p@if} {\p@semicolon}}%
- \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@assert} buffer [ rptr ]
- \.{\neq} 0 {\p@semicolon}}%
- \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}\@s{32.8} buffer [ rptr ] \.{:=} 0
- {\p@semicolon}}%
- \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}\@s{32.8} rptr \.{:=} ( rptr \.{+} 1
- ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
-\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
-\@pvspace{8.0pt}%
-\@x{ {\p@procedure} writer ( )}%
-\@x{ {\p@begin}}%
- \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@if} ( wptr \.{+} 1 )
- \.{\%} N \.{=} rptr {\p@then}}%
- \@x{ w\_early\_ret\@s{.5}\textrm{:}\@s{3}\@s{45.1} {\p@return}
- {\p@semicolon}}%
-\@x{\@s{32.8} {\p@end} {\p@if} {\p@semicolon}}%
- \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}\@s{32.8} {\p@assert} buffer [ wptr
- ] \.{=} 0 {\p@semicolon}}%
- \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}\@s{32.8} buffer [ wptr ] \.{:=} wptr \.{+}
- 1000 {\p@semicolon}}%
- \@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}\@s{32.8} wptr \.{:=} ( wptr \.{+} 1
- ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
-\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
-\end{tlatex}
 
-Note some lines start with \textit{label} (eg. r\_chk\_empty). All the actions
-associated with the label is assumed executed atomically. This is reflected in
-the generated TLA+ code:\newline
-\begin{tla}
-r_chk_empty(self) == /\ pc[self] = "r_chk_empty"
-                     /\ IF rptr = wptr
-                           THEN /\ pc' = [pc EXCEPT ![self] = "r_early_ret"]
-                           ELSE /\ pc' = [pc EXCEPT ![self] = "r_read_buf"]
-                     /\ UNCHANGED << rptr, wptr, buffer, stack >>
-\end{tla}
-\begin{tlatex}
- \@x{ r\_chk\_empty ( self ) \.{\defeq} \.{\land} pc [ self ]
- \.{=}\@w{r\_chk\_empty}}%
-\@x{ \.{\land} {\IF} rptr \.{=} wptr}%
- \@x{ \.{\THEN} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [ self ]
- \.{=}\@w{r\_early\_ret} ]}%
- \@x{ \.{\ELSE} \.{\land} pc \.{'} \.{=} [ pc {\EXCEPT} {\bang} [ self ]
- \.{=}\@w{r\_read\_buf} ]}%
- \@x{ \.{\land} {\UNCHANGED} {\langle} rptr ,\, wptr ,\, buffer ,\, stack
- {\rangle}}%
-\end{tlatex}
-\newline
-
+\begin{ppcal}
+procedure writer() 
+begin
+w_chk_full:         
+    if (wptr + 1) % N = rptr then 
+    w_early_ret:
+        return; 
+    end if;
+w_write_buf:
+    assert buffer[wptr] = 0;
+w_cs:
+    buffer[wptr] := wptr + 1000;
+w_upd_wptr:
+    wptr := (wptr + 1) % N;
+    return;
+end procedure; 
+\end{ppcal}\newline
 
 \section{Safety}
 
