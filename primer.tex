@@ -4,34 +4,34 @@
 
 The key insight to TLA+ is modeling a system as a state machine. A simple
 digital clock can be represented by two variables, hour and minute and the
-number of possible states in a digital clock is $24 * 60 = 1440$. For example,
-a clock in state 10:00 will transition to state 10:01. Asssume an arbitrarily
-system described by N variables, each variable having K possible values such
+number of possible states in a digital clock is $24 * 60 = 1440$. For example, a
+clock in state 10:00 will transition to state 10:01. Assume an arbitrary system
+described by N variables, each variable having K possible values such an
 arbitrary system can have up to $N^K$ state.\newline
 
-For every specification, designer can specify \textit{safety} proerty (or
-invariants) that must be true in \textit{every} states. For example, in any
+For every specification, the designer can specify \textit{safety} property (or
+invariants) that must be true in \textit{every} state. For example, in any
 state of the digital clock hour \textit{must} be between 0 to 23, or formally
-described as $hour \in 0..23$. Similarly, minute must have value between 0 to
-59, or $minute \in 0..59$. Examples invariants of a system include: Only one
+described as $hour \in 0..23$. Similarly, the minute must have a value between 0 to
+59, or $minute \in 0..59$. Examples of invariants of a system include: Only one
 thread has exclusive access to a critical region, all variables in the system
-are within allowable value, resource allocation manager never allocates more
+are within allowable value, and the resource allocation manager never allocates more
 than available resources.\newline
 
-Designer can also specify \textit{liveness} property. These are properties to be
-satisfied by a \textit{sequence of state}. One liveness property for the digital
+The designer can also specify \textit{liveness} property. These are properties to be
+satisfied by a \textit{sequence of state}. One liveness property of the digital
 clock could be when the clock is 10:00, it will eventually become 11:00 (10:00
 \textit{leads} to 11:00). Example liveness property include: a distributed
-system eventually converges, the scheduler eventually schedules every tasks in
-the task queue, the resource allocation manager fairly allocates resources.
+system eventually converges, the scheduler eventually schedules every task in
+the task queue, and the resource allocation manager fairly allocates resources.
 \newline
 
 A TLA+ Spec can be checked by TLC, the model checker. TLC uses
-\textit{breath-first search} algorithm to explore \textit{all} states in the
+\textit{breadth-first search} algorithm to explore \textit{all} states in the
 state machine and ensure safety and liveness properties are upheld.\newline
 
 A TLA+ Spec describes the system using \textit{temporal logic}. The syntax may 
-appear unfamiliar if one hasn't seen it before, but like any other programming 
+appear unfamiliar if one hasn't seen it before but like any other programming 
 language an initiated reader should become familiarized quickly.
 
 \section{Design}
