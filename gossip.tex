@@ -3,31 +3,31 @@
 
 \chapter{Simple Gossip Protocol}
 
-In a distributed system, a cluster of nodes collectively provide a serivce. A
+In a distributed system, a cluster of nodes collectively provides a service. A
 distributed system may have 10s to 100s of nodes working together to offer the
-service in a geo diverse environment to maximize uptime. The nodes often
-have requirements to know about each other. In the context of distributed
-database, a node may need to know the key range another of its peers. The
+service in a geo-diverse environment to maximize uptime. The nodes often
+have requirements to know about each other. In the context of a distributed
+database, a node may need to know the key range of another of its peers. The
 cluster needs a way to communicate this information. One such mechanism is the
 gossip protocol.\newline
 
 Gossip protocol allows nodes to fetch the latest cluster information in a
-distributed fashion. Prior to gossip protocol, nodes in a cluster learn about
-its neighbours by contacting a centralized server. This introduces a single
-failure point in the system. Gossip protocol relies on nodes to initiate 
-the data exchange, and the nodes in the cluster periodically selects a set of neighbors to
+distributed fashion. Before the gossip protocol, nodes in a cluster learn about
+their neighbors by contacting a centralized server. This introduces a single
+failure point in the system. Gossip protocol relies on nodes to initiate
+the data exchange, and the nodes in the cluster periodically select a set of neighbors to
 gossip with. \newline
 
-Assume a N node cluster, at some periodic interval a node selects k neighbours
+Assume an N node cluster, at some periodic interval a node selects k neighbours
 to gossip with. The total amount of gossip propagation time is described
-logrithmticly below:
+logarithmically below:
 
-\begin{equation} 
+\begin{equation}
     propagation\_time = \log_k N * gossip\_interval
 \end{equation}
 
-With the total number of messages exchanged: 
-\begin{equation} 
+With the total number of messages exchanged:
+\begin{equation}
     messages\_exchanged = \log_k N * k
 \end{equation}
 
