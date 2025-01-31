@@ -1,15 +1,13 @@
 
 % \begin{document}
 
-\chapter{Language}
+\chapter{Data Structure}
 
 Like other languages, TLA+ provides its data structure. I assume the readers are
 already familiar with common data structure, and this chapter will only focus on
 the TLA+ language semantics. 
 
-\section{Data Structure}
-
-\subsection{Set}
+\section{Set}
 
 This is the most common data structure used in TLA+ spec. The following is a few examples on
 how a set can be used:\newline
@@ -76,7 +74,7 @@ k == c \ d              \* \{0, 1, 3, 4\} - c substracts d
 \@xx{}%
 \end{tlatex}
 
-\subsection{Tuple}
+\section{Tuple}
 
 \begin{tla}
 A == <<0, 1, 2>>                    
@@ -126,7 +124,7 @@ G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
 \@xx{}%
 \end{tlatex}
 
-\subsection{Function}
+\section{Function}
 
 \begin{tla}
 SetA == {"a", "b", "c"}
@@ -185,10 +183,3 @@ f == [e EXCEPT !["a"] = {"a", "b", "c"}]
  ,\,\@w{c} \} ]}%
 \@pvspace{8.0pt}%
 \end{tlatex}
-
-\section{Liveness Property}
-
-
-TLA+ 
-
-

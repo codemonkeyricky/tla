@@ -109,25 +109,106 @@ property.
 
 However, the system does not \textit{eventually always} stay in state 3, because
 the system toggles between state 2 and 3. This is described by the following
-liveness property: 
+liveness property: \newline
 
 \begin{tla}
-    AlwaysEventually == []<>(counter = 3)
+    EventuallyAlways == <>[](counter = 3)
 \end{tla}
 \begin{tlatex}
- \@x{\@s{16.4} AlwaysEventually \.{\defeq} {\Box} {\Diamond} ( counter \.{=} 3
+ \@x{\@s{16.4} EventuallyAlways \.{\defeq} {\Diamond} {\Box} ( counter \.{=} 3
  )}%
 \end{tlatex}
+\newline
 
-To satisfy this liveness property, we will need to remove the transition from 3
-to 2: 
+To satisfy this liveness property, we will need to \textit{remove} the transition from 3
+to 2:
+
+\begin{center}
+\begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
+  \node[state]  (q1)                {1};
+  \node[state]  (q2) [right of=q1]  {2};
+  \node[state]  (q3) [right of=q2]  {3};
+
+  \path[->]          (q1)  edge   []   node {} (q2);
+%   \path[->]          (q2)  edge   [bend left=20]   node {} (q1);
+
+  \path[->]          (q2)  edge   []   node {} (q3);
+%   \path[->]          (q3)  edge   [bend left=20]   node {} (q2);
+\end{tikzpicture}
+\end{center}
+
+We need to remove the corresponding Dec action from Next:\newline
 \begin{tla}
 Next ==
     \/ /\ counter # 3
        /\ Inc
 \end{tla}
+\begin{tlatex}
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \.{\land} counter \.{\neq} 3}%
+\@x{\@s{16.4} \.{\land} Inc}%
+\end{tlatex}
+\newline 
 
+The system now \textit{eventually always} remain in state 3, satisfy the 
+liveness property.\newline 
+
+Note that the system still \textit{always eventually} make it to state 3, so the
+updated spec satisfies both \textit{AlwaysEventually} and
+\textit{EventuallyAlways} liveness properties. This is not to say designer
+should always use \textit{eventually always}. Some system may never converge 
+onto a fixed state. For example, in a consesus system any given server may crash
+and disturb the converged state. In such case \textit{eventually always} will 
+never be true, but \textit{always eventually} will be.
 
 \section{Leads To}
+
+\textit{Leads to} provides a \textit{cause-and-effect} description. In this example, 
+we can describe state 0 \textit{leads to} state 3:\newline
+\begin{tla}
+    \* state 0 leads to state 3: TRUE 
+    LeadsTo == counter = 0 ~> counter = 3
+
+    \* state 0 leads to state 4: FALSE - model checker reports violation
+    LeadsTo == counter = 0 ~> counter = 4
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4}}%
+\@y{%
+  state 0 leads to state 3: TRUE 
+}%
+\@xx{}%
+ \@x{\@s{16.4} LeadsTo \.{\defeq} counter \.{=} 0 \.{\leadsto} counter \.{=}
+ 3}%
+\@pvspace{8.0pt}%
+\@x{\@s{16.4}}%
+\@y{%
+  state 0 leads to state 4: FALSE - model checker reports violation
+}%
+\@xx{}%
+ \@x{\@s{16.4} LeadsTo \.{\defeq} counter \.{=} 0 \.{\leadsto} counter \.{=}
+ 4}%
+\end{tlatex}
+\newline
+
+Note that \textit{leads to} is only evaluated if the left hand side is
+\textit{true}. If right hand side is updated to counter = 4, the liveness
+property will fail as expected. However, if left hand side is false, then the
+liveness property is not evaluated since there isn't a state that satisfies the
+cause condition. For example, the model checker will not report violation for
+the following liveness property:\newline
+\begin{tla}
+    \* model checker will NOT report violation because cause condition never occur 
+    LeadsTo == counter = 4 ~> counter = 3
+\end{tla}
+\begin{tlatex}
+\@x{\@s{16.4}}%
+\@y{%
+  model checker will NOT report violation because cause condition never occur 
+}%
+\@xx{}%
+ \@x{\@s{16.4} LeadsTo \.{\defeq} counter \.{=} 4 \.{\leadsto} counter \.{=}
+ 3}%
+\end{tlatex}
 
 % \end{document}

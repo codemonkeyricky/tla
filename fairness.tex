@@ -1,10 +1,11 @@
 \chapter{Fairness}
 \label{chap:fairness}
 
-For rigorous definition and proof, please refer to (TODO: citations). This
-chapter focus on the application aspect of liveness and fairness and define an elevator 
-spec that goes up and down.\newline
+For rigorous definition and proof, please refer to \cite{ss}. This chapter focus
+on the application fairness by describing an elevator that eventually makes it to the 
+top floor:\newline
 
+\begin{center}
 \begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
   \node[state]  (q1)                {1F};
   \node[state]  (q2) [right of=q1]  {2F};
@@ -21,6 +22,7 @@ spec that goes up and down.\newline
   \path[->]          (q4)  edge   [bend left=20]   node {} (q3);
 
 \end{tikzpicture}
+\end{center}
 
 \section{Liveness}
 
@@ -68,7 +70,7 @@ Spec ==
 
 The building has a set of floors and the elevator can go either up or down. The
 elevator keeps going up until it's the top floor, or keep going down until it's
-the bottom floor. TLC will pass the \textit{Spec} as is.\newline
+the bottom floor. TLC will pass the spec as is.\newline
 
 Let's introduce a liveness property. The elevator should always at least go 
 to the second floor:\newline
@@ -82,7 +84,7 @@ Liveness ==
 \end{tlatex}
 \newline
 
-Running the \textit{Spec} against TLC will report a violation:
+Model checker will report a violation on this property:
 
 \begin{verbatim}
 Error: Temporal properties were violated.
@@ -128,8 +130,8 @@ Spec ==
 \end{tlatex}
 \newline
 
-Running the spec against TLC passes again. What if we want to verify the
-elevator eventually always goes to the top, not just to 2F? Let's modify the
+Running the spec against model checker passes again. What if we want to verify
+the elevator eventually always goes to the top, not just to 2F? Let's modify the
 Liveness property again:\newline
 \begin{tla}
 Liveness == 
@@ -141,7 +143,7 @@ Liveness ==
 \end{tlatex}
 \newline
 
-TLC now reports the following violation: 
+Model checker now reports the following violation: 
 \begin{verbatim}
 Error: Temporal properties were violated.
 Error: The following behavior constitutes a counter-example:
@@ -152,10 +154,10 @@ a = 2
 Back to state 1: <Down line 13, col 5 to line 14, col 17 of module elevator>
 \end{verbatim}
 
-TLC identified a case where the elevator is perpetually stuck going between 1F
-and 2F, but never go to 3F. Weak fairness is no longer enough, because the the
-elevator is not stuck on 2F repeatedly, but stuck going between 1F and 2F. This
-is where we need strong fairness.
+Model checker identified a case where the elevator is perpetually stuck going
+between 1F and 2F, but never go to 3F. Weak fairness is no longer enough,
+because the the elevator is not stuck on 2F repeatedly, but stuck going
+\textit{between} 1F and 2F. This is where we need strong fairness.
 
 \section{Strong Fairness}
 
@@ -190,7 +192,7 @@ Spec ==
 \end{tlatex}
 \newline 
 
-However, TLC \textit{still} reports the same violation. What's going on?\newline
+However, model checker \textit{still} reports the same violation.\newline
 
 If we take a closer look at the enabling condition for \textit{Up}, it only
 requires current floor to be not the \textit{top floor}. When the elevator is
@@ -221,4 +223,4 @@ Spec ==
 \end{tlatex}
 \newline
 
-Once again with this change TLC will pass.
+With this change the model checker will pass.
