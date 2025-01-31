@@ -16,64 +16,100 @@ and more.\newline
 \begin{tla}
 a == {0, 1, 2}
 b == {2, 3, 4}
-c == a \union b         \* \{0, 1, 2, 3, 4\}
-d == a \intersect b     \* \{2\}
-e == \E x \in c: x > 3  \* TRUE - because 4 in c is bigger than 3
-f == \E x \in c: x > 5  \* FALSE - nothing in c is bigger than 5
-g == \A x \in c: x < 3  \* FALSE - not all elements in c are smaller than 3
-h == \A x \in c: x < 5  \* TRUE - all elements in c are smaller than 3
-i == {x \in c: x < 3}   \* \{0, 1, 2\} - all elementse less than 3
-j == Cardinality(c)     \* 5 - the number of elements in c
-k == c \ d              \* \{0, 1, 3, 4\} - c substracts d
+
+\* \{0, 1, 2, 3, 4\}
+c == a \union b         
+
+\* \{2\}
+d == a \intersect b     
+
+\* TRUE - because 4 in c is bigger than 3
+e == \E x \in c: x > 3  
+
+\* FALSE - nothing in c is bigger than 5
+f == \E x \in c: x > 5  
+
+\* FALSE - not all elements in c are smaller than 3
+g == \A x \in c: x < 3  
+
+\* TRUE - all elements in c are smaller than 3
+h == \A x \in c: x < 5  
+
+\* \{0, 1, 2\} - all elementse less than 3
+i == {x \in c: x < 3}   
+
+\* 5 - the number of elements in c
+j == Cardinality(c)     
+
+\* \{0, 1, 3, 4\} - c substracts d
+k == c \ d             
 \end{tla}
 \begin{tlatex}
 \@x{ a \.{\defeq} \{ 0 ,\, 1 ,\, 2 \}}%
 \@x{ b \.{\defeq} \{ 2 ,\, 3 ,\, 4 \}}%
-\@x{ c \.{\defeq} a \.{\cup} b\@s{32.8}}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   \{0, 1, 2, 3, 4\}
 }%
 \@xx{}%
-\@x{ d \.{\defeq} a \.{\cap} b\@s{32.8}}%
+\@x{ c \.{\defeq} a \.{\cup} b}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   \{2\}
 }%
 \@xx{}%
-\@x{ e \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 3\@s{32.8}}%
+\@x{ d \.{\defeq} a \.{\cap} b}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   TRUE - because 4 in c is bigger than 3
 }%
 \@xx{}%
-\@x{ f \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 5\@s{32.8}}%
+\@x{ e \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 3}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   FALSE - nothing in c is bigger than 5
 }%
 \@xx{}%
-\@x{ g \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 3\@s{32.8}}%
+\@x{ f \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 5}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   FALSE - not all elements in c are smaller than 3
 }%
 \@xx{}%
-\@x{ h \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 5\@s{32.8}}%
+\@x{ g \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 3}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   TRUE - all elements in c are smaller than 3
 }%
 \@xx{}%
-\@x{ i \.{\defeq} \{ x \.{\in} c \.{:} x \.{<} 3 \}\@s{32.8}}%
+\@x{ h \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 5}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   \{0, 1, 2\} - all elementse less than 3
 }%
 \@xx{}%
-\@x{ j \.{\defeq} Cardinality ( c )\@s{32.8}}%
+\@x{ i \.{\defeq} \{ x \.{\in} c \.{:} x \.{<} 3 \}}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   5 - the number of elements in c
 }%
 \@xx{}%
-\@x{ k \.{\defeq} c \.{\,\backslash\,} d\@s{32.8}}%
+\@x{ j \.{\defeq} Cardinality ( c )}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   \{0, 1, 3, 4\} - c substracts d
 }%
 \@xx{}%
+\@x{ k \.{\defeq} c \.{\,\backslash\,} d}%
 \end{tlatex}
 
 \section{Tuple}
@@ -83,57 +119,77 @@ Common operation supported by tuple include Append to push and Tail to pop.
 \newline
 
 \begin{tla}
-A == <<0, 1, 2>>                    
-B == <<2, 3, 4>>
-C == A \o B                         \* tuple: 0, 1, 2, 2, 3, 4
-D == Len(C)                         \* 6
-E == \A x \in 1..Len(C) : C[x] # 10 \* TRUE - every C[x] is not 10
-                                    \* First tuple element is at index 1 (not 0)
-F == \E x \in 1..Len(C) : C[x] = 2  \* TRUE - there exists a C[x] that is 2
-G == {x \in 1..Len(C) : C[x] = 2}   \* \{3, 4\} - when index is 3 or 4, C[x] = 2
+a == <<0, 1, 2>>                    
+b == <<2, 3, 4>>
+
+\* tuple: 0, 1, 2, 2, 3, 4
+c == A \o B
+
+\* 6
+d == Len(c)                         
+
+\* TRUE - every c[x] is not 10
+\* First tuple element is at index 1 (not 0)
+e == \A x \in 1..Len(c) : c[x] # 10 
+
+\* TRUE - there exists a c[x] that is 2
+f == \E x \in 1..Len(c) : c[x] = 2
+
+\* \{3, 4\} - when index is 3 or 4, c[x] = 2
+g == {x \in 1..Len(c) : c[x] = 2}   
 \end{tla}
 \begin{tlatex}
-\@x{ A \.{\defeq} {\langle} 0 ,\, 1 ,\, 2 {\rangle}}%
-\@x{ B \.{\defeq} {\langle} 2 ,\, 3 ,\, 4 {\rangle}}%
-\@x{ C \.{\defeq} A \.{\circ} B\@s{98.39}}%
+\@x{ a \.{\defeq} {\langle} 0 ,\, 1 ,\, 2 {\rangle}}%
+\@x{ b \.{\defeq} {\langle} 2 ,\, 3 ,\, 4 {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   tuple: 0, 1, 2, 2, 3, 4
 }%
 \@xx{}%
-\@x{ D \.{\defeq} Len ( C )\@s{98.39}}%
+\@x{ c \.{\defeq} A \.{\circ} B}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
   6
 }%
 \@xx{}%
- \@x{ E \.{\defeq} \A\, x \.{\in} 1 \.{\dotdot} Len ( C ) \.{:} C [ x ]
- \.{\neq} 10\@s{98.39}}%
+\@x{ d \.{\defeq} Len ( c )}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
-  TRUE - every C[x] is not 10
+  TRUE - every c[x] is not 10
 }%
 \@xx{}%
-\@x{\@s{98.39}}%
+\@x{}%
 \@y{%
   First tuple element is at index 1 (not 0)
 }%
 \@xx{}%
- \@x{ F \.{\defeq} \E\, x \.{\in} 1 \.{\dotdot} Len ( C ) \.{:} C [ x ] \.{=}
- 2\@s{98.39}}%
+ \@x{ e \.{\defeq} \A\, x \.{\in} 1 \.{\dotdot} Len ( c ) \.{:} c [ x ]
+ \.{\neq} 10}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
-  TRUE - there exists a C[x] that is 2
+  TRUE - there exists a c[x] that is 2
 }%
 \@xx{}%
- \@x{ G \.{\defeq} \{ x \.{\in} 1 \.{\dotdot} Len ( C ) \.{:} C [ x ] \.{=} 2
- \}\@s{98.39}}%
+ \@x{ f \.{\defeq} \E\, x \.{\in} 1 \.{\dotdot} Len ( c ) \.{:} c [ x ] \.{=}
+ 2}%
+\@pvspace{8.0pt}%
+\@x{}%
 \@y{%
-  \{3, 4\} - when index is 3 or 4, C[x] = 2
+  \{3, 4\} - when index is 3 or 4, c[x] = 2
 }%
 \@xx{}%
+ \@x{ g \.{\defeq} \{ x \.{\in} 1 \.{\dotdot} Len ( c ) \.{:} c [ x ] \.{=} 2
+ \}}%
 \end{tlatex}
 
 \section{Function}
 
-Function is similar to map in other data structures, supporting key/value
-lookup.
+Function is similar to map in other data structures, supporting key value
+lookup.\\
 
 \begin{tla}
 SetA == {"a", "b", "c"}
@@ -142,12 +198,16 @@ SetB == {"c", "d", "e"}
 \* Create a mapping with keys a, b, c with values 0, 0, 0
 a == [k \in SetA |-> 0]
 b == [k \in SetB |-> 1]
+
 \* Concatenate 
 c == a @@ b
+
 \* Subtraction
 d == [x \in (DOMAIN c \ DOMAIN b) |-> c[x]]
+
 \* Create a mapping with keys a, b, c with values {}, {}, {}
 e == [k \in SetA |-> {}]
+
 \* Create a mapping that is the same as e, except key a's value is {"a", "b", "c"}
 f == [e EXCEPT !["a"] = {"a", "b", "c"}] 
 
@@ -163,12 +223,14 @@ f == [e EXCEPT !["a"] = {"a", "b", "c"}]
 \@xx{}%
 \@x{ a \.{\defeq} [ k \.{\in} SetA \.{\mapsto} 0 ]}%
 \@x{ b \.{\defeq} [ k \.{\in} SetB \.{\mapsto} 1 ]}%
+\@pvspace{8.0pt}%
 \@x{}%
 \@y{%
   Concatenate 
 }%
 \@xx{}%
 \@x{ c \.{\defeq} a \.{\,@@\,} b}%
+\@pvspace{8.0pt}%
 \@x{}%
 \@y{%
   Subtraction
@@ -176,12 +238,14 @@ f == [e EXCEPT !["a"] = {"a", "b", "c"}]
 \@xx{}%
  \@x{ d \.{\defeq} [ x \.{\in} ( {\DOMAIN} c \.{\,\backslash\,} {\DOMAIN} b )
  \.{\mapsto} c [ x ] ]}%
+\@pvspace{8.0pt}%
 \@x{}%
 \@y{%
   Create a mapping with keys a, b, c with values {}, {}, {}
 }%
 \@xx{}%
 \@x{ e \.{\defeq} [ k \.{\in} SetA \.{\mapsto} \{ \} ]}%
+\@pvspace{8.0pt}%
 \@x{}%
 \@y{%
  Create a mapping that is the same as e, except key a's value is {"a", "b",
