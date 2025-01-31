@@ -308,13 +308,14 @@ PROPERTIES Liveness
 After putting both clock.cfg and clock.tla in the same directory, one can now
 run the model checker. In this book I'll assume a commandline interface for the
 model checker:
-\begin{framed}
 \begin{verbatim}
 java -cp /usr/local/lib/tla2tools.jar tlc2.TLC clock
-... 
-Model checking completed. No error has been found.
 ...
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 7.8E-17
+1441 states generated, 1440 distinct states found, 0 states left on queue.
 The depth of the complete state graph search is 1440.
 \end{verbatim}
-\end{framed}
 The 1440 states in the graph represents total number of minutes in a day.
