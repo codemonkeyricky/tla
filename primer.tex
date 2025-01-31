@@ -32,8 +32,7 @@ state machine and ensure safety and liveness properties are upheld.\newline
 
 A TLA+ Spec describes the system using \textit{temporal logic}. The syntax may 
 appear unfamiliar if one hasn't seen it before, but like any other programming 
-language an initiated reader should become familiarized quickly. In this book I
-will use 
+language an initiated reader should become familiarized quickly.
 
 \section{Design}
 
@@ -65,7 +64,7 @@ The \textit{Init} state of such system can be described as: \newline
 
 $\defeq$ is the \textit{defines equal} symbol and $\land$ is the \textit{logical
 and} symbol. The above TLA+ syntax can be read as \textit{Init} state is defined
-as both hour and minute are both 0.\newline
+as both hour and minute are 0.\newline
 
 The spec also always include a \textit{Next} definition, an \textit{action
 formula} describing how the system transition from one state to another. Action
@@ -219,11 +218,11 @@ $WF_{vars}(Next)$ is the fairness qualifier.
 
 \section{Model Checker}
 
-The TLA+ spec can be verified using TLC model checker. The model checker runs
-the spec and verifies all configured safety and liveness properties are
-satisfied. In short, the model checker a library written in Java, and can be
-invoked using command line java. For instruction on installing the model checker
-and related tools, please see \cite{toolbox}.\newline
+A TLA+ spec can be verified using model checker. The model checker runs the spec
+and verifies all specified safety and liveness properties are fulfilled. The
+model checker is a library written in Java, and can be invoked from command
+line. For instruction on installing the model checker and related tools, please
+see \cite{toolbox}.\newline
 
 After installing the model checker, we need two things to verify the spec:
 \begin{itemize}
