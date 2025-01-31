@@ -17,22 +17,22 @@ has been shut off, processor would hang. Since the power island has been shut
 off, the physical hardware debug port is also unavailable, leaving the developer
 with \textit{no way} of live debugging related problem. At this point the
 developer needs to siphon through (possibly hundreds) of instructions to catch
-invariant violation \textit{manually}.
+invariant violation \textit{manually}.\newline
 
 If the microcode attempts to access the memory interface when the power island
 has been shut off, the processor would hang. Since the power island has been
 shut off, the physical hardware debug port is also unavailable, leaving the
-developer with no way of live debugging related problems. At this point, the
-developer needs to manually inspect (possibly hundreds) of instructions to catch
-invariant violations.\newline
+developer with no way to debug related problems. At this point, the developer
+needs to manually inspect (possibly hundreds) of instructions to catch invariant
+violations.\newline
 
 As one can imagine, maintaining the microcode was very expensive. Fortunately,
 the propietary low power processor only had a handful of instructions, I created
 an emulator for this propietary processor to verify the microcode prior to
 deploying it on target. The emulator models the processor states as a state
 graph, with executed instruction transitions the state machine to the next
-state. At every state all the invariants are evaluated to ensure none have been
-violated. Some of the invariants included:
+state. At every state all the invariants are verified. Example invariants 
+include:
 \begin{itemize}
     \item Accessing memory interface after power off leads to a hang
     \item Accessing certain register in certain chip revision leads to a hang 
@@ -42,17 +42,17 @@ violated. Some of the invariants included:
 The verification algorithm was implemented using a \textit{depth-first search}
 algorithm, providing 100\% microcode coverage before deploy on target.\newline
 
-To generalize, we can model arbitrary system as a set of states with a
-collection of invariant that must be upheld at all times. The complexity of the
+To generalize, we can model arbitrary system as a set of states and a set
+of invariant that must be upheld at all times. The complexity of the
 such arbitrarily system generally grows quadratically as the number of states
 grow linearly (eg. in a N state system, adding state N+1 may introduce N
-transitions into the new state). There are many engineering problems that
-exhibit a large number of states, such as lockless or waitfree data structure,
-distributed algorithms, OS scheduler, and more. As the number of states grow, 
-the problem becomes more mentally taxing for designer to reason about.\newline
+transitions into the new state). There are many engineering problems with
+a large number of states, such as lockless or waitfree data structure,
+distributed algorithms, OS scheduler, consensus protocol, and more. As the
+number of states grow, the problem becomes more challenging for designer to
+reason about.\newline
 
-\textit{How does a designer reason about the correctness of a proposed
-solution?}
+So, how do we produce a system that is \textit{correct by design?} 
 
 \section{The Generalized Problem}
 
@@ -72,15 +72,11 @@ few high end hardware. This shifts the technology complexity from vertical to
 horizontal, demanding solution to maximize concurrent resource utilization.
 There is one slight problem though:\newline
 
-\textit{Humans are not good at reasoning about things happening
-concurrently.}\newline
+\textit{Humans are not good at concurrent reasoning}. \newline
 
 Our cognitive system is optimized for sequential reasoning. Enumerating all
 scenarios in one's mind to ensure an arbitrary design accommodates all the
 corner cases is challenging.\newline
-
-Consider a low power processor execution hundreds of instruction, how does the 
-designer ensure the invariants are upheld after every instruction?\newline
 
 Consider a distributed system. The system is a cluster of independently
 operating entities and need to somehow collectively offer the correct system
@@ -109,15 +105,14 @@ design}? To solve this problem, we must rely on tools to do the reasoning
 
 \section{What is TLA+?}
 
-TLA+ is a \textit{system specification language}, with the intent to describe
-the system with implementation details removed. TLA+ allows designer to describe
-the system as a sequence of states. The designer can expresses transition
-condition from one state to another, describe invariants that must hold true in
-every state and liveness properties that the overall system should converge to.
-The key innovation of TLA+ is once the system is modeled as a finite state
-machine, the states can be \textit{exhaustively} explored (via
-breath-first-search) to ensure certain properties are held through out the
-entire state space (either per state or a sequence of states).\newline
+TLA+ is a \textit{system specification language} to describe a system without
+implementation details. TLA+ allows designer to describe a system as a set of
+states with transitions from one state to the next. Designer can describe
+invariants that must hold true in every state and liveness properties a sequence
+of state must satisfy. One of TLA+'s key is once the system is modeled as a
+finite set of states, the states can be \textit{exhaustively} explored (via
+breath-first-search) to ensure properties are upheld through out the entire state
+space (either per state or a sequence of states).\newline
 
 \section{About This Book}
 
@@ -129,31 +124,30 @@ book, which I hope the readers will find helpful in their TLA+ journey.\newline
 The intent for the book is to teach reader how to write TLA+ spec for their
 design to provide confidence in \textit{design correctness}. This book is
 targeted to software designer, hardware designer, system architect, and in
-general anyone who is interested in designing correct system.\newline 
+general anyone who is interested in designing correct systems.\newline 
 
 To get the most out of the book, reader should have general computing science
 knowledge. Reader doesn't need to be expert at a particular language to
 understand this book; TLA+ is effectively its own language. This book is example
 driven and will go through designs such as lockless queue, simple task
 scheduler, consensus algorithm, etc. Reader will likely enjoy a deeper insight
-if she has some familiarity with these topics.
+if there is familarity with these topics.
 
 \section{How to Use This Book}
 
 This book was designed to be used as a reference, providing examples and
 references using TLA+.\newline
 
-Examples are split into two categories: A set of examples written using TLA+,
-and another set of examples written using PlusCal (the C-like syntax that
-transpiles down to TLA+). I believe they are useful for different use cases.
-The differences will be highlighted in their respective sections. All examples
-will follow a similar layout, covering the requirements, design, spec, and 
-safety properties.\newline
+Examples are split into two categories: Examples written using TLA+, Examples
+written using PlusCal (the C-like syntax that transpiles down to TLA+). I
+believe they are useful for different use cases. The differences will be
+highlighted in their respective sections. All examples will follow a similar
+layout, covering the problem statement, design, spec, and safety properties.\newline
 
 All examples in this book will be presented using TLA+ \textit{mathemetical
-notation}. Converting between Mathmetical and ASCII notation is assumed
-straightforward due to the one-to-one mapping. Readers are encouraged to consult
-Table 8 in \cite{ss} as needed.\newline
+notation}. Converting between Mathmetical and ASCII notation is trivial due to
+the one-to-one mapping. Readers are encouraged to consult Table 8 in \cite{ss}
+as needed.\newline
 
 The last part of the book provides that language reference and some focused
 topic. Reader can use the last part of the book as a general reference. 
