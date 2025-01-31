@@ -2,26 +2,20 @@
 
 \chapter{SPMC Lockless Queue}
 
-As the name suggests, an SPMC lockless queue supports a single producer multiple
-consumer usage topology.\newline
+As the name suggests, an SPMC lockless queue supports a single producer
+\textit{multiple} consumer usage topology.\newline
 
-In the previously described SPSC, the reader assumes the write index is reserved, and
-the writer assumes the read index is reserved. While the relationship between read
-and write context remains true in SPMC, the complication is now readers compete
-to reserve an index during reading. Some design considerations include:
-\begin{itemize}
-    \item Readers must have a way to reserve an index to read.
-    \item Readers may complete the read in an order different from when they reserve the indices.
-    \item Readers can perform the reads independently.
-\end{itemize}
-
-A primitive in modern CPU architecture is the compare-and-swap (CAS)
-instruction. To use CAS, the issuer needs to specify a memory location, a current
-value, and a new value. Only when the value in the memory location matches the
-current value, the new value will be written. The instruction ensures this is done
-atomically. If multiple CPUs issue CAS at the same time to the same memory
-location, only one CPU will \textit{win} as the other CPU's current value check
-will fail. Many of the concurrent algorithms are built on top of this primitive. 
+\begin{center}
+\begin{tikzpicture}
+\foreach \i in {0,1,2,3,4,5,6,7} {
+    \draw[thick] (\i,0) rectangle (\i+1,1); % Draw each spot in the queue
+    \node at (\i+0.5, 0.5) {\i}; % Label each spot
+}
+\draw[thick, ->, red] (1.5, -1) -- (1.5, -0.1) node[midway, left] {Read};
+\draw[thick, ->, red] (3.5, -1) -- (3.5, -0.1) node[midway, left] {Read}; % Added read pointer at position 3
+\draw[thick, ->, blue] (7.5, -1) -- (7.5, -0.1) node[midway, right] {Write};
+\end{tikzpicture}
+\end{center}
 
 \section{Design}
 
@@ -29,13 +23,13 @@ Some of the design limitation include:
 \begin{itemize}
     \item A resource is exclusively updated by one owner, and read by one or more readers
     \item For shared resource that can be updated by multiple owners, the CPU
-    can gaurantees exclusive update from a single resource 
+    can guarantee exclusive update from a single resource 
 \end{itemize}
 
 For the design:
 \begin{itemize}
     \item SPMC is implemented as a circular queue with size of N
-    \item The status of indvidual index is represented as an status array of size N
+    \item The status of individual index is represented as a status array of size N
     \item The status of each index is either UNUSED, WRITTEN, or READING
     \item Each reader maintain its own read pointer
     \item A \textit{outstanding} counter is incremented by the writer when write is complete, 
@@ -48,11 +42,11 @@ indicate some buffer is ready to read.\newline
 To read, a reader performs a two-step reservation: 
 \begin{itemize}
     \item The reader decrements \textit{outstanding}. A successful decrement means
-    the reader is \textit{gauranteed} a read index.
+    the reader is \textit{guaranteed} a read index.
     \item After successful decrement of \textit{outstanding}, the reader walk
     its read pointer until it successfully reserve the next available index to
-    read. A This is done by attempting to CAS update an index from WRITTEN to
-    READING. If the update fails, then the index was already reserved by another 
+    read. This is done by attempting to CAS update an index from \textit{WRITTEN} to
+    \textit{READING}. If the update fails, then the index was already reserved by another 
     reader.
 \end{itemize}
 
@@ -128,7 +122,7 @@ end procedure;
 \newline
 
 The reader performs a non-zero check on outstanding. If the outstanding is zero,
-the queue is empty, and the reader early returns.\newline 
+the queue is empty, and the reader early returns.\\
 
 If outstanding is K, then at most K readers can reserve an index to read. If system 
 has M readers, then M-K readers will fail to reserve a read index. The readers now 
@@ -141,16 +135,16 @@ compete to reserve a read. More specifically:
 \end{itemize}
 
 If rv is non-success, another reader has \textit{won} the reservation. The
-the current reader can attempt to reserve again if \textit{outstanding} is
+current reader can attempt to reserve again if \textit{outstanding} is
 non-zero.\newline
 
 If rv is a success, the reader is \textit{guaranteed} a read. However, readers
 may still compete during index reservation. To reserve an index, a reader issues
 CAS to update the index status from \textit{WRITTEN} to \textit{READING}. CAS
 failure indicates another reader has already reserved this index. The reader
-will bump the read pointer and try to reserve the next index.\newline
+will bump the read pointer and try to reserve the next index.\\
 
-Now let us take a look at the writer implementation:\newline
+Now let us take a look at the writer implementation:\\
 
 \begin{pcal}
 procedure writer() begin
