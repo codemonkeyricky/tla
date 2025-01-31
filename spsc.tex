@@ -170,34 +170,22 @@ MutualExclusion ==
 
 \section{Liveness}
 
-The liveness property is simpler, we just need to make sure under no
-circumstance the system hangs.
-
-All indices are eventually used and unused:
+For liveness, we want to check the queue never hangs. This can be described as 
+all indices are eventually used and unused:\\
 
 \begin{tla}
-    Liveness ==
-    \A k \in 0..N-1:
-    <>(buffer[k] # 0)
+Liveness ==
+    /\ \A k \in 0..N-1:
+        buffer[k] # 0 ~> buffer[k] = 0
+    /\ \A k \in 0..N-1:
+        buffer[k] = 0 ~> buffer[k] # 0
 \end{tla}
 \begin{tlatex}
-\@x{\@s{16.4} Liveness \.{\defeq}}%
-\@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
-\@x{\@s{16.4} {\Diamond} ( buffer [ k ] \.{\neq} 0 )}%
-\end{tlatex}
-
-Unused index 0 becomes used, used index 0 becomes unused.
-\begin{tla}
-    Liveness2 ==
-    /\ (buffer[0] = 0) ~> buffer[0] = 1000
-    /\ (buffer[0] = 1000) ~> buffer[0] = 0
-\end{tla}
-\begin{tlatex}
-\@x{\@s{16.4} Liveness2 \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 0 ) \.{\leadsto} buffer [ 0 ]
- \.{=} 1000}%
- \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 1000 ) \.{\leadsto} buffer [ 0 ]
- \.{=} 0}%
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{20.5} buffer [ k ] \.{\neq} 0 \.{\leadsto} buffer [ k ] \.{=} 0}%
+\@x{\@s{16.4} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{20.5} buffer [ k ] \.{=} 0 \.{\leadsto} buffer [ k ] \.{\neq} 0}%
 \end{tlatex}
 
 % \end{document}

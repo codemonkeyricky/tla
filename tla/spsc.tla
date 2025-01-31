@@ -43,7 +43,7 @@ Liveness ==
     /\ \A k \in 0..N-1:
         buffer[k] # 0 ~> buffer[k] = 0
     /\ \A k \in 0..N-1:
-        buffer[k] = 0 ~> buffer[k] = 0
+        buffer[k] = 0 ~> buffer[k] # 0
 
 Liveness2 ==
     /\ (\A k \in 0..N-1: buffer[k] = 0 ~> buffer[k] = 1000 + k)
@@ -104,7 +104,7 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "681cb983" /\ chksum(tla) = "cda1a5ca")
+\* BEGIN TRANSLATION (chksum(pcal) = "823a2b23" /\ chksum(tla) = "c3d2922")
 VARIABLES rptr, wptr, buffer, pc, stack
 
 (* define statement *)
@@ -136,8 +136,10 @@ unused ==
 
 
 Liveness ==
-    \A k \in 0..N-1:
-    <>(buffer[k] # 0)
+    /\ \A k \in 0..N-1:
+        buffer[k] # 0 ~> buffer[k] = 0
+    /\ \A k \in 0..N-1:
+        buffer[k] = 0 ~> buffer[k] # 0
 
 Liveness2 ==
     /\ (\A k \in 0..N-1: buffer[k] = 0 ~> buffer[k] = 1000 + k)
@@ -173,7 +175,7 @@ r_early_ret(self) == /\ pc[self] = "r_early_ret"
 
 r_read_buf(self) == /\ pc[self] = "r_read_buf"
                     /\ Assert(buffer[rptr] # 0, 
-                              "Failure of assertion at line 61, column 21.")
+                              "Failure of assertion at line 66, column 5.")
                     /\ pc' = [pc EXCEPT ![self] = "r_cs"]
                     /\ UNCHANGED << rptr, wptr, buffer, stack >>
 
@@ -204,7 +206,7 @@ w_early_ret(self) == /\ pc[self] = "w_early_ret"
 
 w_write_buf(self) == /\ pc[self] = "w_write_buf"
                      /\ Assert(buffer[wptr] = 0, 
-                               "Failure of assertion at line 72, column 21.")
+                               "Failure of assertion at line 82, column 5.")
                      /\ pc' = [pc EXCEPT ![self] = "w_cs"]
                      /\ UNCHANGED << rptr, wptr, buffer, stack >>
 
