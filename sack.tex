@@ -2,24 +2,22 @@
 
 \chapter{Selective Retransmit}
 
-Assume client device that playsback a video stream. Structurelly, a video is
-composed of frames, frames are then segmented into packets to stream across a 
-network. The client device recombines the packets into a frame, then sequence
-the frame to playback the video.\newline
+Assume a client device that plays a video stream. Structurally, a video is
+composed of frames, frames are then segmented into packets to stream across a
+network. The client device recombines the packets into a frame and then sequences the frame to playback the video.\newline
 
-However, network is not-deterministic. Depending on the route the packets take
+However, the network is not-deterministic. Depending on the route the packets take
 to get to the client, they may arrive out-of-order. The client may need to
-maintain a receive buffer for the packets, re-order the packets back into
-sequence before pushing the packets down to decoding engine.\newline
+maintain a receive buffer for the packets and re-order the packets back into
+sequence before pushing the packets down to the decoding engine.\newline
 
 The network may also drop packets if any of the switches along the way get
 busy. In the case of a packet drop, the client has a few options. The client can
-either discard the frame and let the decoding engine downstream to deal with it
-(which may ressult in visible artifacts during playback). The client can
-request the whole frame to be re-sent, which results in additional bandwidith
-consumption.  The client can selectively request the missing packet to be
-retransmited, which will minimize additional bandwidth consumption, but
-increases implementation complexity.\newline 
+either discard the frame and let the decoding engine downstream deal with it
+(which may result in visible artifacts during playback). The client can
+request the whole frame to be re-sent, which results in additional bandwidth consumption.  The client can selectively request the missing packet to be
+retransmitted, which will minimize additional bandwidth consumption but
+increase implementation complexity.\newline
 
 In this chapter, we will implement a simple selective retransmit
 algorithm.\newline
