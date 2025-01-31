@@ -48,17 +48,17 @@ that are harder to get wrong, and focus the model on the bits that have the
 highest return on investment.\newline
 
 One useful way of trimming out low value portion of the Spec is to audit the
-state dump. Even in the case of a non-terminating run, a partial state dump can
-help identify low value details we can remove from the Spec.\newline
+state dump. Even in the case of a non-terminating run, a partial state dump may
+help identify low value details that can be removed from the Spec.\newline
 
 One key value of TLA+ is it highlights all the corner cases in the system. Even
-if you end up removing certain details from the Spec, it still likely highlights
-to you certain condition you were unaware of.\newline
+if designer end up simplifying the Spec, it still likely highlights certain
+condition the designer was previously unaware of.\newline
 
 As a broad stroke principle: when the Spec has millions or higher more states,
-it is unlikely to terminate within a few seconds. From first principles if you
-can find one failure case in a million states, you can also likely reduce the 
-scope of the model to reproduce the failure in much fewer states.
+it is unlikely to terminate within a few seconds. From first principles if a
+designer can find one failure case in a million states, designer can also likely
+simplify the model to reproduce the failure in much fewer states.
 
 \section{Liveness}
 
