@@ -40,8 +40,10 @@ unused ==
 
 \* Confirm all indicies will be used eventually
 Liveness ==
-    \A k \in 0..N-1:
-    <>(buffer[k] # 0)
+    /\ \A k \in 0..N-1:
+        buffer[k] # 0 ~> buffer[k] = 0
+    /\ \A k \in 0..N-1:
+        buffer[k] = 0 ~> buffer[k] # 0
 
 Liveness2 ==
     /\ (\A k \in 0..N-1: buffer[k] = 0 ~> buffer[k] = 1000 + k)
@@ -248,7 +250,7 @@ Spec == /\ Init /\ [][Next]_vars
 \* END TRANSLATION 
 
 \* reader and writer cannot operator on the same index
-MUTEX ==
+MutualExclusion ==
     ~ ((pc[WRITER] = "w_cs") /\ (pc[READER] = "r_cs") /\ rptr = wptr)
 
 Inv_Basics == 
@@ -258,6 +260,5 @@ Inv_Basics ==
     /\ \/ Cardinality(to_be_read) + 1 = Cardinality(reading) 
        \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
        \/ Cardinality(to_be_read)     = Cardinality(reading)
-    /\ MUTEX
-
+    /\ MutualExclusion
 ===============================================================================

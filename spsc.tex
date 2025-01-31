@@ -17,7 +17,7 @@ read/write may appear out-of-order between CPUs. In this chapter, we will assume
 sequentially (even across CPUs) to focus the discussion on describing the system
 using TLA+.\\
 
-\section{Requirement}
+\section{Design}
 
 The following describes the SPSC queue requirements: 
 
@@ -64,7 +64,7 @@ content to be verified is pseudo implementation. While it is possible to specify
 SPSC in native TLA+, I find the approach more error-prone as each line is
 effectively an individual state to be modeled.\\
 
-The following is a snippet of the \textit{Spec} written in PlusCal:\\
+The following is a snippet of the spec written in PlusCal:\\
 \begin{ppcal}
 procedure reader()
 begin
@@ -81,7 +81,7 @@ r_upd_rtpr:
     rptr := (rptr + 1) % N;
     return;
 end procedure; 
-\end{ppcal}\newline
+\end{ppcal}
 \begin{tlatex}
 \@x{ {\p@procedure} reader ( )}%
 \@x{ {\p@begin}}%
@@ -100,6 +100,9 @@ end procedure;
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
 
+The reader checks if queue is empty by comparing read and write pointer. If 
+queue is empty, reader early returns. If queue is not empty, reader reads the
+index and advances the read pointer.\\
 \begin{ppcal}
 procedure writer() 
 begin
@@ -134,51 +137,43 @@ end procedure;
 \@x{\@s{16.4} {\p@return} {\p@semicolon}}%
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
+\\
+
+The writer checks if queue is full checking if it there's more space to write
+to.  If queue is full, the writer early exists. If queue is not full, writer
+writes to the queue and advances the write pointer.\\
+
+The key insight here is the read and write pointer effectively \textit{reserves}
+the index they are pointing to. The state of the indices are unknown to the
+other context.  Assume a reader index of k, the writer cannot write to index k
+since the reader might be reading from it. The only time writer can write to k
+is when read index is no longer k, suggesting the reader is done with the index. 
+The reason works symmetrically with the write index.
 
 \section{Safety}
 
-Some safety requirement we can enforce include:\\
+A correctness property for a lockless algorithm is to ensure reader and writer 
+cannot access the same index at the same time. It is possible for both reader and writer
+to be both working inside their critical section, but they \textit{cannot} be 
+working on the same index. The following formula describes this safety property:\\
 
 \begin{tla}
-MUTEX ==
+MutualExclusion ==
     ~ ((pc[WRITER] = "w_cs") /\ (pc[READER] = "r_cs") /\ rptr = wptr)
-
-Inv_Basics == 
-    /\ ((written \cup writing) \cup unused) = all
-    /\ reading \subseteq written                            \* reading is a subset of written
-    /\ \A i \in unused : buffer[i] = 0
-    /\ \/ Cardinality(to_be_read) + 1 = Cardinality(reading) 
-       \/ Cardinality(to_be_read)     = Cardinality(reading) + 1
-       \/ Cardinality(to_be_read)     = Cardinality(reading)
-    /\ MUTEX
 \end{tla}
 \begin{tlatex}
-\@x{ MUTEX \.{\defeq}}%
+\@x{ MutualExclusion \.{\defeq}}%
  \@x{\@s{16.4} {\lnot} ( ( pc [ WRITER ] \.{=}\@w{w\_cs} ) \.{\land} ( pc [
  READER ] \.{=}\@w{r\_cs} ) \.{\land} rptr \.{=} wptr )}%
-\@pvspace{8.0pt}%
-\@x{ Inv\_Basics \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} ( ( written \.{\cup} writing ) \.{\cup} unused )
- \.{=} all}%
-\@x{\@s{16.4} \.{\land} reading \.{\subseteq} written\@s{110.7}}%
-\@y{%
-  reading is a subset of written
-}%
-\@xx{}%
-\@x{\@s{16.4} \.{\land} \A\, i \.{\in} unused \.{:} buffer [ i ] \.{=} 0}%
- \@x{\@s{16.4} \.{\land} \.{\lor} Cardinality ( to\_be\_read ) \.{+} 1 \.{=}
- Cardinality ( reading )}%
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read )\@s{16.4} \.{=}
- Cardinality ( reading ) \.{+} 1}%
- \@x{\@s{16.4} \.{\lor} Cardinality ( to\_be\_read ) \.{=} Cardinality (
- reading )}%
-\@x{\@s{16.4} \.{\land} MUTEX}%
 \end{tlatex}
 \\
 
 \section{Liveness}
 
-All indices are eventually used:
+The liveness property is simpler, we just need to make sure under no
+circumstance the system hangs.
+
+All indices are eventually used and unused:
 
 \begin{tla}
     Liveness ==
