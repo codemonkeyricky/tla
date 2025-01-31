@@ -70,11 +70,11 @@ A few things to note:
     \item \textit{SetToSeq} is a macro from the community module \cite{tla_comm}
     to converts a set into a ordered tuple. To use community module, one can
     install required .tla files into the tla project source directly.
-    \item Finally, the single system lock is represented as $lock\_owner$. 
+    \item \textit{lock\_owner} represents the task that is current holding the lock. 
 \end{itemize}
 
 A task can be in three possible state: \textit{Ready}, \textit{Blocked} and
-\textit{Running}. The Spec includes required lock contention handling.\newline
+\textit{Running}. The Spec describes required lock contention handling.\newline
 
 \begin{tla}
 Ready == 
@@ -112,6 +112,7 @@ Next ==
 \@x{\@s{16.4} \.{\lor} Running}%
 \@x{\@s{16.4} \.{\lor} Ready}%
 \end{tlatex}
+\newline
 
 Next can update either a task that is running, or a task waiting to be
 scheduled.\newline
