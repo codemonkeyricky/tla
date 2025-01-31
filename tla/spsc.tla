@@ -43,7 +43,7 @@ Liveness ==
     /\ \A k \in 0..N-1:
         buffer[k] # 0 ~> buffer[k] = 0
     /\ \A k \in 0..N-1:
-        buffer[k] = 0 ~> buffer[k] # 0
+        buffer[k] = 0 ~> buffer[k] = 0
 
 Liveness2 ==
     /\ (\A k \in 0..N-1: buffer[k] = 0 ~> buffer[k] = 1000 + k)
