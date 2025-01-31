@@ -1,0 +1,80 @@
+\chapter{General Guideline}
+
+\section{Model Checker Debug}
+
+Debugging in TLC is a bit different than debugging with normal programs. A step
+in the model checker is really a state transition. Even if the model cheker
+completes, it's still worthwhile dump and audit the states just to make sure the
+Spec is defined correctly.
+
+\begin{verbatim}
+tlc elevator -dump out > /dev/null && cat out.dump | head -n5
+State 1:
+a = 1
+State 2:
+a = 2
+\end{verbatim}
+
+You may want to grep the output to look for state being set to certain value to 
+confirm the Spec is working as intended.
+
+\subsection{Dead Lock}
+
+Deadlock typically happens when the model checker ran out of things to do. This
+is typically a result of an incomplete Spec definition, where certain edge cases
+were not accounted for. The model checker typically provides a fairly
+comprehensive backtrace leading up to the dead lock to simplify debug.
+
+\subsection{Live Lock}
+
+Livelock happens when the model checker identifies a case where the liveness
+property is violated. An example is the elevator stuck going between two floors 
+instead of keep going to the top floor, or the system is stuck dropping and
+retransmit the same packet.\newline 
+
+These are typically fixed by providing additional fairness description to the
+Spec, telling the model checker how continue in the case of a live lock.\newline 
+
+For a detail fairness description please refer to Chapter~\ref{chap:fairness}.
+
+\section{Model Refinement}
+
+This is, in some sense, the \textit{art} associated with writing model checker
+verifiable TLA+ spec. Model checking is only valuable if it can be verified
+within a reasonable amount of time. Since the model complexity grows
+exponentially, there's little value in attempting to hyper-optimize the details.
+Designer should focus on optimizing the broad stroke, such as removing features 
+that are harder to get wrong, and focus the model on the bits that have the
+highest return on investment.\newline
+
+One useful way of trimming out low value portion of the Spec is to audit the
+state dump. Even in the case of a non-terminating run, a partial state dump may
+help identify low value details that can be removed from the Spec.\newline
+
+One key value of TLA+ is it highlights all the corner cases in the system. Even
+if designer end up simplifying the Spec, it still likely highlights certain
+condition the designer was previously unaware of.\newline
+
+As a broad stroke principle: when the Spec has millions or higher more states,
+it is unlikely to terminate within a few seconds. From first principles if a
+designer can find one failure case in a million states, designer can also likely
+simplify the model to reproduce the failure in much fewer states.
+
+\section{Liveness}
+
+While safety properties can catch per state contradictions, liveness properties
+allows you to verify the behaviour across a series of states. This is TLA+'s
+\textit{super power}. We are rarely interested only in the correctness of one
+state state in the system, but rather the correctness of system behaviour
+\textit{across} a set of states. \newline
+
+This book has already provided with a few examples of liveness properties: eg.
+elevator eventually makes it to the top floor, consensus protocol eventually
+converge, scheduling algorithm gaurantees a lock requester eventually gets the
+lock, etc. I argue any system worth the reader's time to model using TLA+ must 
+have interesting liveness properties to verify.\newline
+
+Unfortunately, liveness check also takes \textit{much} longer, since the very
+definition of verifying property across a series of states make the task very
+hard to parallelize. Care must go into refining the model to keep the model
+checker runtime reasonable.

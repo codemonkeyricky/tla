@@ -1,0 +1,133 @@
+% \begin{document}
+
+\chapter{Liveness}
+\label{chap:liveness}
+
+In this chapter we will go through a very simple state machine to demonstare
+liveness properties. Assume a simple three state system:\newline
+
+\begin{center}
+\begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
+  \node[state]  (q1)                {1};
+  \node[state]  (q2) [right of=q1]  {2};
+  \node[state]  (q3) [right of=q2]  {3};
+
+  \path[->]          (q1)  edge   []   node {} (q2);
+%   \path[->]          (q2)  edge   [bend left=20]   node {} (q1);
+
+  \path[->]          (q2)  edge   [bend left=20]   node {} (q3);
+  \path[->]          (q3)  edge   [bend left=20]   node {} (q2);
+\end{tikzpicture}
+\end{center}
+
+This can be described by the following Spec:\newline
+
+\begin{tla}
+--------------------------- MODULE liveness ----------------------------
+EXTENDS Naturals
+VARIABLES counter 
+vars == <<counter>>
+
+EventuallyAlways == <>[](counter = 3)
+AlwaysEventually == []<>(counter = 3)
+
+Init ==
+    /\ counter = 0
+
+Inc == 
+    /\ counter' = counter + 1
+
+Dec == 
+    /\ counter' = counter - 1
+
+Next ==
+    \/ /\ counter # 3
+       /\ Inc
+    \/ /\ counter = 3
+       /\ Dec
+
+Spec ==
+  /\ Init
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+=============================================================================
+\end{tla}
+\begin{tlatex}
+\@x{}\moduleLeftDash\@xx{ {\MODULE} liveness}\moduleRightDash\@xx{}%
+\@x{ {\EXTENDS} Naturals}%
+\@x{ {\VARIABLES} counter}%
+\@x{ vars \.{\defeq} {\langle} counter {\rangle}}%
+\@pvspace{8.0pt}%
+\@x{ EventuallyAlways \.{\defeq} {\Diamond} {\Box} ( counter \.{=} 3 )}%
+\@x{ AlwaysEventually \.{\defeq} {\Box} {\Diamond} ( counter \.{=} 3 )}%
+\@pvspace{8.0pt}%
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} counter \.{=} 0}%
+\@pvspace{8.0pt}%
+\@x{ Inc \.{\defeq}}%
+\@x{ \.{\land} counter \.{'} \.{=} counter \.{+} 1}%
+\@pvspace{8.0pt}%
+\@x{ Dec \.{\defeq}}%
+\@x{ \.{\land} counter \.{'} \.{=} counter \.{-} 1}%
+\@pvspace{8.0pt}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \.{\land} counter \.{\neq} 3}%
+\@x{\@s{16.4} \.{\land} Inc}%
+\@x{\@s{16.4} \.{\lor} \.{\land} counter \.{=} 3}%
+\@x{\@s{16.4} \.{\land} Dec}%
+\@pvspace{8.0pt}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{8.2} \.{\land} Init}%
+\@x{\@s{8.2} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{8.2} \.{\land} {\WF}_{ vars} ( Next )}%
+\@x{}\bottombar\@xx{}%
+\end{tlatex}
+
+Note the required fairness description in the spec. Without fairness the spec is
+allowed to stuttering and model checker cannot verify liveness properties. 
+
+\section{Always Eventually}
+
+We want to verify the system always eventually makes it to state 3. This can be
+described by the following liveness property:\newline
+
+\begin{tla}
+    AlwaysEventually == []<>(counter = 3)
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} AlwaysEventually \.{\defeq} {\Box} {\Diamond} ( counter \.{=} 3
+ )}%
+\end{tlatex}
+\newline
+
+Once the system makes it to state 3, the system is stuck in a loop transitioning
+state 2 and 3. It doesn't \textit{remain} in state 3, but it does \textit{always
+eventually} make it to state 3. The system as described fulfills this liveness
+property.
+
+\section{Eventually Always}
+
+However, the system does not \textit{eventually always} stay in state 3, because
+the system toggles between state 2 and 3. This is described by the following
+liveness property: 
+
+\begin{tla}
+    AlwaysEventually == []<>(counter = 3)
+\end{tla}
+\begin{tlatex}
+ \@x{\@s{16.4} AlwaysEventually \.{\defeq} {\Box} {\Diamond} ( counter \.{=} 3
+ )}%
+\end{tlatex}
+
+To satisfy this liveness property, we will need to remove the transition from 3
+to 2: 
+\begin{tla}
+Next ==
+    \/ /\ counter # 3
+       /\ Inc
+\end{tla}
+
+
+\section{Leads To}
+
+% \end{document}
