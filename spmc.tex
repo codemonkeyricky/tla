@@ -222,14 +222,17 @@ must operate on different indices:\newline
 \begin{tla}
 ExclusiveReservation == 
     \A x, y \in READERS: 
-        (x /= y /\ pc[x] = "r_read_buf" /\ pc[y] = "r_read_buf") 
+        (/\ x /= y 
+         /\ pc[x] = "r_read_buf" 
+         /\ pc[y] = "r_read_buf") 
             => (rptr[x] # rptr[y])
 \end{tla}
 \begin{tlatex}
 \@x{ ExclusiveReservation \.{\defeq}}%
 \@x{\@s{16.4} \A\, x ,\, y \.{\in} READERS \.{:}}%
- \@x{\@s{16.4} ( x \.{\neq} y \.{\land} pc [ x ] \.{=}\@w{r\_read\_buf}
- \.{\land} pc [ y ] \.{=}\@w{r\_read\_buf} )}%
+\@x{\@s{16.4} ( \.{\land} x \.{\neq} y}%
+\@x{\@s{20.5} \.{\land} pc [ x ] \.{=}\@w{r\_read\_buf}}%
+\@x{\@s{20.5} \.{\land} pc [ y ] \.{=}\@w{r\_read\_buf} )}%
 \@x{\@s{20.5} \.{\implies} ( rptr [ x ] \.{\neq} rptr [ y ] )}%
 \end{tlatex}
 \newline
@@ -239,13 +242,16 @@ on different indices as well:\newline
 \begin{tla}
 ExclusiveReadWrite == 
     \A x \in READERS: 
-        (pc[x] = "r_read_buf" /\ pc[WRITER] = "w_write_buf") => (rptr[x] # wptr)
+        (/\ pc[x] = "r_read_buf" 
+         /\ pc[WRITER] = "w_write_buf") 
+            => (rptr[x] # wptr)
 \end{tla}
 \begin{tlatex}
 \@x{ ExclusiveReadWrite \.{\defeq}}%
 \@x{\@s{16.4} \A\, x \.{\in} READERS \.{:}}%
- \@x{\@s{20.5} ( pc [ x ] \.{=}\@w{r\_read\_buf} \.{\land} pc [ WRITER ]
- \.{=}\@w{w\_write\_buf} ) \.{\implies} ( rptr [ x ] \.{\neq} wptr )}%
+\@x{\@s{20.5} ( \.{\land} pc [ x ] \.{=}\@w{r\_read\_buf}}%
+\@x{\@s{24.6} \.{\land} pc [ WRITER ] \.{=}\@w{w\_write\_buf} )}%
+\@x{\@s{24.6} \.{\implies} ( rptr [ x ] \.{\neq} wptr )}%
 \end{tlatex}
 
 \section{Liveness}
@@ -278,20 +284,26 @@ system remains functional after such scenario.\newline
 \begin{tla}
 Liveness2 == 
     \A k \in 0..N-3:
-    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING)
+    /\ (/\ status[k] = READING 
+        /\ status[k+1] = UNUSED 
+        /\ status[k+2] = READING)
         ~> (status[k] = WRITTEN)
-    /\ (status[k] = READING /\ status[k+1] = UNUSED /\ status[k+2] = READING)
+    /\ (/\ status[k] = READING 
+        /\ status[k+1] = UNUSED 
+        /\ status[k+2] = READING)
         ~> (status[k+2] = WRITTEN)
 \end{tla}
 \begin{tlatex}
 \@x{ Liveness2 \.{\defeq}}%
 \@x{\@s{16.4} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 3 \.{:}}%
- \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} READING \.{\land} status [ k
- \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} READING )}%
-\@x{\@s{16.4} \.{\leadsto} ( status [ k ] \.{=} WRITTEN )}%
- \@x{\@s{16.4} \.{\land} ( status [ k ] \.{=} READING \.{\land} status [ k
- \.{+} 1 ] \.{=} UNUSED \.{\land} status [ k \.{+} 2 ] \.{=} READING )}%
-\@x{\@s{16.4} \.{\leadsto} ( status [ k \.{+} 2 ] \.{=} WRITTEN )}%
+\@x{\@s{16.4} \.{\land} ( \.{\land} status [ k ] \.{=} READING}%
+\@x{\@s{20.5} \.{\land} status [ k \.{+} 1 ] \.{=} UNUSED}%
+\@x{\@s{20.5} \.{\land} status [ k \.{+} 2 ] \.{=} READING )}%
+\@x{\@s{20.5} \.{\leadsto} ( status [ k ] \.{=} WRITTEN )}%
+\@x{\@s{16.4} \.{\land} ( \.{\land} status [ k ] \.{=} READING}%
+\@x{\@s{20.5} \.{\land} status [ k \.{+} 1 ] \.{=} UNUSED}%
+\@x{\@s{20.5} \.{\land} status [ k \.{+} 2 ] \.{=} READING )}%
+\@x{\@s{20.5} \.{\leadsto} ( status [ k \.{+} 2 ] \.{=} WRITTEN )}%
 \end{tlatex}
 
 % \end{document}
