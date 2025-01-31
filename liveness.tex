@@ -6,20 +6,21 @@
 While safety properties can catch per-state contradictions, liveness properties
 allow you to verify the behavior across a series of states. This is TLA+'s
 \textit{superpower}. We are rarely interested only in the correctness of one
-state in the system, but rather in the correctness of system behavior \textit{across} a set of states. \newline
+state in the system, but rather in the correctness of system behavior \textit{across} a set of states.\\
 
 This book has already provided a few examples of liveness properties: eg.
 The elevator eventually makes it to the top floor, consensus protocol eventually
 converges, the scheduling algorithm guarantees a lock requester eventually gets the
 lock, etc. I argue any system worth the reader's time to model using TLA+ must 
-have interesting liveness properties to verify.\newline
+have interesting liveness properties to verify.\\
 
 Unfortunately, liveness check also takes \textit{much} longer, since the very
 definition of verifying property across a series of states makes the task very
 hard to parallelize. Care must go into refining the model to keep the model
-checker runtime reasonable.
+checker runtime reasonable. In this chapter, we will go through a very simple
+state machine to demonstrate liveness properties. \\
 
-In this chapter, we will go through a very simple state machine to demonstrate liveness properties. Assume a simple three-system system:\newline
+Assume a simple three-system system:\\
 
 \begin{center}
 \begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
@@ -35,7 +36,7 @@ In this chapter, we will go through a very simple state machine to demonstrate l
 \end{tikzpicture}
 \end{center}
 
-This can be described by the following Spec:\newline
+This can be described by the following spec:\newline
 
 \begin{tla}
 --------------------------- MODULE liveness ----------------------------
@@ -98,13 +99,13 @@ Spec ==
 \@x{}\bottombar\@xx{}%
 \end{tlatex}
 
-Note the required fairness description in the spec. Without fairness the spec is
-allowed to stuttering and model checker cannot verify liveness properties. 
+Note the fairness description in the spec. Without fairness the spec is
+allowed to stutter and fail any liveness property checks.
 
 \section{Always Eventually}
 
-We want to verify the system always eventually makes it to state 3. This can be
-described by the following liveness property:\newline
+We want to verify the system \textit{always eventually} transition state 3. This
+can be described by the following liveness property:\newline
 
 \begin{tla}
     AlwaysEventually == []<>(counter = 3)
@@ -117,14 +118,15 @@ described by the following liveness property:\newline
 
 Once the system makes it to state 3, the system is stuck in a loop transitioning
 state 2 and 3. It doesn't \textit{remain} in state 3, but it does \textit{always
-eventually} make it to state 3. The system as described fulfills this liveness
+eventually} transition to state 3. The system as described fulfills this liveness
 property.
 
 \section{Eventually Always}
 
-However, the system does not \textit{eventually always} stay in state 3, because
-the system toggles between state 2 and 3. This is described by the following
-liveness property: \newline
+However, the system does not \textit{eventually always} remain in state 3, because
+the system toggles between state 2 and 3. The liveness property to check the
+system \textit{eventually always} transition to and remain state 3 is shown
+below:\\
 
 \begin{tla}
     EventuallyAlways == <>[](counter = 3)
@@ -135,8 +137,8 @@ liveness property: \newline
 \end{tlatex}
 \newline
 
-To satisfy this liveness property, we will need to \textit{remove} the transition from 3
-to 2:
+To satisfy this liveness property, we will need to \textit{remove} the
+transition from 3 to 2, which updates the state diagram like below:
 
 \begin{center}
 \begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
@@ -152,11 +154,11 @@ to 2:
 \end{tikzpicture}
 \end{center}
 
-We need to remove the corresponding Dec action from Next:\newline
+We need to remove the corresponding \textit{Dec} action from Next:\\
 \begin{tla}
 Next ==
-    \/ /\ counter # 3
-       /\ Inc
+    /\ counter # 3
+    /\ Inc
 \end{tla}
 \begin{tlatex}
 \@x{ Next \.{\defeq}}%
@@ -171,10 +173,10 @@ liveness property.\newline
 Note that the system still \textit{always eventually} make it to state 3, so the
 updated spec satisfies both \textit{AlwaysEventually} and
 \textit{EventuallyAlways} liveness properties. This is not to say designer
-should always use \textit{eventually always}. Some system may never converge 
-onto a fixed state. For example, in a consesus system any given server may crash
-and disturb the converged state. In such case \textit{eventually always} will 
-never be true, but \textit{always eventually} will be.
+should always use \textit{eventually always}. Some system may \textit{never}
+converge onto a fixed state. For example, in a consesus system any given server
+may crash and disturb the converged state. In such case \textit{eventually
+always} will never be true, but \textit{always eventually} can be true.
 
 \section{Leads To}
 
