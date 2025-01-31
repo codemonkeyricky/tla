@@ -8,21 +8,20 @@ are non-trivial OS abstractions. Every process maintains its own virtual memory
 space for security reasons. Context switching process requires the OS to "clean"
 the hardware before running the new process.\newline
 
-For emedded devices such as hard drives or network cards, the security
+For embedded devices such as hard drives or network cards, the security
 consideration may be relaxed as users are typically not allowed to run arbitrary
-code on the device. Sometimes these products don't have full blown operating
+code on the device. Sometimes these products don't have a full-blown operating
 system to save on memory and storage footprint, but still need some sort of
 scheduler to manage the tasks.\newline
 
-To solve the c10k \cite{c10k} problem, some languages (eg. Rust) supports
-asynchronous programming, allowing the user to enable task switching 
-\textit{within} the same process to scale up system throughput. However,
+To solve the c10k \cite{c10k} problem, some languages (eg. Rust) support 
+asynchronous programming, allowing the user to enable task switching \textit{within} in the same process to scale up system throughput. However,
 language like Rust only provides the \textit{language support} for asynchronous
-programming, and user must supply their own async runtime. The async runtime
+programming, and user must supply their async runtime. The async runtime
 must also include a scheduler to manage the tasks.\newline
 
-Hopefully this provides enough context to why implementing a scheduler may be of
-interest. In this chapter we will implement a very simple cooperative
+Hopefully, this provides enough context as to why implementing a scheduler may be of
+interest. In this chapter, we will implement a very simple cooperative
 scheduler with tasks that share a single lock.
 
 \section{Design}
