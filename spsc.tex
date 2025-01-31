@@ -84,6 +84,23 @@ r_upd_rtpr:
     return;
 end procedure; 
 \end{ppcal}\newline
+\begin{tlatex}
+\@x{ {\p@procedure} reader ( )}%
+\@x{ {\p@begin}}%
+\@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} rptr \.{=} wptr {\p@then}}%
+\@x{\@s{16.4} r\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@assert} buffer [ rptr ] \.{\neq} 0 {\p@semicolon}}%
+\@x{ r\_cs\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} buffer [ rptr ] \.{:=} 0 {\p@semicolon}}%
+\@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} rptr \.{:=} ( rptr \.{+} 1 ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\end{tlatex}
 
 \begin{ppcal}
 procedure writer() 
@@ -102,6 +119,23 @@ w_upd_wptr:
     return;
 end procedure; 
 \end{ppcal}\newline
+\begin{tlatex}
+\@x{ {\p@procedure} writer ( )}%
+\@x{ {\p@begin}}%
+\@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@if} ( wptr \.{+} 1 ) \.{\%} N \.{=} rptr {\p@then}}%
+\@x{\@s{16.4} w\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
+\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} {\p@assert} buffer [ wptr ] \.{=} 0 {\p@semicolon}}%
+\@x{ w\_cs\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} buffer [ wptr ] \.{:=} wptr \.{+} 1000 {\p@semicolon}}%
+\@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{16.4} wptr \.{:=} ( wptr \.{+} 1 ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
+\@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
+\end{tlatex}
 
 \section{Safety}
 
@@ -172,7 +206,5 @@ Unused index 0 becomes used, used index 0 becomes unused.
  \@x{\@s{16.4} \.{\land} ( buffer [ 0 ] \.{=} 1000 ) \.{\leadsto} buffer [ 0 ]
  \.{=} 0}%
 \end{tlatex}
-
-\section{Configuration}
 
 % \end{document}
