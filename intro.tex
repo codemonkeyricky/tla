@@ -6,37 +6,49 @@
 Years ago, I worked on a proprietary low-power processor in an embedded
 system. The processor ran a microcode featuring a custom instruction set. To
 enter a low-power state, a set of (possibly hundreds) instructions were
-executed. Theseinstructions progressively put the system in a lower power state.
+executed. These instructions progressively put the system in a lower power state.
 For example: Turn off IP A, then turn off IP B, then turn off the power island
-to the IPs. Tosave cost and power, the low-power processor had very limited
-debuggability support.\newline
+to the IPs. To save cost and power, the low-power processor had very limited
+debuggability support.\\
 
-An experienced reader may start to notice some red flags.\newline
+An experienced reader may start to notice some red flags.\\
 
 If the microcode attempts to access the memory interface when the power
-islandhas been shut off, the processor will hang. Since the power island has
+island has been shut off, the processor will hang. Since the power island has
 been shutoff, the physical hardware debug port is also unavailable, leaving the
-developerwith \textit{no way} of live debugging-related problems. At this point,
-thedeveloper needs to siphon through (possibly hundreds) of instructions to
-catch invariant violation \textit{manually}.\newline
+developer with \textit{no way} of live debugging-related problems. At this point,
+the developer needs to siphon through (possibly hundreds) of instructions to
+catch invariant violation \textit{manually}.\\
 
 If the microcode attempts to access the memory interface when the power
-islandhas been shut off, the processor will hang. Since the power island has
-beenshut off, the physical hardware debug port is also unavailable, leaving
-thedeveloper with no way to debug related problems. At this point, the
-developerneeds to manually inspect (possibly hundreds) of instructions to catch
-invariantviolations.\newline
+island has been shut off, the processor will hang. Since the power island has
+been shut off, the physical hardware debug port is also unavailable, leaving
+the developer with no way to debug related problems. At this point, the
+developer needs to manually inspect (possibly hundreds) of instructions to catch
+invariant violations.\\
 
-As one can imagine, maintaining the microcode was very expensive. Fortunately,the proprietary low-power processor only had a handful of instructions, so I createdan emulator for this proprietary processor to verify the microcode beforedeploying it on target. The emulator models the processor states as a stategraph, with executed instruction, transitions the state machine to the nextstate. At every state, all the invariants are verified. Example invariants include:
+As one can imagine, maintaining the microcode was very expensive.
+Fortunately, the proprietary low-power processor only had a handful of
+instructions, so I created an emulator for this proprietary processor to verify
+the microcode before deploying it on target. The emulator models the processor
+states as a state graph, with executed instruction, transitions the state machine
+to the next state. At every state, all the invariants are verified. Example
+invariants include:
 \begin{itemize} 
     \item Accessing memory interface after power off leads to a hang 
     \item Accessing certain register in certain chip revision leads to a hang \item Verify IPs are shut off in the allowed order
 \end{itemize}
-The verification algorithm was implemented using a \textit{depth-first
-search}the algorithm, providing 100\% microcode coverage before deployment on
-target.\newline
+The verification algorithm was implemented using a \textit{depth-first-search},
+providing 100\% microcode coverage before deployment on target.\\
 
-To generalize, we can model an arbitrary system as a set of states and a setof invariants that must be upheld at all times. The complexity of such an arbitrary system generally grows quadratically as the number of statesgrows linearly (eg. in an N-state system, adding state N+1 may introduce Ntransitions into the new state). There are many engineering problems witha large number of states, such as lockless or wait-free data structures,distributed algorithms, OS schedulers, consensus protocols, and more. As thenumber of states grows, the problem becomes more challenging for designers toreason about.\newline
+To generalize, we can model an arbitrary system as a set of states and a setof
+invariants that must be upheld at all times. The complexity of such an arbitrary
+system generally grows quadratically as the number of states grows linearly (eg.
+in an N-state system, adding state N+1 may introduce N transitions into the new
+state). There are many engineering problems with a large number of states, such
+as lockless or wait-free data structures, distributed algorithms, OS schedulers,
+consensus protocols, and more. As the number of states grows, the problem becomes
+more challenging for designers to reason about.\newline
 
 So, how do we produce a system that is \textit{correct by design?} 
 
@@ -46,91 +58,91 @@ Fast forward to now: I stumbled across TLA+, a formalized solution of what I
 waslooking for.\newline
 
 The Turing Award winner Leslie Lamport invented the TLA+ in 1999, but TLA+
-didn'tappear to have caught on until the 2010s. My opinion is that TLA+ was
+didn't appear to have caught on until the 2010s. My opinion is that TLA+ was
 invented aheadof its time, and the problem complexity finally caught up in the
 past decade orso, to allow TLA+ to demonstrate its strength.\newline
 
 We are at a point in the technology curve where vertical scaling is no
-longerpractical, with CPU speed plateaued in the past decade or so. The industry
-isexploring horizontal scaling solutions, such as hardware vendors focusing on
-addingmore CPU cores, or software vendors buying many low-end hardware instead
-of afew high-end hardware. This shifts the technology complexity from vertical
-tohorizontal, demanding solutions to maximize concurrent resource
-utilization.There is one slight problem though:\newline
+longer practical, with CPU speed plateaued in the past decade or so. The industry
+is exploring horizontal scaling solutions, such as hardware vendors focusing on
+adding more CPU cores, or software vendors buying many low-end hardware instead
+of a few high-end hardware. This shifts the technology complexity from vertical
+to horizontal, demanding solutions to maximize concurrent resource
+utilization. There is one slight problem though:\newline
 
 \textit{Humans are not good at concurrent reasoning}. \newline
 
 Our cognitive system is optimized for sequential reasoning. Enumerating
-allscenarios in one's mind to ensure an arbitrary design accommodates all
-thecorner cases are challenging.\newline
+all scenarios in one's mind to ensure an arbitrary design accommodates all
+the corner cases are challenging.\newline
 
-Consider a distributed system. The system is a cluster of independentlyoperating
-entities and need to somehow collectively offer the correct systembehavior,
-while any one of the machines may receive instructions out of order,crash,
+Consider a distributed system. The system is a cluster of independently operating
+entities and need to somehow collectively offer the correct system behavior,
+while any one of the machines may receive instructions out of order, crash,
 recover, etc. \newline
 
 Consider a single producer multiple consumer lockless queue. The consumers may
 reserve an index in the queue in a certain order but may release it in a
-different order. What if one reader is slow, and another reader is super fast
+different order. What if one reader is slow, and another reader is superfast
 and possibly lapses the slow reader? \newline
 
 Consider an OS scheduler with locks. Assume all the processes have the
-samepriority. Can a process starve the other processes by repeatedly acquiring
-andreleasing the lock? How do we ensure scheduling is fair?\newline
+same priority. Can a process starve the other processes by repeatedly acquiring
+and releasing the lock? How do we ensure scheduling is fair?\newline
 % One \textit{anti-solution} is to assert that these are easy problems for designer% with the right experience and skill set. While this may be true, it also isn't% very scalable. It is likely to your organization's 
 The \textit{anti-pattern} is to keep band-aiding the design until the user
-stopsfiling bug reports. This is never ideal. Per Murphy's law, anything that
-can gowrong \textit{will go wrong}, and a hard-to-reproduce bug will come in at
-themost inconvenient time. How do we make sure the solution is \textit{correct
-bydesign}? To solve this problem, we must rely on tools to do the
-reasoning\textit{for us}.
+stops filing bug reports. This is never ideal. Per Murphy's law, anything that
+can go wrong \textit{will go wrong}, and a hard-to-reproduce bug will come in at
+th emost inconvenient time. How do we make sure the solution is \textit{correct
+by design}? To solve this problem, we must rely on tools to do the
+reasoning \textit{for us}.
 
 \section{What is TLA+?}
 
 TLA+ is a \textit{system specification language} to describe a system
-withoutimplementation details. TLA+ allows a designer to describe a system as a
-set ofstates with transitions from one state to the next. Designers can
-describeinvariants that must hold in every state and liveness properties a
-sequenceof states must satisfy. One of TLA+'s keys is once the system is modeled
-as afinite set of states, the states can be \textit{exhaustively} explored
-(viabreath-first-search) to ensure properties are upheld throughout the entire
-statespace (either per state or a sequence of states).
+withou timplementation details. TLA+ allows a designer to describe a system as a
+set of states with transitions from one state to the next. Designers can
+describe invariants that must hold in every state and liveness properties a
+sequence of states must satisfy. One of TLA+'s keys is once the system is modeled
+as a finite set of states, the states can be \textit{exhaustively} explored
+(via breath-first-search) to ensure properties are upheld throughout the entire
+state space (either per state or a sequence of states).
 
 \section{About This Book}
 To my surprise, there is not as much material on TLA+ as I assumed for
-suchcritical tools in a designer's toolbox. This book was initially a set of
-notes Itook while learning TLA+. I decided to formalize these notes into this
-shortbook, which I hope the readers will find helpful in their TLA+
+such critical tools in a designer's toolbox. This book was initially a set of
+notes I took while learning TLA+. I decided to formalize these notes into this
+short book, which I hope the readers will find helpful in their TLA+
 journey.\newline
 
-The book intends to teach the reader how to write TLA+ spec for theirdesign to
-provide confidence in \textit{design correctness}. This book istargeted at
-software designers, hardware designers, system architects, and ingeneral anyone
+The book intends to teach the reader how to write TLA+ spec for their design to
+provide confidence in \textit{design correctness}. This book is targeted at
+software designers, hardware designers, system architects, and in general anyone
 interested in designing correct systems.\newline 
 
 To get the most out of the book, the reader should have general computing
-scienceknowledge. The reader doesn't need to be an expert in a particular
-language tounderstand this book; TLA+ is effectively its language. This book is
+science knowledge. The reader doesn't need to be an expert in a particular
+language to understand this book; TLA+ is effectively its language. This book is
 example-driven and will go through designs such as lockless queues, simple
-taskschedulers, consensus algorithms, etc. Readers will likely enjoy a deeper
-insightif there is familiarity with these topics.
+tasks chedulers, consensus algorithms, etc. Readers will likely enjoy a deeper
+insight if there is familiarity with these topics.
 
 \section{How to Use This Book}
 
 This book was designed to be used as a reference, providing examples
-andreferences using TLA+.\newline
+and references using TLA+.\newline
 
 Examples are split into two categories: Examples written using TLA+ and
-exampleswritten using PlusCal (the C-like syntax that transpiles down to TLA+).
-Ibelieve they are useful for different use cases. The differences will
-behighlighted in their respective sections. All examples will follow a
-similarlayout, covering the problem statement, design, spec, and safety
+examples written using PlusCal (the C-like syntax that transpiles down to TLA+).
+I believe they are useful for different use cases. The differences will
+be highlighted in their respective sections. All examples will follow a
+similar layout, covering the problem statement, design, spec, and safety
 properties.\newline
 
 All examples in this book will be presented using TLA+
-\textit{mathemeticalnotation}. Converting between Mathematical and ASCII
-notation is trivial due tothe one-to-one mapping. Readers are encouraged to
+\textit{mathemetical notation}. Converting between Mathematical and ASCII
+notation is trivial due to the one-to-one mapping. Readers are encouraged to
 consult Table 8 in \cite{ss} as needed.\newline
 
-The last part of the book provides language references and some focusedtopics.
+The last part of the book provides language references and some focused topics.
 Readers can use the last part of the book as a general reference. 
