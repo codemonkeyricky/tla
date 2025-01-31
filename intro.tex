@@ -68,32 +68,32 @@ of a few high-end hardware. This shifts the technology complexity from vertical
 to horizontal, demanding solutions to maximize concurrent resource
 utilization. There is one slight problem though:\\
 
-\textit{Humans are not good at concurrent reasoning}. \newline
+\textit{Humans are not good at concurrent reasoning}.\\
 
 Our cognitive system is optimized for sequential reasoning. Enumerating
 all scenarios in one's mind to ensure an arbitrary design accommodates all
-the corner cases is challenging.\newline
+the corner cases is challenging.\\
 
 Consider a distributed system. The system is a cluster of independently operating
 entities and need to somehow collectively offer the correct system behavior,
 while any one of the machines may receive instructions out of order, crash,
-recover, etc. \newline
+recover, etc.\\
 
 Consider a single producer multiple consumer lockless queue. The consumers may
 reserve an index in the queue in a certain order but may release it in a
 different order. What if one reader is slow, and another reader is superfast
-and possibly lapses the slow reader? \newline
+and possibly lapses the slow reader?\\
 
-Consider an OS scheduler with locks. Assume all the processes have the
-same priority. Can a process starve the other processes by repeatedly acquiring
-and releasing the lock? How do we ensure scheduling is fair?\newline
-% One \textit{anti-solution} is to assert that these are easy problems for designer% with the right experience and skill set. While this may be true, it also isn't very scalable. It is likely to your organization's 
-The \textit{anti-pattern} is to keep band-aiding the design until the user
-stops filing bug reports. This is never ideal. Per Murphy's law, anything that
-can go wrong \textit{will go wrong}, and a hard-to-reproduce bug will come in at
-the most inconvenient time. How do we make sure the solution is \textit{correct
-by design}? To solve this problem, we must rely on tools to do the
-reasoning \textit{for us}.
+Consider an OS scheduler with locks. Assume all the processes have the same
+priority. Can a process starve the other processes by repeatedly acquiring and
+releasing the lock? How do we ensure scheduling is fair?\\
+
+The \textit{anti-pattern} is to keep band-aiding the design until the user stops
+filing bug reports. This is never ideal. Per Murphy's law, anything that can go
+wrong \textit{will go wrong}, and a hard-to-reproduce bug will come in at the
+most inconvenient time. How do we make sure the solution is \textit{correct by
+design}? To solve this problem, we must rely on tools to do the reasoning
+\textit{for us}.
 
 \section{What is TLA+?}
 
@@ -137,10 +137,10 @@ be highlighted in their respective sections. All examples will follow a
 similar layout, covering the problem statement, design, spec, and safety
 properties.\newline
 
-All examples in this book will be presented using TLA+
-\textit{mathemetical notation}. Converting between Mathematical and ASCII
-notation is trivial due to the one-to-one mapping. Readers are encouraged to
-consult Table 8 in \cite{ss} as needed.\newline
+All examples in this book will be presented using TLA+ \textit{mathematical
+notation}. Converting between Mathematical and ASCII notation is trivial due to
+the one-to-one mapping. Readers are encouraged to consult Table 8 in \cite{ss}
+as needed.\\
 
 The last part of the book provides language references and some focused topics.
 Readers can use the last part of the book as a general reference. 
