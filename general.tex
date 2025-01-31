@@ -60,21 +60,4 @@ it is unlikely to terminate within a few seconds. From first principles if a
 designer can find one failure case in a million states, designer can also likely
 simplify the model to reproduce the failure in much fewer states.
 
-\section{Liveness}
 
-While safety properties can catch per state contradictions, liveness properties
-allows you to verify the behaviour across a series of states. This is TLA+'s
-\textit{super power}. We are rarely interested only in the correctness of one
-state state in the system, but rather the correctness of system behaviour
-\textit{across} a set of states. \newline
-
-This book has already provided with a few examples of liveness properties: eg.
-elevator eventually makes it to the top floor, consensus protocol eventually
-converge, scheduling algorithm gaurantees a lock requester eventually gets the
-lock, etc. I argue any system worth the reader's time to model using TLA+ must 
-have interesting liveness properties to verify.\newline
-
-Unfortunately, liveness check also takes \textit{much} longer, since the very
-definition of verifying property across a series of states make the task very
-hard to parallelize. Care must go into refining the model to keep the model
-checker runtime reasonable.
