@@ -205,7 +205,7 @@ c == a @@ b
 \* Subtraction
 d == [x \in (DOMAIN c \ DOMAIN b) |-> c[x]]
 
-\* Create a mapping with keys a, b, c with values {}, {}, {}
+\* Create a mapping with keys a, b, c with values \{\}, \{\}, \{\}
 e == [k \in SetA |-> {}]
 
 \* Create a mapping that is the same as e, except key a's value is {"a", "b", "c"}
@@ -241,7 +241,7 @@ f == [e EXCEPT !["a"] = {"a", "b", "c"}]
 \@pvspace{8.0pt}%
 \@x{}%
 \@y{%
-  Create a mapping with keys a, b, c with values {}, {}, {}
+  Create a mapping with keys a, b, c with values \{\}, \{\}, \{\}
 }%
 \@xx{}%
 \@x{ e \.{\defeq} [ k \.{\in} SetA \.{\mapsto} \{ \} ]}%
