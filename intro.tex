@@ -1,4 +1,3 @@
-
 \chapter{Motivation}
 
 \section{Catching Problems Early} 
@@ -15,7 +14,7 @@ An experienced reader may start to notice some red flags.\\
 
 If the microcode attempts to access the memory interface when the power
 island has been shut off, the processor will hang. Since the power island has
-been shutoff, the physical hardware debug port is also unavailable, leaving the
+been shut off, the physical hardware debug port is also unavailable, leaving the
 developer with \textit{no way} of live debugging-related problems. At this point,
 the developer needs to siphon through (possibly hundreds) of instructions to
 catch invariant violation \textit{manually}.\\
@@ -36,31 +35,30 @@ to the next state. At every state, all the invariants are verified. Example
 invariants include:
 \begin{itemize} 
     \item Accessing memory interface after power off leads to a hang 
-    \item Accessing certain register in certain chip revision leads to a hang \item Verify IPs are shut off in the allowed order
+    \item Accessing certain register in certain chip revision leads to a hang 
+    \item Verify IPs are shut off in the allowed order
 \end{itemize}
 The verification algorithm was implemented using a \textit{depth-first-search},
 providing 100\% microcode coverage before deployment on target.\\
 
-To generalize, we can model an arbitrary system as a set of states and a setof
-invariants that must be upheld at all times. The complexity of such an arbitrary
-system generally grows quadratically as the number of states grows linearly (eg.
-in an N-state system, adding state N+1 may introduce N transitions into the new
+To generalize, we can model an arbitrary system as a set of states and a set of invariants that must be upheld at all times. The complexity of such an arbitrarysystem generally grows quadratically as the number of states grows linearly (eg.
+In an N-state system, adding state N+1 may introduce N transitions into the new
 state). There are many engineering problems with a large number of states, such
 as lockless or wait-free data structures, distributed algorithms, OS schedulers,
 consensus protocols, and more. As the number of states grows, the problem becomes
-more challenging for designers to reason about.\newline
+more challenging for designers to reason about.\\
 
 So, how do we produce a system that is \textit{correct by design?} 
 
 \section{The Generalized Problem}
 
 Fast forward to now: I stumbled across TLA+, a formalized solution of what I
-waslooking for.\newline
+was looking for.\\
 
 The Turing Award winner Leslie Lamport invented the TLA+ in 1999, but TLA+
 didn't appear to have caught on until the 2010s. My opinion is that TLA+ was
-invented aheadof its time, and the problem complexity finally caught up in the
-past decade orso, to allow TLA+ to demonstrate its strength.\newline
+invented ahead of its time, and the problem complexity finally caught up in the
+past decade or so, to allow TLA+ to demonstrate its strength.\newline
 
 We are at a point in the technology curve where vertical scaling is no
 longer practical, with CPU speed plateaued in the past decade or so. The industry
@@ -68,13 +66,13 @@ is exploring horizontal scaling solutions, such as hardware vendors focusing on
 adding more CPU cores, or software vendors buying many low-end hardware instead
 of a few high-end hardware. This shifts the technology complexity from vertical
 to horizontal, demanding solutions to maximize concurrent resource
-utilization. There is one slight problem though:\newline
+utilization. There is one slight problem though:\\
 
 \textit{Humans are not good at concurrent reasoning}. \newline
 
 Our cognitive system is optimized for sequential reasoning. Enumerating
 all scenarios in one's mind to ensure an arbitrary design accommodates all
-the corner cases are challenging.\newline
+the corner cases is challenging.\newline
 
 Consider a distributed system. The system is a cluster of independently operating
 entities and need to somehow collectively offer the correct system behavior,
@@ -89,18 +87,18 @@ and possibly lapses the slow reader? \newline
 Consider an OS scheduler with locks. Assume all the processes have the
 same priority. Can a process starve the other processes by repeatedly acquiring
 and releasing the lock? How do we ensure scheduling is fair?\newline
-% One \textit{anti-solution} is to assert that these are easy problems for designer% with the right experience and skill set. While this may be true, it also isn't% very scalable. It is likely to your organization's 
+% One \textit{anti-solution} is to assert that these are easy problems for designer% with the right experience and skill set. While this may be true, it also isn't very scalable. It is likely to your organization's 
 The \textit{anti-pattern} is to keep band-aiding the design until the user
 stops filing bug reports. This is never ideal. Per Murphy's law, anything that
 can go wrong \textit{will go wrong}, and a hard-to-reproduce bug will come in at
-th emost inconvenient time. How do we make sure the solution is \textit{correct
+the most inconvenient time. How do we make sure the solution is \textit{correct
 by design}? To solve this problem, we must rely on tools to do the
 reasoning \textit{for us}.
 
 \section{What is TLA+?}
 
 TLA+ is a \textit{system specification language} to describe a system
-withou timplementation details. TLA+ allows a designer to describe a system as a
+without implementation details. TLA+ allows a designer to describe a system as a
 set of states with transitions from one state to the next. Designers can
 describe invariants that must hold in every state and liveness properties a
 sequence of states must satisfy. One of TLA+'s keys is once the system is modeled
@@ -124,7 +122,7 @@ To get the most out of the book, the reader should have general computing
 science knowledge. The reader doesn't need to be an expert in a particular
 language to understand this book; TLA+ is effectively its language. This book is
 example-driven and will go through designs such as lockless queues, simple
-tasks chedulers, consensus algorithms, etc. Readers will likely enjoy a deeper
+task schedulers, consensus algorithms, etc. Readers will likely enjoy a deeper
 insight if there is familiarity with these topics.
 
 \section{How to Use This Book}
