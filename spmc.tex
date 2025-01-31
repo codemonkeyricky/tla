@@ -3,7 +3,14 @@
 \chapter{SPMC Lockless Queue}
 
 As the name suggests, an SPMC lockless queue supports a single producer
-\textit{multiple} consumer usage topology.\newline
+\textit{multiple} consumer usage topology.\\
+
+% Some design considerations include:
+% \begin{itemize}
+%     \item A resource is exclusively updated by one owner, and read by one or more readers
+%     \item For shared resource that can be updated by multiple owners, the CPU
+%     can guarantee exclusive update from a single resource 
+% \end{itemize}
 
 \begin{center}
 \begin{tikzpicture}
@@ -17,14 +24,18 @@ As the name suggests, an SPMC lockless queue supports a single producer
 \end{tikzpicture}
 \end{center}
 
-\section{Design}
-
-Some of the design limitation include:
+An SPMC queue can be tricky to get right. There are many things to consider:
 \begin{itemize}
-    \item A resource is exclusively updated by one owner, and read by one or more readers
-    \item For shared resource that can be updated by multiple owners, the CPU
-    can guarantee exclusive update from a single resource 
+    \item Readers can lapse each other.
+    \item Readers can compete for read indices.
+    \item Readers can lapse writer.
+    \item One reader can starve other readers.
+    \item A slow reader can block the system.
 \end{itemize}
+
+And under all circumstances, system \textit{correctness} must be maintained.
+
+\section{Design}
 
 For the design:
 \begin{itemize}
@@ -200,18 +211,7 @@ The writer first checks outstanding, and early return if queue is full. After
 fullness check, the writer then checks if the current index is UNUSED.  This is
 to account for the edge case where a reader has performed the reservation first
 step to decrement outstanding but haven't done the actual read. If both checks
-pass, then writer now has an UNUSED index it can write to.\newline
-
-The SPMC algorithm can be tricky to get right. There are many things to consider when 
-designing a SPMC queue. Considerations include:
-\begin{itemize}
-    \item Readers can lapse each other
-    \item Readers can lapse writer 
-    \item One reader can starve other readers
-    \item A slow reader can block the system
-\end{itemize}
-
-And under all circumstances, system \textit{correctness} must be maintained.
+pass, then writer now has an \textit{UNUSED} index it can write to.\newline
 
 \section{Safety}
 
@@ -234,7 +234,7 @@ ExclusiveReservation ==
 \end{tlatex}
 \newline
 
-Similarly, for any reader and writer inside critical section, they musut operate
+Similarly, for any reader and writer inside critical section, they must operate
 on different indices as well:\newline
 \begin{tla}
 ExclusiveReadWrite == 
