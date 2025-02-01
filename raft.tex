@@ -6,48 +6,48 @@
 
 Raft is a consensus algorithm that enables a cluster of nodes to agree on a
 collective state even in the presence of failures. An application of Raft is
-database replication protocol. With a replication factor of 3 (eg. data is
-replicated across 3 nodes) and hard drive failure rate of 0.81\% per year, the
-possibility of the total failure where the entire replication group goes down is
+a database replication protocol. With a replication factor of 3 (eg. data is
+replicated across 3 nodes) and a hard drive failure rate of 0.81\% per year, the
+possibility of total failure where the entire replication group goes down is
 $1-0.0081^3 = 99.9999\%$ uptime \cite{backblaze}.\newline
 
 This chapter implements only the leader election portion of the protocol to
-limit the scope of the discussion. For a full description of the the Raft
+limit the scope of the discussion. For a full description of the Raft
 protocol, please refer to the original paper \cite{raft}.\newline
 
-We will briefly describe Raft and its leader election process below: 
+We will briefly describe Raft and its leadership election process below: 
 \begin{itemize}
-    \item A Raft cluster have N nodes, the cluster work collective as a
+    \item A Raft cluster has N nodes, the cluster works collectively as a
     \textit{system} to offer some service
     \item Each node can be in one of three possible states: Follower, Candidate, Leader
-    \item During normal operations, a cluster of N nodes have a single leader
+    \item During normal operations, a cluster of N nodes has a single leader
     and N-1 followers
     \item The leader handles all the client interactions. Requests sent to followers will be 
     redirected to the leader
-    \item The leader regularly sends heartbeat to the follower, indicate its
+    \item The leader regularly sends a heartbeat to the follower, indicating its
     alive
-    \item If a follower fails to receive heartbeat from the leader after
+    \item If a follower fails to receive a heartbeat from the leader after
     timeout, it will become a candidate, vote for itself, and campaign to be
     leader
-    \item A candidate collect the majority of the vote becomes the leader
-    \item If multiple candidates are campaigning and a split vote happen,
-    candidates will eventually declare election timeout and start new round of
+    \item A candidate who collects the majority of the vote becomes the leader
+    \item If multiple candidates are campaigning and a split vote happens,
+    candidates will eventually declare an election timeout and start a new round of
     election
-    \item The cluster can have multiple leaders due to unfavourable network conditions, 
+    \item The cluster can have multiple leaders due to unfavorable network conditions, 
     but the leaders must be on different terms 
     \item A newly elected leader will send a heartbeat to other nodes to establish 
     leadership 
-    \item All request and responses include the sender's term, allowing the
+    \item All requests and responses include the sender's term, allowing the
     receiver to react accordingly
 \end{itemize}
 
-The protocol also included description about log synchronization, state
-recovery, and more. Many details are ommitted in chis chapter to reduce modeling
-cost. The N nodes in the cluster operate \textit{independently} following the
-above hueristics. Hopefully this highlights the complexity around verifying the
-the correctness of the protocol.\newline
+The protocol also included a description of log synchronization, state
+recovery, and more. Many details are omitted in this chapter to reduce modeling
+costs. The N nodes in the cluster operate \textit{independently} following the
+above heuristics. Hopefully, this highlights the complexity of verifying the
+correctness of the protocol.\newline
 
-The following illustrate the state diagram of one node in the cluster:\newline
+The following illustrates the state diagram of one node in the cluster:\newline
 \begin{center}
 \begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=4.5cm]
   \node[state]  (f)                {Follower};
@@ -218,7 +218,7 @@ Next ==
     \item \textit{voted\_for} tracks who a given node previously voted for.
     This prevents a node from voting more than once
     \item \textit{vote\_granted} tracks how many votes a candidate has received
-    \item \textit{vote\_requested} tracks if a node has already issued request
+    \item \textit{vote\_requested} tracks if a node has already issued a request
     vote to its peers
     \item \textit{Follower} either Receive or Timeout and campaign to be a leader
     \item \textit{Candidate} campaigns to be a leader, and becomes one if it has
@@ -230,8 +230,8 @@ Next ==
 \end{itemize}
 
 The Spec implements four messages AppendEntry request/response, RequestVote
-request/response. Handling for all messages are fairly similar in structure. In
-this chapter we will look at \textit{RequestVoteReq} only. Readers are
+request/response. Handling for all messages is similar in structure. In
+this chapter, we will look at \textit{RequestVoteReq} only. Readers are
 encouraged to check the remaining definition as an exercise:\newline
 
 \begin{tla}
@@ -255,7 +255,7 @@ RequestVoteReq(msg) ==
                                         RemoveMessage(msg, messages))
            /\ UNCHANGED <<state, term, vote_granted, 
                 vote_requested, establish_leadership >>
-        \* already voted someone else
+        \* already voted for someone else
         \/ /\ t = term[i]
            /\ voted_for[i] # j 
            /\ voted_for[i] # ""
@@ -276,7 +276,7 @@ RequestVoteReq(msg) ==
                                         RemoveMessage(msg, messages))
             /\ UNCHANGED <<state, voted_for, term, 
                 vote_granted, vote_requested, establish_leadership>>
-        \* revert back to follower
+        \* revert to follower
         \/  /\ t > term[i]
             /\ state' = [state EXCEPT ![i] = "Follower"]
             /\ term' = [term EXCEPT ![i] = t]
@@ -380,21 +380,21 @@ RequestVoteReq(msg) ==
 
 The handling is split into three cases: 
 \begin{itemize}
-    \item If received request is on a higher term, processing node grants vote and becomes a Follower
-    \item If received request is on a lower term, processing node ignores request
-    \item If received request is on the same term, processing node only grants
-    vote if it hasn't voted, or has had voted for the same requester prior 
+    \item If the received request is on a higher term, the processing node grants a vote and becomes a Follower
+    \item If the received request is on a lower term, the processing node ignores the request
+    \item If the received request is on the same term, the processing node only grants
+    vote if it hasn't voted, or has voted for the same requester prior 
 \end{itemize}
 
 \section{Refinement}
 
-The model checker will run the spec as defined, but due to the expoential growth
-of states it is unlikely to complete in a reasonable amount of time. We need to
-simplify the model and possibly trades off some correctness. Careful
+The model checker will run the spec as defined, but due to the exponential growth
+of states, it is unlikely to be completed in a reasonable amount of time. We need to
+simplify the model and possibly trade off some correctness. Careful
 consideration must go into finding the right balance between maximizing model
 correctness and minimizing model checker runtime.\newline
 
-The main strategy is to \textit{bound} the state graph. The following describe a
+The main strategy is to \textit{bound} the state graph. The following describes a
 set of optimization implemented for this example.
 
 \subsection{Modeling Messages as a Set}
@@ -405,20 +405,20 @@ sender to repeatedly send the same message (eg. keepalive), and grow the
 message count in an unbounded fashion.\newline
 
 \textit{messages} in this example has been implemented as a set, which
-effectively limits message instance count to one. It is still possible for
+effectively limits the message instance count to one. It is still possible for
 messages to grow unboundedly because of the monotonically increasing term value.
 Further changes are described below.
 
 \subsection{Limit Term Divergence} 
 
-It is possible for a node to \textit{never} make progress. Such case can occur
-when a node is partitioned off while the rest of the cluster elects new leader
-and move onto newer terms. Many of the interesting behaviours of Raft are how it
+It is possible for a node to \textit{never} make progress. Such a case can occur
+when a node is partitioned off while the rest of the cluster elects a new leader
+and moves onto newer terms. Many of the interesting behaviors of Raft are how it
 addresses these cases. In a cluster of nodes with mixed terms, the nodes with
-older term will eventually converge onto newer terms when they are contacted by
-new leader. This converging behaviour will happen whether the stale node is
-either 1 or N terms away from the curent leader, and the former is much less
-costly to simulate than the latter because the reduced number of states.\newline
+older terms will eventually converge onto newer terms when they are contacted by
+a new leader. This converging behavior will happen whether the stale node is
+either 1 or N terms away from the current leader, and the former is much less
+costly to simulate than the latter because of the reduced number of states.\newline
 
 We can include \textit{LimitDivergence} as a conjunction in
 \textit{Timeout}:\newline
@@ -489,9 +489,7 @@ Timeout(i) ==
 
 \subsection{Normalize Cluster Term}
 
-However, term \textit{itself} can grow unbounded. This is a key tenent 
-converging protocols rely on, an monotonically increasing counter. We want to 
-\textit{normalize} the range of terms in the cluster so the minimum value resets
+However, the term \textit{itself} can grow unbounded. This is a key tenant converging protocols rely on, a monotonically increasing counter. We want to \textit{normalize} the range of terms in the cluster so the minimum value resets
 back to 0. This provides an upper bound to the state graph.\newline
 
 \begin{tla}
@@ -549,10 +547,10 @@ Next ==
 \newline
 
 The implementation ensures only the state machine only moves forward when none
-of the nodes is on \textit{MaxTerm}. If any of the node is on \textit{MaxTerm},
+of the nodes is on \textit{MaxTerm}. If any of the nodes are on \textit{MaxTerm},
 the cluster terms are normalized.\newline
 
-Another caveat here is in the initial implementation I didn't update messsages.
+Another caveat here is in the initial implementation I didn't update messages.
 This led to liveness property violation as the messages had terms disagreeing
 with the system state. To simplify the spec I simply cleared all messages. This 
 indirectly verifies a portion of the packet loss handling in the spec as well.
@@ -561,8 +559,8 @@ indirectly verifies a portion of the packet loss handling in the spec as well.
 
 The send requests were initially implemented using the existential quantifier. 
 This introduces many interleaving states. This was replaced with a universal
-quantifier so the set of messages are only sent once. The implementation no
-longer tracks if the responses were received, since the spec should handle
+quantifier so the set of messages is only sent once. The implementation no
+longer tracks if the responses were received since the spec should handle
 packet loss scenarios as well.\newline
 
 \begin{tla}
@@ -656,7 +654,7 @@ RemoveMessage(to_remove, msgs) ==
 
 \subsection{Enable Symmetry}
 
-Since the behaviour is symmetric between nodes, we can enable symmetry to speed
+Since the behavior is symmetric between nodes, we can enable symmetry to speed
 up model checker runtime:\newline
 
 \begin{tla}
@@ -668,10 +666,9 @@ Perms == Permutations(Servers)
 
 \section{Safety}
 
-One of the goals for the protocol is to ensure the cluster only have one leader.
-It is possible for the clusters to have mulitple leaders due to unfavourable
-network connections. For example, a leader node is partitioned off and a new
-leader is elected. However, even when the cluster have mutliple leaders, they
+One of the goals of the protocol is to ensure the cluster only has one leader.
+The clusters can have multiple leaders due to unfavorable network connections. For example, a leader node is partitioned off and a new
+leader is elected. However, even when the cluster has multiple leaders, they
 \textit{must} be on different terms. The leader with the highest term is
 effectively the \textit{true leader}. This invariant can be implemented like
 so:\newline
@@ -699,15 +696,15 @@ term.
 
 \section{Liveness}
 
-In any failure recovery scenario, the nodes in the cluster converges to a higher
-term value either voluntary or involuntarily. For example: 
+In any failure recovery scenario, the nodes in the cluster converge to a higher
+term value either voluntarily or involuntarily. For example: 
 \begin{itemize}
-    \item A node timed out and starts a new election on a new term 
-    \item A partitioned follower receives heartbeat from a new leader on a new term
+    \item A node timed out and started a new election on a new term 
+    \item A partitioned follower receives a heartbeat from a new leader on a new term
     \item A candidate receiving a request vote from another candidate on a higher term
 \end{itemize}
 
-In any case, a node's term number always increase. This can be described as below:\newline
+In any case, a node's term number always increases. This can be described as below:\newline
 \begin{tla}
 Converge ==
     \A s \in Servers:
