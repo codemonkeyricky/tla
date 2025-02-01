@@ -117,7 +117,7 @@ can be described by the following liveness property:\newline
 \newline
 
 Once the system makes it to state 3, the system is stuck in a loop transitioning
-state 2 and 3. It doesn't \textit{remain} in state 3, but it does \textit{always
+states 2 and 3. It doesn't \textit{remain} in state 3, but it does \textit{always
 eventually} transition to state 3. The system as described fulfills this liveness
 property.
 
@@ -138,7 +138,7 @@ below:\\
 \newline
 
 To satisfy this liveness property, we will need to \textit{remove} the
-transition from 3 to 2, which updates the state diagram like below:
+the transition from 3 to 2, which updates the state diagram like below:
 
 \begin{center}
 \begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
@@ -162,19 +162,19 @@ Next ==
 \end{tla}
 \begin{tlatex}
 \@x{ Next \.{\defeq}}%
-\@x{\@s{16.4} \.{\lor} \.{\land} counter \.{\neq} 3}%
+\@x{\@s{16.4} \.{\land} counter \.{\neq} 3}%
 \@x{\@s{16.4} \.{\land} Inc}%
 \end{tlatex}
 \newline 
 
-The system now \textit{eventually always} remain in state 3, satisfy the 
+The system now \textit{eventually always} remains in state 3, satisfying the 
 liveness property.\newline 
 
-Note that the system still \textit{always eventually} make it to state 3, so the
+Note that the system still \textit{always eventually} makes it to state 3, so the
 updated spec satisfies both \textit{AlwaysEventually} and
-\textit{EventuallyAlways} liveness properties. This is not to say designer
+\textit{EventuallyAlways} liveness properties. This is not to say the designer
 should always use \textit{eventually always}. Some system may \textit{never}
-converge onto a fixed state. For example, in a consesus system any given server
+converge onto a fixed state. For example, in a consensus system, any given server
 may crash and disturb the converged state. In such case \textit{eventually
 always} will never be true, but \textit{always eventually} can be true.
 
@@ -186,7 +186,7 @@ we can describe state 0 \textit{leads to} state 3:\newline
     \* state 0 leads to state 3: TRUE 
     LeadsTo == counter = 0 ~> counter = 3
 
-    \* state 0 leads to state 4: FALSE - model checker reports violation
+    \* state 0 leads to state 4: FALSE - model checker reports a violation
     LeadsTo == counter = 0 ~> counter = 4
 \end{tla}
 \begin{tlatex}
@@ -200,7 +200,7 @@ we can describe state 0 \textit{leads to} state 3:\newline
 \@pvspace{8.0pt}%
 \@x{\@s{16.4}}%
 \@y{%
-  state 0 leads to state 4: FALSE - model checker reports violation
+  state 0 leads to state 4: FALSE - model checker reports a violation
 }%
 \@xx{}%
  \@x{\@s{16.4} LeadsTo \.{\defeq} counter \.{=} 0 \.{\leadsto} counter \.{=}
@@ -208,11 +208,11 @@ we can describe state 0 \textit{leads to} state 3:\newline
 \end{tlatex}
 \newline
 
-Note that \textit{leads to} is only evaluated if the left hand side is
-\textit{true}. If right hand side is updated to counter = 4, the liveness
-property will fail as expected. However, if left hand side is false, then the
+Note that \textit{leads to} is only evaluated if the left-hand side is
+\textit{true}. If the right-hand side is updated to counter = 4, the liveness
+the property will fail as expected. However, if the left-hand side is false, then the
 liveness property is not evaluated since there isn't a state that satisfies the
-cause condition. For example, the model checker will not report violation for
+cause condition. For example, the model checker will not report violations for
 the following liveness property:\newline
 \begin{tla}
     \* model checker will NOT report violation because cause condition never occur 
