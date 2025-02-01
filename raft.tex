@@ -102,7 +102,8 @@ Leader(i) ==
 BecomeLeader(i) ==
     /\ Cardinality(vote_granted[i]) > Cardinality(Servers) \div 2
     /\ state' = [state EXCEPT ![i] = "Leader"]
-    /\ UNCHANGED <<messages, voted_for, term, vote_granted, vote_requested>>
+    /\ UNCHANGED <<messages, voted_for, 
+        term, vote_granted, vote_requested>>
 
 Candidate(i) == 
     /\ state[i] = "Candidate"
@@ -177,8 +178,8 @@ Next ==
  ( Servers ) \.{\div} 2}%
  \@x{\@s{16.4} \.{\land} state \.{'} \.{=} [ state {\EXCEPT} {\bang} [ i ]
  \.{=}\@w{Leader} ]}%
- \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} messages ,\, voted\_for ,\,
- term ,\, vote\_granted ,\, vote\_requested {\rangle}}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} messages ,\, voted\_for ,\,}%
+\@x{\@s{20.5} term ,\, vote\_granted ,\, vote\_requested {\rangle}}%
 \@pvspace{8.0pt}%
 \@x{ Candidate ( i ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Candidate}}%
@@ -574,7 +575,8 @@ Campaign(i) ==
     /\ vote_requested[i] = 0
     /\ vote_requested' = [vote_requested EXCEPT ![i] = 1]
     /\ messages' = messages \cup RequestVoteSet(i) 
-    /\ UNCHANGED <<state, term, vote_granted, voted_for, establish_leadership>>
+    /\ UNCHANGED <<state, term, vote_granted, 
+        voted_for, establish_leadership>>
 
 KeepAliveSet(i) == {
     [fSrc |-> i, fDst |-> s, fType |-> "AppendEntryReq", fTerm |-> term[i]] 
@@ -602,7 +604,8 @@ Leader(i) ==
  \@x{\@s{16.4} \.{\land} messages \.{'} \.{=} messages \.{\cup} RequestVoteSet
  ( i )}%
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} state ,\, term ,\,
- vote\_granted ,\, voted\_for ,\, establish\_leadership {\rangle}}%
+ vote\_granted ,\,}%
+\@x{\@s{20.5} voted\_for ,\, establish\_leadership {\rangle}}%
 \@pvspace{8.0pt}%
 \@x{ KeepAliveSet ( i ) \.{\defeq} \{}%
  \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType

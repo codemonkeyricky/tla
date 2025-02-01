@@ -467,7 +467,9 @@ RemoveStaleAck(ack, msgs) ==
     LET 
         acks == {(ack - k + N ) % N : k \in 1..W}
     IN 
-        {m \in msgs : ~(m.dst = "server" /\ m.type = "ack" /\ m.ack \in acks)}
+        {m \in msgs : ~(/\ m.dst = "server" 
+                        /\ m.type = "ack" 
+                        /\ m.ack \in acks)}
 
 ServerReceive(pp) == 
     \/ /\ pp.type = "ack"
@@ -488,8 +490,10 @@ ServerReceive(pp) ==
  \@x{\@s{32.8} acks \.{\defeq} \{ ( ack \.{-} k \.{+} N ) \.{\%} N \.{:} k
  \.{\in} 1 \.{\dotdot} W \}}%
 \@x{\@s{16.4} \.{\IN}}%
- \@x{\@s{32.8} \{ m \.{\in} msgs \.{:} {\lnot} ( m . dst \.{=}\@w{server}
- \.{\land} m . type \.{=}\@w{ack} \.{\land} m . ack \.{\in} acks ) \}}%
+ \@x{\@s{32.8} \{ m \.{\in} msgs \.{:} {\lnot} ( \.{\land} m . dst
+ \.{=}\@w{server}}%
+\@x{\@s{36.89} \.{\land} m . type \.{=}\@w{ack}}%
+\@x{\@s{36.89} \.{\land} m . ack \.{\in} acks ) \}}%
 \@pvspace{8.0pt}%
 \@x{ ServerReceive ( pp ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\lor} \.{\land} pp . type \.{=}\@w{ack}}%
