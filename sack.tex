@@ -1,3 +1,4 @@
+
 % \begin{document}
 
 \chapter{Selective Retransmit}
@@ -14,7 +15,7 @@ sequence before pushing the packets down to the decoding engine.\newline
 The network may also drop packets if any of the switches along the way get
 busy. In the case of a packet drop, the client has a few options. The client can
 either discard the frame and let the decoding engine downstream deal with it
-(which may result in visible artifacts during playback). The client can
+(which may result in visible artefacts during playback). The client can
 request the whole frame to be re-sent, which results in additional bandwidth consumption.  The client can selectively request the missing packet to be
 retransmitted, which will minimize additional bandwidth consumption but
 increase implementation complexity.\newline
@@ -56,16 +57,15 @@ algorithm.\newline
 \end{center}
 
 Since packets may arrive out-of-order, the server stamps the packets with
-sequence number to allow the client to order the packets as they arrive.
+sequence numbers to allow the client to order the packets as they arrive.
 Once the client has a set of ordered packets, it moves the packets from the 
 receive buffer into the decoding engine to be displayed.\newline
 
-The video packets are often sent via unreliable channel to minimize network
-overhead and latency. The client sends acknowledgement back to the server to
+The video packets are often sent via unreliable channels to minimize network
+overhead and latency. The client sends an acknowledgement back to the server to
 acknowledge the received packet. This indicates to the server it can send more
-video data to the client. Acknowlegements are not latency sensitive in
-nature, and take up a very small proportion of bandwidth, so they are
-transported through reliable channel.\newline
+video data to the client. Acknowledgements are not latency-sensitive and take up a very small proportion of bandwidth, so they are
+transported through reliable channels.\newline
 
 The following illustrates packet reorder handling:
 \begin{center}
@@ -116,18 +116,18 @@ The following illustrates packet loss handling:
 There are other design considerations. The server is allowed to send up to W
 packets before getting an acknowledgement, this reduces latency perceived by the
 user. The client also doesn't need to acknowledge all the packets, since the
-server assumes once an acknowledgement of packet N is received, then all packets
-prior to N have also been received.
+the server assumes once an acknowledgement of packet N is received, then all packets
+before N has also been received.
 
 \section{Design}
 
 With the above description, we are now ready to provide a more formal
-description for our design:
+description of our design:
 
 \begin{itemize}
     \item Client is the receiver that displays the video stream.
     \item Server is the sender that sends the video stream.
-    \item Server always sends the packets in-order.
+    \item Server always sends the packets in order.
     \item Client may receive the packets out-of-order.
     \item Client may never receive some packet due to loss.
     \item Server can send up to W packets before an acknowledgement is received
@@ -138,13 +138,13 @@ description for our design:
     \item Client puts a received packet in its receive buffer. Packets in the 
     receive buffer may be out-of-order due to network conditions.
     \item Client will remove the packets from the receive buffer once the
-    sequence number of the received packets are contiguous. The client will also
+    sequence number of the received packets is contiguous. The client will also
     send an acknowledgement back to the Server with the most recently
     acknowledged sequence number.
-    \item Data patckets are transported using unreliable channel due to
-    bandwidth and latency requirement.
-    \item Control packets are transported using reliable channel due to relaxed 
-    and latency requirement. 
+    \item Data packets are transported using unreliable channels due to
+    bandwidth and latency requirements.
+    \item Control packets are transported using reliable channels due to relaxed 
+    and latency requirements. 
 \end{itemize}
 
 We are now ready to implement the \textit{Spec}. 
@@ -199,7 +199,7 @@ Next ==
 The server is represented by three variables: 
 \begin{itemize}
     \item tx+1 represents the sequence number to be used in the next packet
-    \item tx\_liimit represents the highest sequence number server can send
+    \item tx\_liimit represents the highest sequence number the server can send
     without waiting for an acknowledgement
     \item tx\_ack represents the most recent acknowledged sequence number
 \end{itemize}
@@ -208,12 +208,10 @@ The client is represented by two variables:
 \begin{itemize}
     \item client\_rx is the most recently acknowledged sequence number
     \item client\_buffer is the receive buffer holding all the packets waiting 
-    to be re-ordered prior to being acknowleged 
-\end{itemize}
-
+    to be re-ordered before being acknowledged\end{itemize}
 The allowed actions include packet \textit{Receive}, which the existential
 quantifier also has the side effect of re-ordering.
-\textit{ClientRetransmitRequest} detects and sends retransmit request.
+\textit{ClientRetransmitRequest} detects and sends retransmit requests.
 \textit{ClientAcknowledgement} sends acknowledgement. Finally, data packets may
 be dropped.\newline
 
@@ -304,16 +302,16 @@ Range ==
 
 At any moment the system allows a window of packets to be unacknowledged. Both
 the client and server are aware of the window size, represented by W. By looking
-at packets in its receive buffer and its most acknowleged sequence number, the
-client can determine which packets were lost. There's actually some nuisance 
+at packets in its receive buffer and its most acknowledged sequence number, the
+client can determine which packets were lost. There's some nuisance 
 to implement this.\newline
 
 Since the system does not allow more than W unacknowledged packets, the client
-can assume the window of packet in its receiver buffer must have sequence number
+can assume the window of the packet in its receiver buffer must have sequence number
 $s \in client\_rx ..client\_rx+W$. Since the sequence number has a ceiling, the
 window of packets may wrap around the boundary. This introduces some
-complication around determining the minimum and maximum in the window of packet.
-The functions defined above calcluates the range, maximum and minimum value in
+complications around determining the minimum and maximum in the window of the packet.
+The functions defined above calculate the range, maximum and minimum value in
 the window accounting for wraparound.\newline
 
 Now we can look at how the client acknowledgement logic:\newline
@@ -450,18 +448,18 @@ ClientRetransmitRequest ==
 \end{tlatex}
 \newline
 
-\textit{ClientReceive} moves the a packet from network into client receive
+\textit{ClientReceive} moves the packet from the network into the client receive
 buffer. The only reason why this is done as a separate step is to make debugging
 easier.\newline
 
-\textit{Missing} returns a set of missing missing sequence number. This is done
-by cross checking the client receive buffer and the outstanding network packet
+\textit{Missing} returns a set of missing missing sequence numbers. This is done
+by cross-checking the client receive buffer and the outstanding network packet
 targeting the client. In theory, the client doesn't know if a gap in its receive
 buffer means the packet is lost or will arrive soon. Practically, the client
 will assume a packet is lost after some configurable timeout and request a
 retransmit.\newline
 
-Let us take a look at server related definitions:\newline
+Let us take a look at server-related definitions:\newline
 
 \begin{tla}
 RemoveStaleAck(ack, msgs) == 
@@ -513,11 +511,9 @@ ServerReceive(pp) ==
 \newline
 
 When the server receives an acknowledgement for sequence number K, it assumes
-K-1 and prior were all received by the client. \textit{RemoveStaleAck} is an
-model optimization to drop all acknowledgements with sequence number less than
-K. Note that sequence number k, k-N, k-2*N, are all represented as k, and in
-theory the client may not be able to differentiate betweeen them.  Practically,
-N is sized large enough to represent a few seconds worth of data, so the system
+K-1 and prior were all received by the client. \textit{RemoveStaleAck} is amodel optimization to drop all acknowledgements with sequence numbers less thanK. Note that sequence numbers k, k-N, and k-2*N, are all represented as k, and in
+theory, the client may not be able to differentiate between them.  Practically,
+N is sized large enough to represent a few second's worth of data, so the system
 can safely assume a sequence number k is for the most recent N packets.\newline
 
 Upon receiving an acknowledgement from the client, the server bumps the
@@ -530,38 +526,36 @@ determine how many packets can be dropped at the same time.
 \subsection{Removing Stale Acknowlegement}
 
 When the server acknowledges K, it has already received all the packets before
-K. Likewise, when the client receives a acknowledgement for K, it can assume all
-previous packets have been received. It is possible client receives the
+K. Likewise, when the client receives an acknowledgement for K, it can assume all
+previous packets have been received. The client may receive the
 acknowledgement out-of-order due to unfavourable network conditions. One
 refinement we can make to the model is simply \textit{remove all stale
 acknowledgements}. In a practical implementation, this is also how the client
-can react when itt receives stale acknowledgements.\\
+can react when it receives stale acknowledgements.\\
 
 There is a bit of nuisance here. Since the sequence number wraps around, the
-client cannot actually differentiate between K from K-N, K-2*N, etc. However, N
-is usually large enough to acommodate a few seconds of data before a sequence
+client cannot differentiate between K from K-N, K-2*N, etc. However, N
+is usually large enough to accommodate a few seconds of data before a sequence
 number is re-used. The client can be confident that any K received the current
 K, not K-N or earlier.
 
 \subsection{Retransmit Request Assumed Reliable}
 
-Retransmit request packets be delivered through unreliable
-channel. However, this makes no difference in the model. The client sends
-retransmit request when it detect packets are lost. If the model drops the
+Retransmit requests packets be delivered through unreliable
+channels. However, this makes no difference in the model. The client sends
+a retransmit request when it detects packets are lost. If the model drops the
 retransmit request, the client will just send another retransmit request because
 the missing packet is still missing.\\
 
-While this can be modeled, it would increase the runtime without providing much 
-benefit. For this Spec we simply assume all control packets are reliable. 
-
+While this can be modelled, it would increase the runtime without providing many benefits. For this Spec, we simply assume all control packets are reliable. 
 \section{Safety}
 
 \section{Liveness}
 
 Given the system may randomly drop packets, one possible liveness condition is
-to verify packets of all sequence number are received by the client at some
+to verify packets of all sequence numbers are received by the client at some
 point. This can be described as for all possible sequence number value k, k is
-eventually exists in client receive buffer.\\
+eventually exists in the client receive buffer.\\
 
 \begin{tla}
 Liveness == 
