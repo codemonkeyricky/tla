@@ -321,7 +321,7 @@ RequestVoteReq(msg) ==
 \@x{\@s{41.0} vote\_requested ,\, establish\_leadership {\rangle}}%
 \@x{\@s{32.8}}%
 \@y{%
-  already voted someone else
+  already voted for someone else
 }%
 \@xx{}%
 \@x{\@s{32.8} \.{\lor} \.{\land} t \.{=} term [ i ]}%
@@ -352,7 +352,7 @@ RequestVoteReq(msg) ==
  {\rangle}}%
 \@x{\@s{32.8}}%
 \@y{%
-  revert back to follower
+  revert to follower
 }%
 \@xx{}%
 \@x{\@s{32.8} \.{\lor}\@s{4.1} \.{\land} t \.{>} term [ i ]}%
@@ -560,8 +560,8 @@ indirectly verifies a portion of the packet loss handling in the spec as well.
 The send requests were initially implemented using the existential quantifier. 
 This introduces many interleaving states. This was replaced with a universal
 quantifier so the set of messages is only sent once. The implementation no
-longer tracks if the responses were received since the spec should handle
-packet loss scenarios as well.\newline
+longer tracks if the responses were received since \textit{Spec} should handle
+packet loss scenarios as well.\\
 
 \begin{tla}
 RequestVoteSet(i) == {
