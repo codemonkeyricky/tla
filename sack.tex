@@ -511,8 +511,7 @@ ServerReceive(pp) ==
 \newline
 
 When the server receives an acknowledgement for sequence number K, it assumes
-K-1 and prior were all received by the client. \textit{RemoveStaleAck} is amodel optimization to drop all acknowledgements with sequence numbers less thanK. Note that sequence numbers k, k-N, and k-2*N, are all represented as k, and in
-theory, the client may not be able to differentiate between them.  Practically,
+K-1 and prior were all received by the client. \textit{RemoveStaleAck} is a model optimization to drop all acknowledgements with sequence numbers less than K. Note that sequence numbers k, k-N, and k-2*N, are all represented as k, and intheory, the client may not be able to differentiate between them.  Practically,
 N is sized large enough to represent a few second's worth of data, so the system
 can safely assume a sequence number k is for the most recent N packets.\newline
 
