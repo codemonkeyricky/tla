@@ -523,10 +523,30 @@ determine how many packets can be dropped at the same time.
 
 \subsection{Removing Stale Acknowlegement}
 
-TODO: W * 2 < N
-TODO: stale ack removal
-TODO: describe network empty 
-TODO: retransmit is assumed to be reliable, because making it unreliable doesn't make sense.
+When the server acknowledges K, it has already received all the packets before
+K. Likewise, when the client receives a acknowledgement for K, it can assume all
+previous packets have been received. It is possible client receives the
+acknowledgement out-of-order due to unfavourable network conditions. One
+refinement we can make to the model is simply \textit{remove all stale
+acknowledgements}. In a practical implementation, this is also how the client
+can react when itt receives stale acknowledgements.\\
+
+There is a bit of nuisance here. Since the sequence number wraps around, the
+client cannot actually differentiate between K from K-N, K-2*N, etc. However, N
+is usually large enough to acommodate a few seconds of data before a sequence
+number is re-used. The client can be confident that any K received the current
+K, not K-N or earlier.
+
+\subsection{Retransmit Request Assumed Reliable}
+
+Retransmit request packets be delivered through unreliable
+channel. However, this makes no difference in the model. The client sends
+retransmit request when it detect packets are lost. If the model drops the
+retransmit request, the client will just send another retransmit request because
+the missing packet is still missing.\\
+
+While this can be modeled, it would increase the runtime without providing much 
+benefit. For this Spec we simply assume all control packets are reliable. 
 
 \section{Safety}
 
@@ -535,7 +555,7 @@ TODO: retransmit is assumed to be reliable, because making it unreliable doesn't
 Given the system may randomly drop packets, one possible liveness condition is
 to verify packets of all sequence number are received by the client at some
 point. This can be described as for all possible sequence number value k, k is
-eventually exists in client receive buffer.\newline
+eventually exists in client receive buffer.\\
 
 \begin{tla}
 Liveness == 
@@ -548,11 +568,5 @@ Liveness ==
  \@x{\@s{20.5} client\_buffer \.{=} \{ \} \.{\leadsto} \E\, j \.{\in}
  client\_buffer \.{:} i \.{=} j}%
 \end{tlatex}
-\newline
-
-
-
-
-
 
 % \end{document}
