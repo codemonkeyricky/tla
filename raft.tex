@@ -1,3 +1,5 @@
+% \begin{document}
+
 \chapter{Raft Consensus Protocol}
 
 \section{Design}
@@ -145,7 +147,7 @@ Next ==
 \@x{ RequestVoteSet ( i ) \.{\defeq} \{}%
  \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
  \.{\mapsto}\@w{RequestVoteReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
-\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{\@s{28.69} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
 \@x{ \}}%
 \@pvspace{8.0pt}%
 \@x{ Campaign ( i ) \.{\defeq}}%
@@ -160,7 +162,7 @@ Next ==
 \@x{ KeepAliveSet ( i ) \.{\defeq} \{}%
  \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
  \.{\mapsto}\@w{AppendEntryReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
-\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{\@s{28.69} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
 \@x{ \}}%
 \@pvspace{8.0pt}%
 \@x{ Leader ( i ) \.{\defeq}}%
@@ -181,32 +183,28 @@ Next ==
 \@x{ Candidate ( i ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Candidate}}%
 \@x{\@s{16.4} \.{\land} \.{\lor} Campaign ( i )}%
-\@x{\@s{27.51} \.{\lor} BecomeLeader ( i )}%
-\@x{\@s{27.51} \.{\lor} Timeout ( i )}%
+\@x{\@s{16.4} \.{\lor} BecomeLeader ( i )}%
+\@x{\@s{16.4} \.{\lor} Timeout ( i )}%
 \@pvspace{8.0pt}%
 \@x{ Follower ( i ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} state [ i ] \.{=}\@w{Follower}}%
 \@x{\@s{16.4} \.{\land} Timeout ( i )}%
 \@pvspace{8.0pt}%
 \@x{ Receive ( msg ) \.{\defeq}}%
- \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
- \.{=}\@w{AppendEntryReq}}%
-\@x{\@s{32.57} \.{\land} AppendEntryReq ( msg )}%
- \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
- \.{=}\@w{AppendEntryResp}}%
-\@x{\@s{32.57} \.{\land} AppendEntryResp ( msg )}%
- \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
- \.{=}\@w{RequestVoteReq}}%
-\@x{\@s{32.57} \.{\land} RequestVoteReq ( msg )}%
- \@x{\@s{16.4} \.{\lor}\@s{5.06} \.{\land} msg . fType
- \.{=}\@w{RequestVoteResp}}%
-\@x{\@s{32.57} \.{\land} RequestVoteResp ( msg )}%
+\@x{\@s{16.4} \.{\lor} \.{\land} msg . fType \.{=}\@w{AppendEntryReq}}%
+\@x{\@s{16.4} \.{\land} AppendEntryReq ( msg )}%
+\@x{\@s{16.4} \.{\lor} \.{\land} msg . fType \.{=}\@w{AppendEntryResp}}%
+\@x{\@s{16.4} \.{\land} AppendEntryResp ( msg )}%
+\@x{\@s{16.4} \.{\lor} \.{\land} msg . fType \.{=}\@w{RequestVoteReq}}%
+\@x{\@s{16.4} \.{\land} RequestVoteReq ( msg )}%
+\@x{\@s{16.4} \.{\lor} \.{\land} msg . fType \.{=}\@w{RequestVoteResp}}%
+\@x{\@s{16.4} \.{\land} RequestVoteResp ( msg )}%
 \@pvspace{8.0pt}%
 \@x{ Next \.{\defeq}}%
 \@x{\@s{16.4} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
-\@x{\@s{34.73} \.{\lor} Leader ( i )}%
-\@x{\@s{34.73} \.{\lor} Candidate ( i )}%
-\@x{\@s{34.73} \.{\lor} Follower ( i )}%
+\@x{\@s{16.4} \.{\lor} Leader ( i )}%
+\@x{\@s{16.4} \.{\lor} Candidate ( i )}%
+\@x{\@s{16.4} \.{\lor} Follower ( i )}%
 \@x{\@s{16.4} \.{\lor} \E\, msg \.{\in} messages \.{:} Receive ( msg )}%
 \end{tlatex}
 
@@ -254,7 +252,8 @@ RequestVoteReq(msg) ==
                                         fTerm |-> t, 
                                         fSuccess |-> 1],
                                         RemoveMessage(msg, messages))
-           /\ UNCHANGED <<state, term, vote_granted, vote_requested, establish_leadership >>
+           /\ UNCHANGED <<state, term, vote_granted, 
+                vote_requested, establish_leadership >>
         \* already voted someone else
         \/ /\ t = term[i]
            /\ voted_for[i] # j 
@@ -265,7 +264,8 @@ RequestVoteReq(msg) ==
                                         fTerm |-> t, 
                                         fSuccess |-> 0],
                                         RemoveMessage(msg, messages))
-            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
+            /\ UNCHANGED <<state, voted_for, term, 
+                vote_granted, vote_requested, establish_leadership>>
         \/  /\ t < term[i]
             /\ messages' = AddMessage([fSrc |-> i, 
                                         fDst |-> j, 
@@ -273,7 +273,8 @@ RequestVoteReq(msg) ==
                                         fTerm |-> term[i], 
                                         fSuccess |-> 0],
                                         RemoveMessage(msg, messages))
-            /\ UNCHANGED <<state, voted_for, term, vote_granted, vote_requested, establish_leadership>>
+            /\ UNCHANGED <<state, voted_for, term, 
+                vote_granted, vote_requested, establish_leadership>>
         \* revert back to follower
         \/  /\ t > term[i]
             /\ state' = [state EXCEPT ![i] = "Follower"]
@@ -292,7 +293,7 @@ RequestVoteReq(msg) ==
 \begin{tlatex}
 \@x{ RequestVoteReq ( msg ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\LET}}%
-\@x{\@s{32.8} i\@s{0.42} \.{\defeq} msg . fDst}%
+\@x{\@s{32.8} i \.{\defeq} msg . fDst}%
 \@x{\@s{32.8} j \.{\defeq} msg . fSrc}%
 \@x{\@s{32.8} type \.{\defeq} msg . fType}%
 \@x{\@s{32.8} t \.{\defeq} msg . fTerm}%
@@ -303,71 +304,76 @@ RequestVoteReq(msg) ==
 }%
 \@xx{}%
 \@x{\@s{32.8} \.{\lor} \.{\land} t \.{=} term [ i ]}%
-\@x{\@s{43.91} \.{\land} \.{\lor} voted\_for [ i ] \.{=} j}%
-\@x{\@s{55.02} \.{\lor} voted\_for [ i ] \.{=}\@w{}}%
- \@x{\@s{43.91} \.{\land} voted\_for \.{'} \.{=} [ voted\_for {\EXCEPT}
- {\bang} [ i ] \.{=} j ]}%
- \@x{\@s{43.91} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+\@x{\@s{32.8} \.{\land} \.{\lor} voted\_for [ i ] \.{=} j}%
+\@x{\@s{32.8} \.{\lor} voted\_for [ i ] \.{=}\@w{}}%
+ \@x{\@s{32.8} \.{\land} voted\_for \.{'} \.{=} [ voted\_for {\EXCEPT} {\bang}
+ [ i ] \.{=} j ]}%
+ \@x{\@s{32.8} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
  i ,\,}%
-\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
-\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
-\@x{\@s{180.15} fTerm \.{\mapsto} t ,\,}%
-\@x{\@s{180.15} fSuccess \.{\mapsto} 1 ] ,\,}%
-\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
- \@x{\@s{43.91} \.{\land} {\UNCHANGED} {\langle} state ,\, term ,\,
- vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@x{\@s{41.0} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{41.0} fType \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{41.0} fTerm \.{\mapsto} t ,\,}%
+\@x{\@s{41.0} fSuccess \.{\mapsto} 1 ] ,\,}%
+\@x{\@s{41.0} RemoveMessage ( msg ,\, messages ) )}%
+ \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} state ,\, term ,\,
+ vote\_granted ,\,}%
+\@x{\@s{41.0} vote\_requested ,\, establish\_leadership {\rangle}}%
 \@x{\@s{32.8}}%
 \@y{%
   already voted someone else
 }%
 \@xx{}%
 \@x{\@s{32.8} \.{\lor} \.{\land} t \.{=} term [ i ]}%
-\@x{\@s{43.91} \.{\land} voted\_for [ i ] \.{\neq} j}%
-\@x{\@s{43.91} \.{\land} voted\_for [ i ] \.{\neq}\@w{}}%
- \@x{\@s{43.91} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+\@x{\@s{32.8} \.{\land} voted\_for [ i ] \.{\neq} j}%
+\@x{\@s{32.8} \.{\land} voted\_for [ i ] \.{\neq}\@w{}}%
+ \@x{\@s{32.8} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
  i ,\,}%
-\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
-\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
-\@x{\@s{180.15} fTerm \.{\mapsto} t ,\,}%
-\@x{\@s{180.15} fSuccess \.{\mapsto} 0 ] ,\,}%
-\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
- \@x{\@s{48.01} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
- ,\, vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@x{\@s{41.0} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{41.0} fType \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{41.0} fTerm \.{\mapsto} t ,\,}%
+\@x{\@s{41.0} fSuccess \.{\mapsto} 0 ] ,\,}%
+\@x{\@s{41.0} RemoveMessage ( msg ,\, messages ) )}%
+ \@x{\@s{36.89} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
+ ,\,}%
+ \@x{\@s{40.99} vote\_granted ,\, vote\_requested ,\, establish\_leadership
+ {\rangle}}%
 \@x{\@s{32.8} \.{\lor}\@s{4.1} \.{\land} t \.{<} term [ i ]}%
- \@x{\@s{48.01} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+ \@x{\@s{36.89} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
  i ,\,}%
-\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
-\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
-\@x{\@s{180.15} fTerm \.{\mapsto} term [ i ] ,\,}%
-\@x{\@s{180.15} fSuccess \.{\mapsto} 0 ] ,\,}%
-\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
- \@x{\@s{48.01} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
- ,\, vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@x{\@s{40.99} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{40.99} fType \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{40.99} fTerm \.{\mapsto} term [ i ] ,\,}%
+\@x{\@s{40.99} fSuccess \.{\mapsto} 0 ] ,\,}%
+\@x{\@s{40.99} RemoveMessage ( msg ,\, messages ) )}%
+ \@x{\@s{36.89} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\, term
+ ,\,}%
+ \@x{\@s{40.99} vote\_granted ,\, vote\_requested ,\, establish\_leadership
+ {\rangle}}%
 \@x{\@s{32.8}}%
 \@y{%
   revert back to follower
 }%
 \@xx{}%
 \@x{\@s{32.8} \.{\lor}\@s{4.1} \.{\land} t \.{>} term [ i ]}%
- \@x{\@s{48.01} \.{\land} state \.{'} \.{=} [ state {\EXCEPT} {\bang} [ i ]
+ \@x{\@s{36.89} \.{\land} state \.{'} \.{=} [ state {\EXCEPT} {\bang} [ i ]
  \.{=}\@w{Follower} ]}%
- \@x{\@s{48.01} \.{\land} term \.{'} \.{=} [ term {\EXCEPT} {\bang} [ i ]
+ \@x{\@s{36.89} \.{\land} term \.{'} \.{=} [ term {\EXCEPT} {\bang} [ i ]
  \.{=} t ]}%
- \@x{\@s{48.01} \.{\land} voted\_for \.{'} \.{=} [ voted\_for {\EXCEPT}
+ \@x{\@s{36.89} \.{\land} voted\_for \.{'} \.{=} [ voted\_for {\EXCEPT}
  {\bang} [ i ] \.{=} j ]}%
- \@x{\@s{48.01} \.{\land} vote\_granted \.{'} \.{=} [ vote\_granted {\EXCEPT}
+ \@x{\@s{36.89} \.{\land} vote\_granted \.{'} \.{=} [ vote\_granted {\EXCEPT}
  {\bang} [ i ] \.{=} \{ \} ]}%
- \@x{\@s{48.01} \.{\land} vote\_requested \.{'} \.{=} [ vote\_requested
+ \@x{\@s{36.89} \.{\land} vote\_requested \.{'} \.{=} [ vote\_requested
  {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
- \@x{\@s{48.01} \.{\land} establish\_leadership \.{'} \.{=} [
+ \@x{\@s{36.89} \.{\land} establish\_leadership \.{'} \.{=} [
  establish\_leadership {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
- \@x{\@s{48.01} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
+ \@x{\@s{36.89} \.{\land} messages \.{'} \.{=} AddMessage ( [ fSrc \.{\mapsto}
  i ,\,}%
-\@x{\@s{180.15} fDst \.{\mapsto} j ,\,}%
-\@x{\@s{180.15} fType\@s{2.95} \.{\mapsto}\@w{RequestVoteResp} ,\,}%
-\@x{\@s{180.15} fTerm \.{\mapsto} t ,\,}%
-\@x{\@s{180.15} fSuccess \.{\mapsto} 1 ] ,\,}%
-\@x{\@s{180.15} RemoveMessage ( msg ,\, messages ) )}%
+\@x{\@s{40.99} fDst \.{\mapsto} j ,\,}%
+\@x{\@s{40.99} fType \.{\mapsto}\@w{RequestVoteResp} ,\,}%
+\@x{\@s{40.99} fTerm \.{\mapsto} t ,\,}%
+\@x{\@s{40.99} fSuccess \.{\mapsto} 1 ] ,\,}%
+\@x{\@s{40.99} RemoveMessage ( msg ,\, messages ) )}%
 \end{tlatex}
 \newline
 
@@ -443,36 +449,36 @@ Timeout(i) ==
 \@x{\@s{32.8} values \.{\defeq} \{ term [ s ] \.{:} s \.{\in} Servers \}}%
  \@x{\@s{32.8} max\_v \.{\defeq} {\CHOOSE} x \.{\in} values \.{:} \A\, y
  \.{\in} values \.{:} x \.{\geq} y}%
- \@x{\@s{32.8} min\_v\@s{1.49} \.{\defeq} {\CHOOSE} x \.{\in} values \.{:}
- \A\, y \.{\in} values \.{:} x \.{\leq} y}%
+ \@x{\@s{32.8} min\_v \.{\defeq} {\CHOOSE} x \.{\in} values \.{:} \A\, y
+ \.{\in} values \.{:} x \.{\leq} y}%
 \@x{\@s{16.4} \.{\IN}}%
 \@x{\@s{32.8} \.{\lor} \.{\land} term [ i ] \.{\neq} max\_v}%
 \@x{\@s{32.8} \.{\lor} \.{\land} term [ i ] \.{=} max\_v}%
-\@x{\@s{43.91} \.{\land} term [ i ] \.{-} min\_v \.{<} MaxDiff}%
+\@x{\@s{32.8} \.{\land} term [ i ] \.{-} min\_v \.{<} MaxDiff}%
 \@pvspace{8.0pt}%
 \@x{ Timeout ( i ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\land}\@s{9.72} LimitDivergence ( i )}%
- \@x{\@s{16.4} \.{\land}\@s{9.72} state \.{'} \.{=} [ state {\EXCEPT} {\bang}
- [ i ] \.{=}\@w{Candidate} ]}%
- \@x{\@s{16.4} \.{\land}\@s{9.72} voted\_for \.{'} \.{=} [ voted\_for
- {\EXCEPT} {\bang} [ i ] \.{=} i ]\@s{49.19}}%
+\@x{\@s{16.4} \.{\land} LimitDivergence ( i )}%
+ \@x{\@s{16.4} \.{\land} state \.{'} \.{=} [ state {\EXCEPT} {\bang} [ i ]
+ \.{=}\@w{Candidate} ]}%
+ \@x{\@s{16.4} \.{\land} voted\_for \.{'} \.{=} [ voted\_for {\EXCEPT} {\bang}
+ [ i ] \.{=} i ]\@s{49.19}}%
 \@y{%
   voted for myself
 }%
 \@xx{}%
- \@x{\@s{16.4} \.{\land}\@s{9.72} vote\_granted \.{'} \.{=} [ vote\_granted
- {\EXCEPT} {\bang} [ i ] \.{=} \{ i \} ]}%
- \@x{\@s{16.4} \.{\land}\@s{9.72} vote\_requested \.{'} \.{=} [
- vote\_requested {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
- \@x{\@s{16.4} \.{\land}\@s{9.72} term \.{'} \.{=} [ term {\EXCEPT} {\bang} [
- i ] \.{=} @ \.{+} 1 ]\@s{68.59}}%
+ \@x{\@s{16.4} \.{\land} vote\_granted \.{'} \.{=} [ vote\_granted {\EXCEPT}
+ {\bang} [ i ] \.{=} \{ i \} ]}%
+ \@x{\@s{16.4} \.{\land} vote\_requested \.{'} \.{=} [ vote\_requested
+ {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
+ \@x{\@s{16.4} \.{\land} term \.{'} \.{=} [ term {\EXCEPT} {\bang} [ i ] \.{=}
+ @ \.{+} 1 ]\@s{49.19}}%
 \@y{%
   bump term
 }%
 \@xx{}%
- \@x{\@s{16.4} \.{\land}\@s{9.72} establish\_leadership \.{'} \.{=} [
+ \@x{\@s{16.4} \.{\land} establish\_leadership \.{'} \.{=} [
  establish\_leadership {\EXCEPT} {\bang} [ i ] \.{=} 0 ]}%
-\@x{\@s{16.4} \.{\land}\@s{9.72} {\UNCHANGED} {\langle} messages {\rangle}}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} messages {\rangle}}%
 \@x{\@s{16.4}}%
 \@y{%
   /\ PrintT(state')
@@ -497,7 +503,8 @@ Normalize ==
         /\ max_v = MaxTerm
         /\ term' = [s \in Servers |-> term[s] - min_v]
         /\ messages' = {}
-        /\ UNCHANGED <<state, voted_for, vote_granted, vote_requested, establish_leadership>>
+        /\ UNCHANGED <<state, voted_for, 
+            vote_granted, vote_requested, establish_leadership>>
 
 Next == 
     \/ /\ \A i \in Servers : term[i] # MaxTerm 
@@ -515,27 +522,28 @@ Next ==
 \@x{\@s{32.8} values \.{\defeq} \{ term [ s ] \.{:} s \.{\in} Servers \}}%
  \@x{\@s{32.8} max\_v \.{\defeq} {\CHOOSE} x \.{\in} values \.{:} \A\, y
  \.{\in} values \.{:} x \.{\geq} y}%
- \@x{\@s{32.8} min\_v\@s{1.49} \.{\defeq} {\CHOOSE} x \.{\in} values \.{:}
- \A\, y \.{\in} values \.{:} x \.{\leq} y}%
+ \@x{\@s{32.8} min\_v \.{\defeq} {\CHOOSE} x \.{\in} values \.{:} \A\, y
+ \.{\in} values \.{:} x \.{\leq} y}%
 \@x{\@s{16.4} \.{\IN}}%
 \@x{\@s{32.8} \.{\land} max\_v \.{=} MaxTerm}%
- \@x{\@s{32.8} \.{\land} term \.{'}\@s{5.41} \.{=} [ s \.{\in} Servers
- \.{\mapsto} term [ s ] \.{-} min\_v ]}%
+ \@x{\@s{32.8} \.{\land} term \.{'} \.{=} [ s \.{\in} Servers \.{\mapsto} term
+ [ s ] \.{-} min\_v ]}%
 \@x{\@s{32.8} \.{\land} messages \.{'} \.{=} \{ \}}%
- \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\,
- vote\_granted ,\, vote\_requested ,\, establish\_leadership {\rangle}}%
+\@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} state ,\, voted\_for ,\,}%
+ \@x{\@s{36.89} vote\_granted ,\, vote\_requested ,\, establish\_leadership
+ {\rangle}}%
 \@pvspace{8.0pt}%
 \@x{ Next \.{\defeq}}%
  \@x{\@s{16.4} \.{\lor} \.{\land} \A\, i \.{\in} Servers \.{:} term [ i ]
  \.{\neq} MaxTerm}%
-\@x{\@s{27.51} \.{\land} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
-\@x{\@s{56.95} \.{\lor} Leader ( i )}%
-\@x{\@s{56.95} \.{\lor} Candidate ( i )}%
-\@x{\@s{56.95} \.{\lor} Follower ( i )}%
-\@x{\@s{38.62} \.{\lor} \E\, msg \.{\in} messages \.{:} Receive ( msg )}%
+\@x{\@s{16.4} \.{\land} \.{\lor} \E\, i \.{\in} Servers \.{:}}%
+\@x{\@s{16.4} \.{\lor} Leader ( i )}%
+\@x{\@s{16.4} \.{\lor} Candidate ( i )}%
+\@x{\@s{16.4} \.{\lor} Follower ( i )}%
+\@x{\@s{16.4} \.{\lor} \E\, msg \.{\in} messages \.{:} Receive ( msg )}%
  \@x{\@s{16.4} \.{\lor} \.{\land} \E\, i \.{\in} Servers \.{:} term [ i ]
  \.{=} MaxTerm}%
-\@x{\@s{27.51} \.{\land} Normalize}%
+\@x{\@s{16.4} \.{\land} Normalize}%
 \end{tlatex}
 \newline
 
@@ -584,7 +592,7 @@ Leader(i) ==
 \@x{ RequestVoteSet ( i ) \.{\defeq} \{}%
  \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
  \.{\mapsto}\@w{RequestVoteReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
-\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{\@s{28.69} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
 \@x{ \}}%
 \@pvspace{8.0pt}%
 \@x{ Campaign ( i ) \.{\defeq}}%
@@ -599,7 +607,7 @@ Leader(i) ==
 \@x{ KeepAliveSet ( i ) \.{\defeq} \{}%
  \@x{\@s{16.4} [ fSrc \.{\mapsto} i ,\, fDst \.{\mapsto} s ,\, fType
  \.{\mapsto}\@w{AppendEntryReq} ,\, fTerm \.{\mapsto} term [ i ] ]}%
-\@x{\@s{31.47} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
+\@x{\@s{28.69} \.{:} s \.{\in} Servers \.{\,\backslash\,} \{ i \}}%
 \@x{ \}}%
 \@pvspace{8.0pt}%
 \@x{ Leader ( i ) \.{\defeq}}%
@@ -635,7 +643,7 @@ RemoveMessage(to_remove, msgs) ==
 \@x{ AddMessage ( to\_add ,\, msgs ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\LET}}%
 \@x{\@s{32.8} pruned \.{\defeq} \{ msg \.{\in} msgs \.{:}}%
- \@x{\@s{91.33} {\lnot} ( msg . fDst \.{=} to\_add . fDst \.{\land} msg .
+ \@x{\@s{36.89} {\lnot} ( msg . fDst \.{=} to\_add . fDst \.{\land} msg .
  fTerm \.{<} to\_add . fTerm ) \}}%
 \@x{\@s{16.4} \.{\IN}}%
 \@x{\@s{32.8} pruned \.{\cup} \{ to\_add \}}%
@@ -668,14 +676,18 @@ so:\newline
 \begin{tla}
 LeaderUniqueTerm ==
     \A s1, s2 \in Servers :
-        (state[s1] = "Leader" /\ state[s2] = "Leader" /\ s1 /= s2) => (term[s1] # term[s2])
+        (/\state[s1] = "Leader" 
+         /\ state[s2] = "Leader" 
+         /\ s1 /= s2)   
+            => (term[s1] # term[s2])
 \end{tla}
 \begin{tlatex}
 \@x{ LeaderUniqueTerm \.{\defeq}}%
 \@x{\@s{16.4} \A\, s1 ,\, s2 \.{\in} Servers \.{:}}%
- \@x{\@s{27.72} ( state [ s1 ] \.{=}\@w{Leader} \.{\land} state [ s2 ]
- \.{=}\@w{Leader} \.{\land} s1 \.{\neq} s2 ) \.{\implies} ( term [ s1 ]
- \.{\neq} term [ s2 ] )}%
+\@x{\@s{20.5} ( \.{\land} state [ s1 ] \.{=}\@w{Leader}}%
+\@x{\@s{24.6} \.{\land} state [ s2 ] \.{=}\@w{Leader}}%
+\@x{\@s{24.6} \.{\land} s1 \.{\neq} s2 )}%
+\@x{\@s{24.6} \.{\implies} ( term [ s1 ] \.{\neq} term [ s2 ] )}%
 \end{tlatex}
 \newline
 
@@ -701,7 +713,7 @@ Converge ==
 \begin{tlatex}
 \@x{ Converge \.{\defeq}}%
 \@x{\@s{16.4} \A\, s \.{\in} Servers \.{:}}%
- \@x{\@s{27.72} term [ s ] \.{=} 0 \.{\leadsto} term [ s ] \.{=} MaxTerm \.{-}
+ \@x{\@s{20.5} term [ s ] \.{=} 0 \.{\leadsto} term [ s ] \.{=} MaxTerm \.{-}
  MaxDiff}%
 \end{tlatex}
 \newline
@@ -723,10 +735,11 @@ Liveness ==
 \begin{tlatex}
 \@x{ Liveness \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} \A\, i \.{\in} Servers \.{:}}%
-\@x{\@s{31.61} \.{\land} {\WF}_{ vars} ( Leader ( i ) )}%
-\@x{\@s{31.61} \.{\land} {\WF}_{ vars} ( Candidate ( i ) )}%
-\@x{\@s{31.61} \.{\land} {\WF}_{ vars} ( Follower ( i ) )}%
+\@x{\@s{20.5} \.{\land} {\WF}_{ vars} ( Leader ( i ) )}%
+\@x{\@s{20.5} \.{\land} {\WF}_{ vars} ( Candidate ( i ) )}%
+\@x{\@s{20.5} \.{\land} {\WF}_{ vars} ( Follower ( i ) )}%
  \@x{\@s{16.4} \.{\land} {\WF}_{ vars} ( \E\, msg \.{\in} messages \.{:}
  Receive ( msg ) )}%
 \end{tlatex}
 
+% \end{document}
