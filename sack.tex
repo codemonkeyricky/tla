@@ -355,8 +355,10 @@ ClientAcknowledgement ==
 \@x{\@s{16.4} \.{\land} client\_buffer \.{'} \.{=} \{ \}}%
 \@x{\@s{16.4} \.{\land} client\_rx \.{'} \.{=} MaxIndex}%
  \@x{\@s{16.4} \.{\land} network \.{'} \.{=} AddMessage ( [ dst
- \.{\mapsto}\@w{server} ,\, type \.{\mapsto}\@w{ack} ,\, ack \.{\mapsto}
- MaxIndex ] ,\, network )}%
+ \.{\mapsto}\@w{server} ,\,}%
+\@x{\@s{16.4} type \.{\mapsto}\@w{ack} ,\,}%
+\@x{\@s{16.4} ack \.{\mapsto} MaxIndex ] ,\,}%
+\@x{\@s{24.59} network )}%
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\, server\_tx\_ack
  ,\, server\_tx\_limit ,\, lost {\rangle}}%
 \end{tlatex}
@@ -370,7 +372,8 @@ client sends the acknowledgement back to the server.\newline
 ClientReceive(pp) == 
     /\ network' = RemoveMessage(pp, network)
     /\ client_buffer' = client_buffer \cup {pp.seq}
-    /\ UNCHANGED <<server_tx, client_rx, server_tx_ack, server_tx_limit, lost>>
+    /\ UNCHANGED <<server_tx, client_rx, 
+        server_tx_ack, server_tx_limit, lost>>
 
 Missing == 
     LET 
@@ -396,15 +399,16 @@ ClientRetransmitRequest ==
                               type |-> "retransmit",
                               seq |-> CHOOSE x \in Missing : TRUE],
                                 network)
-    /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack, lost>>
+    /\ UNCHANGED <<server_tx, server_tx_limit, 
+        client_rx, client_buffer, server_tx_ack, lost>>
 \end{tla}
 \begin{tlatex}
 \@x{ ClientReceive ( pp ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} network \.{'} \.{=} RemoveMessage ( pp ,\, network )}%
  \@x{\@s{16.4} \.{\land} client\_buffer \.{'} \.{=} client\_buffer \.{\cup} \{
  pp . seq \}}%
- \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\, client\_rx ,\,
- server\_tx\_ack ,\, server\_tx\_limit ,\, lost {\rangle}}%
+\@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\, client\_rx ,\,}%
+\@x{\@s{20.5} server\_tx\_ack ,\, server\_tx\_limit ,\, lost {\rangle}}%
 \@pvspace{8.0pt}%
 \@x{ Missing \.{\defeq}}%
 \@x{\@s{16.4} \.{\LET}}%
@@ -440,8 +444,9 @@ ClientRetransmitRequest ==
  ,\,}%
 \@x{\@s{24.59} network )}%
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\,
- server\_tx\_limit ,\, client\_rx ,\, client\_buffer ,\, server\_tx\_ack ,\,
- lost {\rangle}}%
+ server\_tx\_limit ,\,}%
+ \@x{\@s{20.5} client\_rx ,\, client\_buffer ,\, server\_tx\_ack ,\, lost
+ {\rangle}}%
 \end{tlatex}
 \newline
 
@@ -475,7 +480,8 @@ ServerReceive(pp) ==
        /\ network' = AddMessage([dst |-> "client", seq |-> pp.seq], 
                                 RemoveMessage(pp, network))
        /\ lost' = lost -1
-       /\ UNCHANGED <<server_tx, server_tx_limit, client_rx, client_buffer, server_tx_ack>>
+       /\ UNCHANGED <<server_tx, server_tx_limit, 
+            client_rx, client_buffer, server_tx_ack>>
 \end{tla}
 \begin{tlatex}
 \@x{ RemoveStaleAck ( ack ,\, msgs ) \.{\defeq}}%
@@ -501,8 +507,8 @@ ServerReceive(pp) ==
 \@x{\@s{16.4} RemoveMessage ( pp ,\, network ) )}%
 \@x{\@s{16.4} \.{\land} lost \.{'} \.{=} lost \.{-} 1}%
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\,
- server\_tx\_limit ,\, client\_rx ,\, client\_buffer ,\, server\_tx\_ack
- {\rangle}}%
+ server\_tx\_limit ,\,}%
+\@x{\@s{24.59} client\_rx ,\, client\_buffer ,\, server\_tx\_ack {\rangle}}%
 \end{tlatex}
 \newline
 
