@@ -12,13 +12,14 @@ to get to the client, they may arrive out-of-order. The client may need to
 maintain a receive buffer for the packets and re-order the packets back into
 sequence before pushing the packets down to the decoding engine.\newline
 
-The network may also drop packets if any of the switches along the way get
-busy. In the case of a packet drop, the client has a few options. The client can
+The network may also drop packets if any of the switches along the way get busy.
+In the case of a packet drop, the client has a few options. The client can
 either discard the frame and let the decoding engine downstream deal with it
-(which may result in visible artefacts during playback). The client can
-request the whole frame to be re-sent, which results in additional bandwidth consumption.  The client can selectively request the missing packet to be
-retransmitted, which will minimize additional bandwidth consumption but
-increase implementation complexity.\newline
+(which may result in visible artefacts during playback). The client can request
+the whole frame to be re-sent, which results in additional bandwidth
+consumption.  The client can selectively request the missing packet to be
+retransmitted, which will minimize additional bandwidth consumption but increase
+implementation complexity.\newline
 
 In this chapter, we will implement a simple selective retransmit
 algorithm.\newline
