@@ -7,7 +7,7 @@ digital clock can be represented by two variables, hour and minute and the
 number of possible states in a digital clock is $24 * 60 = 1440$. For example, a
 clock in state 10:00 will transition to state 10:01. Assume an arbitrary system
 described by N variables, each variable having K possible values such an
-arbitrary system can have up to $N^K$ state.\newline
+arbitrary system can have up to $N^K$ state.\\
 
 For every specification, the designer can specify \textit{safety} property (or
 invariants) that must be true in \textit{every} state. For example, in any
@@ -16,7 +16,7 @@ described as $hour \in 0..23$. Similarly, the minute must have a value between 0
 59, or $minute \in 0..59$. Examples of invariants of a system include: Only one
 thread has exclusive access to a critical region, all variables in the system
 are within allowable value, and the resource allocation manager never allocates more
-than available resources.\newline
+than available resources.\\
 
 The designer can also specify \textit{liveness} property. These are properties to be
 satisfied by a \textit{sequence of state}. One liveness property of the digital
@@ -24,11 +24,11 @@ clock could be when the clock is 10:00, it will eventually become 11:00 (10:00
 \textit{leads} to 11:00). Example liveness property include: a distributed
 system eventually converges, the scheduler eventually schedules every task in
 the task queue, and the resource allocation manager fairly allocates resources.
-\newline
+\\
 
 A TLA+ Spec can be checked by TLC, the model checker. TLC uses
 \textit{breadth-first search} algorithm to explore \textit{all} states in the
-state machine and ensure safety and liveness properties are upheld.\newline
+state machine and ensure safety and liveness properties are upheld.\\
 
 A TLA+ Spec describes the system using \textit{temporal logic}. The syntax may 
 appear unfamiliar if one hasn't seen it before but like any other programming 
@@ -39,16 +39,16 @@ language an initiated reader should become familiarized quickly.
 In this example, we will specify a \textit{digital clock}. The digital clock has
 a few simple requirements:
 \begin{itemize}
-    \item Two variables to represent state: hour and minute
-    \item The clock increment one minute at a time
-    \item Hour is between 0 to 23, inclusive
-    \item Minute is between 0 to 59, inclusive
-    \item Clock wraps around at midnight (ie. 23:59 transitions to 00:00)
+\item Two variables to represent state: hour and minute
+\item The clock increments one minute at a time
+\item Hour is between 0 to 23, inclusive
+\item Minute is between 0 to 59, inclusive
+\item Clock wraps around at midnight (ie. 23:59 transitions to 00:00)
 \end{itemize}
 
 \section{Spec}
 
-The \textit{Init} state of such system can be described as: \newline
+The \textit{Init} state of such a system can be described as: \newline
 \begin{tla}
     vars == <<hour, minute>>
     Init ==
@@ -66,9 +66,9 @@ $\defeq$ is the \textit{defines equal} symbol and $\land$ is the \textit{logical
 and} symbol. The above TLA+ syntax can be read as \textit{Init} state is defined
 as both hour and minute are 0.\newline
 
-The spec also always include a \textit{Next} definition, an \textit{action
-formula} describing how the system transition from one state to another. Action
-formula contains \textit{primed} variables what happens to the variable in its
+The spec also always includes a \textit{Next} definition, an \textit{action
+formula} describing how the system transitions from one state to another. Action
+formula contains \textit{primed} variables, representing variable in its
 next state. The \textit{Next} action for the digital clock can be defined
 as:\newline
 
@@ -128,30 +128,29 @@ Finally, the Spec itself is formally defined as:\newline
 \end{tlatex}
 \newline
 
-Note this forms the basis for \textbf{all} TLA+ Spec. Every example in this book
-will include a Spec definition similar to this. \newline
+Note this forms the basis for \textbf{all} TLA+ spec. Every example in this book
+will include a \textit{Spec} definition similar to this.\\
 
 $\Box[Next]_{vars}$ deserves some special attention:
 \begin{itemize}
     \item $vars$ is defined earlier to be \textit{all} variables in the spec, in
-    this case hour and minute. Combination of these variables at different
-    values constitute the states of the system (eg. 23:59 and 00:00 are differente
-    states in the system).
+    this case, hour and minute. A combination of these variables at different
+    values constitutes the states of the system (eg. 23:59 and 00:00 are different states in the system).
     \item $\Box[Next]_{vars}$ is a box-action formula, where \textit{Next} is an
     action and \textit{vars} is a state function.
-    \item $\Box$ operator asserts the formula is always true for every step in the behaviour.
+    \item $\Box$ operator asserts the formula is always true for every step in the behavior.
     \item And steps in the behaviour is defined as $[Next]_{vars}$, where $Next$
     describe the action and $vars$ capturing all variables representing the state.
 \end{itemize}
 
-This can be roughly translate to: the system is valid for for every step
-\textit{Next} can take, forming the basis of the Spec.
+This can be roughly translated to: the system is valid for every step
+\textit{Next} can take.
 
 \section{Safety}
 
-Safety property describes invariant that must hold true in \textit{every} state
-of system. A common invariant is \textit{type safety} checks. In a digital
-clock, hour can only be in value between 0 to 23, and minute can only be value
+Safety property describes invariant that must hold in \textit{every} state
+of the system. A common invariant is \textit{type safety} checks. In a digital
+clock, an hour can only be in value between 0 to 23, and a minute can only be the value
 of 0 to 59:\newline
 
 \begin{tla}
@@ -166,12 +165,12 @@ of 0 to 59:\newline
 \end{tlatex}
 \newline
 
-When hour or minute falls outside of the specified range, the model checker 
-reports failure.
+When an hour or minute falls outside of the specified range, the model checker 
+reports violation.
 
-\section{Liveness}
+\section{Liveness and Fairness}
 
-Liveness property verifies certain behavioural across a sequence of state. One
+Liveness property verifies certain behaviors across a sequence of states. One
 liveness property is to confirm the clock wraps around at midnight, a property
 that can only be verified after checking at least two states: \newline
 
@@ -187,14 +186,11 @@ that can only be verified after checking at least two states: \newline
 \newline
 
 $\leadsto$ is the \textit{leads to} operator, suggesting something is eventually
-true. TLA+ provides a set of operators to describe liveness property.\newline 
+true. TLA+ provides a set of operators to describe the liveness property.\newline 
 
 To verify liveness, we need to modify the spec slightly to enable
 \textit{fairness} to prevent \textit{stuttering}. In plain terms, fairness
-ensure a state always transition to \textit{some other state}. Without fairness
-the spec is allowed to \textit{stutter}, or \textit{not transition} to any state. 
-This by definition fails liveness property check as the model checker is
-unable to verify the behaviour across a sequence of states. To get a more 
+ensures a state always transitions to \textit{some other state}. Without fairness,the spec is allowed to \textit{stutter}, or \textit{not transition} to any state. This fails the liveness property check as the model checker cannot verify the behavior across a sequence of states. To get a more 
 comprehensive description of fairness, refer to the last part of the
 book.\newline
 
@@ -214,14 +210,14 @@ book.\newline
 
 $WF_{vars}(Next)$ is the fairness qualifier.
 
-% TODO: insert reference here to specifying systems 8.1 
+% TODO: insert reference here to specify systems 8.1 
 
 \section{Model Checker}
 
-A TLA+ spec can be verified using model checker. The model checker runs the spec
+A TLA+ spec can be verified using a model checker. The model checker runs the spec
 and verifies all specified safety and liveness properties are fulfilled. The
-model checker is a library written in Java, and can be invoked from command
-line. For instruction on installing the model checker and related tools, please
+model checker is a library written in Java and can be invoked from the command
+line. For instructions on installing the model checker and related tools, please
 see \cite{toolbox}.\newline
 
 After installing the model checker, we need two things to verify the spec:
@@ -305,7 +301,7 @@ PROPERTIES Liveness
 \end{framed}
 
 After putting both clock.cfg and clock.tla in the same directory, one can now
-run the model checker. In this book I'll assume a commandline interface for the
+run the model checker. In this book I'll assume a command line interface for the
 model checker:
 \begin{verbatim}
 java -cp /usr/local/lib/tla2tools.jar tlc2.TLC clock
@@ -317,4 +313,4 @@ Model checking completed. No error has been found.
 1441 states generated, 1440 distinct states found, 0 states left on queue.
 The depth of the complete state graph search is 1440.
 \end{verbatim}
-The 1440 states in the graph represents total number of minutes in a day.
+The 1440 states in the state graph represent the total number of minutes in a day.
