@@ -1,6 +1,5 @@
 % \begin{document}
 
-
 \chapter{Simple Gossip Protocol}
 
 In a distributed system, a cluster of nodes collectively provides a service. A
@@ -33,22 +32,22 @@ $messages\_exchanged = \log_k N * k$
 
 \section{Design}
 
-In this chapter we will implement a simplified gossip model where: 
+In this chapter, we will implement a simplified gossip model where: 
 \begin{itemize}
     \item Each node has a version.
     \item Each node caches the version of all other nodes.
     \item A pair of nodes are randomly selected to gossip 
     \item A node can restart. Restarting a node clears the node's version cache
     of the other nodes.
-    \item A node can bump its own version.
+    \item A node can bump its version.
 \end{itemize}
 
 If the gossip protocol works correctly, every node should eventually have the
-latest version of all the nodes.
+the latest version of all the nodes.
 
 \section{Spec}
 
-In gossip protocol, every node needs to remember all its peers current
+In gossip protocol, every node needs to remember all its peer's current
 version:\newline
 
 \begin{tla}
@@ -76,11 +75,11 @@ Next ==
 \end{tlatex}
 \newline
 
-The \textit{Init} formula simply declares version to be a two dimension array
-with all elements initialized to 0. \textit{Next} allows either bumping version
-of a server, pick a pair of nodes to gossip, or restart a server.\newline
+The \textit{Init} formula simply declares the version to be a two-dimensional array
+with all elements initialized to 0. \textit{Next} allows either bumping the version
+of a server, picking a pair of nodes to gossip, or restarting a server.\newline
 
-The following provides definition to these steps:\newline
+The following defines these steps:\newline
 
 \begin{tla}
 Gossip(i, j) == 
@@ -108,7 +107,7 @@ Gossip(i, j) ==
 \end{tlatex}
 \newline
 
-When two server gossip, they gossip about all the nodes (including themselves)
+When two servers gossip, they gossip about all the nodes (including themselves)
 and update both of their version cache with the more up-to-date entry between
 the two. The \textit{LET..IN} syntax enables local macro definition. In this
 example, we use temporary variables defined inside \textit{LET}, and update the
@@ -131,9 +130,8 @@ Bump(i) ==
 \newline
 
 The action only permits version bump if the Server hasn't made it to 
-\textit{MaxVersion}. When the Server bumps the version, it only bumps its own 
-version and keeps all other version in its version cache as is. \newline
-
+\textit{MaxVersion}. When the Server bumps the version, it only bumps its 
+version and keeps all other versions in its version cache as is. \newline
 \begin{tla}
 Restart(i) == 
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
@@ -148,9 +146,8 @@ Restart(i) ==
 \end{tlatex}
 \newline
 
-Upon \textit{Restart}, a server reloads from its local storage (so it's own
-version persist), but the server needs to re-learn the cluster status (all other
-entries in its version cache is wiped).\newline
+Upon \textit{Restart}, a server reloads from its local storage (so its version persists), but the server needs to re-learn the cluster status (all other
+entries in its version cache are wiped).\newline
 
 The \textit{Spec} defines three actions: \textit{Bump}, \textit{Restart},
 \textit{Gossip}. Without any fairness description, \textit{Any} permutation of
@@ -168,10 +165,10 @@ We will discuss how to specify fairness in the Liveness section of this chapter.
 
 \section{Liveness}
 
-The expected behaviour of a system using gossip protocol is to ensure the
-cluster converges towards higher version number for all servers even in the
+The expected behavior of a system using gossip protocol is to ensure the
+cluster converges towards a higher version number for all servers even in the
 presence of failure (represented by \textit{Restart}). This means we need to
-gaurantee \textit{Bump} is always being called. Without this gaurantee, the Spec
+guarantee \textit{Bump} is always being called. Without this guarantee, the Spec
 can trap in a \textit{Restart} and \textit{Gossip} loop. To ensure \textit{Bump}
 is always called, we need to add fairness description:\newline 
 
@@ -192,14 +189,14 @@ Spec ==
 \@x{\@s{16.4} {\WF}_{ vars} ( Bump ( i ) )}%
 \end{tlatex}
 
-The the model checker explores all possible transitions permitted by the Spec.
-This includes calling Restart repeatedly, calling Gossip repeatedly, calling any
-subset of the actions repeatedly. The fairness description gaurantees that if
-the enabling condition of an action is true, the action will take. If the system
+The model checker explores all possible transitions permitted by the Spec.
+This includes calling Restart repeatedly, calling Gossip, and calling any
+subset of the actions repeatedly. The fairness description guarantees that if
+the enabling condition of an action is true, the action will be taken. If the system
 is trapped in a Restart and Gossip loop when Bump can be called, specifying fairness 
 for Bump ensures Bump is called, breaking the loop.\newline
 
-With the Spec ensuring the system always mgirate torwards higher version number, 
+With the Spec ensuring the system always migrate towards higher version number, 
 we can now define the Liveness property:\newline
 
 \begin{tla}
@@ -222,7 +219,7 @@ Liveness ==
 
 The $\Box\Diamond$ represents \textit{always eventually}. The liveness condition
 specifies that there exists a pair of Servers such that both of them
-\textit{always eventually} makes it to MaxVersion and have Gossip with each
+\textit{always eventually} make it to MaxVersion and have Gossip with each
 other.\newline
 
 Since the Spec permits \textit{Restart} to be called anytime, a liveness
