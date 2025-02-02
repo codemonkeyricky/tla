@@ -149,7 +149,7 @@ Restart(i) ==
 Upon \textit{Restart}, a server reloads from its local storage (so its version persists), but the server needs to re-learn the cluster status (all other
 entries in its version cache are wiped).\newline
 
-The \textit{Spec} defines three actions: \textit{Bump}, \textit{Restart},
+\textit{Spec} defines three actions: \textit{Bump}, \textit{Restart},
 \textit{Gossip}. Without any fairness description, \textit{Any} permutation of
 these actions are allowed by the Spec, and \textit{will} be checked by the model
 checker:
