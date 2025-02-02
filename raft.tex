@@ -229,7 +229,7 @@ Next ==
     \textit{AppepndEntryReq} to all its peers
 \end{itemize}
 
-The Spec implements four messages AppendEntry request/response, RequestVote
+ \textit{Spec} implements four messages AppendEntry request/response, RequestVote
 request/response. Handling for all messages is similar in structure. In
 this chapter, we will look at \textit{RequestVoteReq} only. Readers are
 encouraged to check the remaining definition as an exercise:\newline
@@ -388,14 +388,14 @@ The handling is split into three cases:
 
 \section{Refinement}
 
-The model checker will run the spec as defined, but due to the exponential growth
-of states, it is unlikely to be completed in a reasonable amount of time. We need to
-simplify the model and possibly trade off some correctness. Careful
-consideration must go into finding the right balance between maximizing model
-correctness and minimizing model checker runtime.\newline
+The model checker will run \textit{Spec} as defined, but is unlikely to be
+completed in a reasonable amount of time due to exponential state growth. We
+need to simplify the model, and careful consideration must go into finding the
+right balance between maximizing model correctness and minimizing model checker
+runtime.\newline
 
-The main strategy is to \textit{bound} the state graph. The following describes a
-set of optimization implemented for this example.
+The main strategy is to \textit{bound} the state graph. The following describes
+a set of optimization implemented for this example.
 
 \subsection{Modeling Messages as a Set}
 
@@ -489,8 +489,11 @@ Timeout(i) ==
 
 \subsection{Normalize Cluster Term}
 
-However, the term \textit{itself} can grow unbounded. This is a key tenant converging protocols rely on, a monotonically increasing counter. We want to \textit{normalize} the range of terms in the cluster so the minimum value resets
-back to 0. This provides an upper bound to the state graph.\newline
+However, \textit{term} can grow unbounded. A monotonically increasing counter is
+what many consensus protocol rely on to represent the latest reality. We want to
+\textit{normalize} the range of terms in the cluster so the minimum value resets
+back to 0 to bound the state graph. This is a trick described in \cite{finite}.
+\\
 
 \begin{tla}
 Normalize == 
@@ -552,8 +555,8 @@ the cluster terms are normalized.\newline
 
 Another caveat here is in the initial implementation I didn't update messages.
 This led to liveness property violation as the messages had terms disagreeing
-with the system state. To simplify the spec I simply cleared all messages. This 
-indirectly verifies a portion of the packet loss handling in the spec as well.
+with the system state. To simplify \textit{Spec} I simply cleared all messages. This 
+indirectly verifies a portion of the packet loss handling in \textit{Spec} as well.
 
 \subsection{Sending Request as a Batch}
 
@@ -720,7 +723,7 @@ Converge ==
 
 Instead of \textit{MaxTerm}, we use \textit{MaxTerm-MaxDiff} to ensure the
 liveness property is always upheld even after \textit{Normalization}. However,
-running the spec against TLC now will encounter a set of stuttering issues. We
+running  \textit{Spec} against TLC now will encounter a set of stuttering issues. We
 also need to update the fairness description to ensure all possible actions are
 called when the enabling conditions are \textit{eventually always} true:\newline
 

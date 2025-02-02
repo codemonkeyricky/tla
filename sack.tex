@@ -516,9 +516,13 @@ ServerReceive(pp) ==
 \newline
 
 When the server receives an acknowledgement for sequence number K, it assumes
-K-1 and prior were all received by the client. \textit{RemoveStaleAck} is a model optimization to drop all acknowledgements with sequence numbers less than K. Note that sequence numbers k, k-N, and k-2*N, are all represented as k, and intheory, the client may not be able to differentiate between them.  Practically,
-N is sized large enough to represent a few second's worth of data, so the system
-can safely assume a sequence number k is for the most recent N packets.\newline
+K-1 and prior were all received by the client. \textit{RemoveStaleAck} is a
+model optimization to drop all acknowledgements with sequence numbers less than
+K. Note that sequence numbers k, k-N, and k-2*N, are all represented as k, and
+intheory, the client may not be able to differentiate between them.
+Practically, N is sized large enough to represent a few second's worth of data,
+so the system can safely assume a sequence number k is for the most recent N
+packets.\\
 
 Upon receiving an acknowledgement from the client, the server bumps the
 server\_tx\_limit allowing it to send more data. The server can also receive a 
@@ -530,8 +534,8 @@ determine how many packets can be dropped at the same time.
 \subsection{Removing Stale Acknowlegement}
 
 When the server acknowledges K, it has already received all the packets before
-K. Likewise, when the client receives an acknowledgement for K, it can assume all
-previous packets have been received. The client may receive the
+K. Likewise, when the client receives an acknowledgement for K, it can assume
+all previous packets have been received. The client may receive the
 acknowledgement out-of-order due to unfavourable network conditions. One
 refinement we can make to the model is simply \textit{remove all stale
 acknowledgements}. In a practical implementation, this is also how the client
@@ -545,13 +549,15 @@ K, not K-N or earlier.
 
 \subsection{Retransmit Request Assumed Reliable}
 
-Retransmit requests packets be delivered through unreliable
-channels. However, this makes no difference in the model. The client sends
-a retransmit request when it detects packets are lost. If the model drops the
-retransmit request, the client will just send another retransmit request because
-the missing packet is still missing.\\
+Retransmit requests packets can be delivered through unreliable channels. However,
+this makes no difference in the model. The client sends a retransmit request
+when it detects packets are lost. If the model drops the retransmit request, the
+client will just send another retransmit request because the missing packet is
+still missing.\\
 
-While this can be modelled, it would increase the runtime without providing many benefits. For this Spec, we simply assume all control packets are reliable. 
+While this can be modeled, it would increase the runtime without providing many
+benefits. For this Spec, we simply assume all control packets are reliable. 
+
 \section{Safety}
 
 \section{Liveness}

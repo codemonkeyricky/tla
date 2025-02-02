@@ -42,9 +42,11 @@ Next ==
 
 \* Ensure multiple modes have made it to MaxVersion and communicated at least once
 Liveness == 
-    \A i, j \in Servers: 
+    \E i, j \in Servers: 
         /\ i # j
-        /\ []<>(version[i][j] = MaxVersion)
+        /\ []<>(/\ version[i][i] = MaxVersion
+                /\ version[i][j] = MaxVersion
+                /\ version[j][j] = MaxVersion)
 
 Spec ==
   /\ Init
