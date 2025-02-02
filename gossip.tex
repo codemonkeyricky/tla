@@ -2,22 +2,22 @@
 
 \chapter{Simple Gossip Protocol}
 
-In a distributed system, a cluster of nodes collectively provides a service. A
-distributed system may have 10s to 100s of nodes working together to offer the
-service in a geo-diverse environment to maximize uptime. The nodes often
+In a distributed system, a cluster of servers collectively provides a service. A
+distributed system may have 10s to 100s of servers working together to offer the
+service in a geo-diverse environment to maximize uptime. The servers often
 have requirements to know about each other. In the context of a distributed
-database, a node may need to know the key range of another of its peers. The
+database, a server may need to know the key range of another of its peers. The
 cluster needs a way to communicate this information. One such mechanism is the
-gossip protocol.\newline
+gossip protocol.\\
 
-Gossip protocol allows nodes to fetch the latest cluster information in a
-distributed fashion. Before the gossip protocol, nodes in a cluster learn about
+Gossip protocol allows servers to fetch the latest cluster information in a
+distributed fashion. Before the gossip protocol, servers in a cluster learn about
 their neighbors by contacting a centralized server. This introduces a single
-failure point in the system. Gossip protocol relies on nodes to initiate
-the data exchange, and the nodes in the cluster periodically select a set of neighbors to
-gossip with. \newline
+failure point in the system. Gossip protocol relies on servers to initiate
+the data exchange, and the servers in the cluster periodically select a set of
+neighbors to gossip with.\\
 
-Assume an N node cluster, at some periodic interval a node selects k neighbors
+Assume an N server cluster, at some periodic interval a server selects k neighbors
 to gossip with. The total amount of gossip propagation time is described
 logarithmically below:
 
@@ -34,21 +34,21 @@ $messages\_exchanged = \log_k N * k$
 
 In this chapter, we will implement a simplified gossip model where: 
 \begin{itemize}
-    \item Each node has a version.
-    \item Each node caches the version of all other nodes.
-    \item A pair of nodes are randomly selected to gossip 
-    \item A node can restart. Restarting a node clears the node's version cache
-    of the other nodes.
-    \item A node can bump its version.
+    \item Each server has a version.
+    \item Each server caches the version of all other servers.
+    \item A pair of servers are randomly selected to gossip.
+    \item A server can restart. Restarting a server clears the server's version cache
+    of the other servers.
+    \item A server can bump its version.
 \end{itemize}
 
-If the gossip protocol works correctly, every node should eventually have the
-the latest version of all the nodes.
+If the gossip protocol works correctly, every server should eventually have
+the latest version of all the servers.
 
 \section{Spec}
 
-In gossip protocol, every node needs to remember all its peer's current
-version:\newline
+In gossip protocol, every server needs to remember all its peer's current
+version:\\
 
 \begin{tla}
 Init ==
@@ -77,7 +77,7 @@ Next ==
 
 The \textit{Init} formula simply declares the version to be a two-dimensional array
 with all elements initialized to 0. \textit{Next} allows either bumping the version
-of a server, picking a pair of nodes to gossip, or restarting a server.\newline
+of a server, picking a pair of servers to gossip, or restarting a server.\newline
 
 The following defines these steps:\newline
 
@@ -107,7 +107,7 @@ Gossip(i, j) ==
 \end{tlatex}
 \newline
 
-When two servers gossip, they gossip about all the nodes (including themselves)
+When two servers gossip, they gossip about all the servers (including themselves)
 and update both of their version cache with the more up-to-date entry between
 the two. The \textit{LET..IN} syntax enables local macro definition. In this
 example, we use temporary variables defined inside \textit{LET}, and update the
@@ -129,9 +129,9 @@ Bump(i) ==
 \end{tlatex}
 \newline
 
-The action only permits version bump if the Server hasn't made it to 
-\textit{MaxVersion}. When the Server bumps the version, it only bumps its 
-version and keeps all other versions in its version cache as is. \newline
+\textit{Bump} only increments the version if the server hasn't made it to
+\textit{MaxVersion}. When the Server bumps the version, it only bumps its
+version and keeps all other versions in its version cache as is.\\
 \begin{tla}
 Restart(i) == 
     /\ version' = [version EXCEPT ![i] = [k \in Servers |-> 
@@ -146,31 +146,29 @@ Restart(i) ==
 \end{tlatex}
 \newline
 
-Upon \textit{Restart}, a server reloads from its local storage (so its version persists), but the server needs to re-learn the cluster status (all other
-entries in its version cache are wiped).\newline
-
-\textit{Spec} defines three actions: \textit{Bump}, \textit{Restart},
-\textit{Gossip}. Without any fairness description, \textit{Any} permutation of
-these actions are allowed by the Spec, and \textit{will} be checked by the model
-checker:
-\begin{itemize}
-    \item Restart, Restart, Restart,...
-    \item Bump, Bump, Bump, Bump ...
-    \item Restart, Gossip, Restart, Gossip, ... 
-\end{itemize}
-
-We will discuss how to specify fairness in the Liveness section of this chapter.
+Upon \textit{Restart}, a server reloads from its local storage (so its version
+persists), but the server needs to re-learn the cluster status (all other
+entries in its version cache are wiped).\\
 
 \section{Safety}
 
 \section{Liveness}
 
-The expected behavior of a system using gossip protocol is to ensure the
-cluster converges towards a higher version number for all servers even in the
-presence of failure (represented by \textit{Restart}). This means we need to
-guarantee \textit{Bump} is always being called. Without this guarantee, the Spec
-can trap in a \textit{Restart} and \textit{Gossip} loop. To ensure \textit{Bump}
-is always called, we need to add fairness description:\\
+\textit{Spec} defines three actions: \textit{Bump}, \textit{Restart},
+\textit{Gossip}. Without any fairness description, \textit{Any} permutation of
+these actions are allowed by \textit{Spec}, including:
+\begin{itemize}
+    \item Restart, Restart, Restart,...
+    \item Restart, Gossip, Restart, Gossip, ... 
+    \item Gossip, Gossip, Gossip, ... 
+\end{itemize}
+
+Some of these are not of interest, for example, the cluster is stuck in a
+loop where everyone is constantly restarting. In the gossip protocol, we are
+interested in verifying the cluster over time converges towards higher version
+value for all servers. This means we need to make sure \textit{Bump} is
+guaranteed to be called under some circumstances. This is where the fairness
+description comes in. To ensure \textit{Bump} is always called:\\
 
 \begin{tla}
 Spec ==
@@ -190,41 +188,41 @@ Spec ==
 \end{tlatex}
 \\
 
-The model checker explores all possible transitions permitted by \textit{Spec}.
-This includes calling Restart repeatedly, calling Gossip, and calling any
-subset of the actions repeatedly. The fairness description guarantees that if
-the enabling condition of an action is true, the action will be taken. If the system
-is trapped in a Restart and Gossip loop when Bump can be called, specifying fairness 
-for Bump ensures Bump is called, breaking the loop.\newline
+The model checker explores all possible transitions permitted by \textit{Spec}, 
+including calling any subset of actions repeatedly.  Fairness description
+guarantees that if the enabling condition of an action is true, the action will
+be taken. If the system is trapped in a \textit{Restart} and \textit{Gossip}
+loop when \textit{Bump} can be called, specifying fairness for \textit{Bump}
+ensures \textit{Bump} is called, breaking the loop.\\
 
-With the Spec ensuring the system always migrate towards higher version number, 
-we can now define the Liveness property:\newline
+With \textit{Spec} ensuring the system always migrate towards higher version
+number, we can now define the Liveness property:\\
 
 \begin{tla}
 Liveness == 
     \E i, j \in Servers: 
         /\ i # j
-        /\ []<>(version[i][i] = MaxVersion
-             /\ version[i][i] = MaxVersion 
-             /\ version[i][j] = MaxVersion)
+        /\ []<>(/\ version[i][i] = MaxVersion
+                /\ version[i][j] = MaxVersion
+                /\ version[j][j] = MaxVersion)
 \end{tla}
 \begin{tlatex}
 \@x{ Liveness \.{\defeq}}%
 \@x{\@s{16.4} \E\, i ,\, j \.{\in} Servers \.{:}}%
 \@x{\@s{16.4} \.{\land} i \.{\neq} j}%
- \@x{\@s{16.4} \.{\land} {\Box} {\Diamond} ( version [ i ] [ i ] \.{=}
- MaxVersion}%
-\@x{\@s{16.4} \.{\land} version [ i ] [ i ] \.{=} MaxVersion}%
-\@x{\@s{16.4} \.{\land} version [ i ] [ j ] \.{=} MaxVersion )}%
+ \@x{\@s{16.4} \.{\land} {\Box} {\Diamond} ( \.{\land} version [ i ] [ i
+ ]\@s{4.10} \.{=} MaxVersion}%
+\@x{\@s{20.5} \.{\land} version [ i ] [ j ] \.{=} MaxVersion}%
+\@x{\@s{20.5} \.{\land} version [ j ] [ j ] \.{=} MaxVersion )}%
 \end{tlatex}
 \\
 
 The $\Box\Diamond$ represents \textit{always eventually}. The liveness condition
 specifies that there exists a pair of Servers such that both of them
-\textit{always eventually} make it to MaxVersion and have Gossip with each
-other.\\
+\textit{always eventually} make it to \textit{MaxVersion} and have
+\textit{Gossip} with each other.\\
 
-Since the Spec permits \textit{Restart} to be called anytime, a liveness
+Since \textit{Spec} permits \textit{Restart} to be called anytime, a liveness
 property where \textit{all} Servers are up-to-date cannot be true. The model
 checker can always \textit{Restart} one of the Servers before this property is
 met.\\
@@ -235,7 +233,7 @@ Likewise, replacing \textit{always eventually} with \textit{eventually always}
 state. This cannot be true as the liveness condition is transient, since the
 model checker can always disturb any condition with a \textit{Restart}.\\
 
-For a more comprehensive discussion of fairness, refer to the last section of
-the book.
+For a more comprehensive discussion of fairness, please refer to
+Chapter~\ref{chap:fairness}.
 
 % \end{document}
