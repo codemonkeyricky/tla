@@ -18,18 +18,18 @@ failure point in the system. Gossip protocol relies on nodes to initiate
 the data exchange, and the nodes in the cluster periodically select a set of neighbors to
 gossip with. \newline
 
-Assume an N node cluster, at some periodic interval a node selects k neighbours
+Assume an N node cluster, at some periodic interval a node selects k neighbors
 to gossip with. The total amount of gossip propagation time is described
 logarithmically below:
 
-\begin{equation}
-    propagation\_time = \log_k N * gossip\_interval
-\end{equation}
+\begin{center}
+$propagation\_time = \log_k N * gossip\_interval$
+\end{center}
 
 With the total number of messages exchanged:
-\begin{equation}
-    messages\_exchanged = \log_k N * k
-\end{equation}
+\begin{center}
+$messages\_exchanged = \log_k N * k$
+\end{center}
 
 \section{Design}
 
