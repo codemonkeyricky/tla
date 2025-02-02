@@ -170,7 +170,7 @@ cluster converges towards a higher version number for all servers even in the
 presence of failure (represented by \textit{Restart}). This means we need to
 guarantee \textit{Bump} is always being called. Without this guarantee, the Spec
 can trap in a \textit{Restart} and \textit{Gossip} loop. To ensure \textit{Bump}
-is always called, we need to add fairness description:\newline 
+is always called, we need to add fairness description:\\
 
 \begin{tla}
 Spec ==
@@ -188,8 +188,9 @@ Spec ==
 \@x{\@s{8.2} \.{\land} \A\, i \.{\in} Servers \.{:}}%
 \@x{\@s{16.4} {\WF}_{ vars} ( Bump ( i ) )}%
 \end{tlatex}
+\\
 
-The model checker explores all possible transitions permitted by the Spec.
+The model checker explores all possible transitions permitted by \textit{Spec}.
 This includes calling Restart repeatedly, calling Gossip, and calling any
 subset of the actions repeatedly. The fairness description guarantees that if
 the enabling condition of an action is true, the action will be taken. If the system
@@ -215,23 +216,24 @@ Liveness ==
  MaxVersion}%
 \@x{\@s{16.4} \.{\land} version [ i ] [ i ] \.{=} MaxVersion}%
 \@x{\@s{16.4} \.{\land} version [ i ] [ j ] \.{=} MaxVersion )}%
-\end{tlatex}\newline
+\end{tlatex}
+\\
 
 The $\Box\Diamond$ represents \textit{always eventually}. The liveness condition
 specifies that there exists a pair of Servers such that both of them
 \textit{always eventually} make it to MaxVersion and have Gossip with each
-other.\newline
+other.\\
 
 Since the Spec permits \textit{Restart} to be called anytime, a liveness
 property where \textit{all} Servers are up-to-date cannot be true. The model
 checker can always \textit{Restart} one of the Servers before this property is
-met.\newline
+met.\\
 
 Likewise, replacing \textit{always eventually} with \textit{eventually always}
 ($\Diamond\Box$) also fails. $\Diamond\Box$ checks that once the system
 \textit{eventually} enters a specified state, it \textit{always} remains in that
 state. This cannot be true as the liveness condition is transient, since the
-model checker can always disturb any condition with a \textit{Restart}.\newline
+model checker can always disturb any condition with a \textit{Restart}.\\
 
 For a more comprehensive discussion of fairness, refer to the last section of
 the book.
