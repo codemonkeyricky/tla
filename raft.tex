@@ -2,18 +2,18 @@
 
 \chapter{Raft Consensus Protocol}
 
-\section{Design}
-
 Raft is a consensus algorithm that enables a cluster of nodes to agree on a
 collective state even in the presence of failures. An application of Raft is
 a database replication protocol. With a replication factor of 3 (eg. data is
 replicated across 3 nodes) and a hard drive failure rate of 0.81\% per year, the
 possibility of total failure where the entire replication group goes down is
-$1-0.0081^3 = 99.9999\%$ uptime \cite{backblaze}.\newline
+$1-0.0081^3 = 99.9999\%$ uptime \cite{backblaze}.\\
 
 This chapter implements only the leader election portion of the protocol to
 limit the scope of the discussion. For a full description of the Raft
-protocol, please refer to the original paper \cite{raft}.\newline
+protocol, please refer to the original paper \cite{raft}.\\
+
+\section{Design}
 
 We will briefly describe Raft and its leadership election process below: 
 \begin{itemize}
