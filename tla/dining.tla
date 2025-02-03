@@ -65,7 +65,7 @@ Eat(k) ==
         \* forksp == [forks EXCEPT ![left] = ""]
         \* forkspp == [forksp EXCEPT ![right] = ""]
     IN 
-        /\ PrintT("eat")
+        \* /\ PrintT("eat")
         /\ forks[left] = k
         /\ forks[right] = k
         /\ eaten' = [eaten EXCEPT ![k] = 1 - eaten[k]]
@@ -78,12 +78,12 @@ Liveness ==
         /\ eaten[k] = 1 ~> eaten[k] = 0
 
 Next ==
-    \/ \E k \in 0.. P-1:
-        TakeLeft(k)
-    \/ \E k \in 0.. P-1:
-        TakeRight(k)
     \* \/ \E k \in 0.. P-1:
-    \*     TakeBoth(k)
+    \*     TakeLeft(k)
+    \* \/ \E k \in 0.. P-1:
+    \*     TakeRight(k)
+    \/ \E k \in 0.. P-1:
+        TakeBoth(k)
     \/ \E k \in 0.. P-1:
         PutLeft(k)
     \/ \E k \in 0.. P-1:
@@ -96,6 +96,7 @@ Spec ==
   /\ [][Next]_vars
   /\ WF_vars(Next)
   /\ \A k \in 0..P-1: 
+    \* /\ SF_vars(TakeLeft(k))
     /\ SF_vars(Eat(k))
     \* /\ SF_vars(TakeLeft(k))
     \* /\ SF_vars(TakeRight(k))
