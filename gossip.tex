@@ -247,6 +247,7 @@ Liveness ==
         /\ i # j
         /\ []<>(/\ version[i][i] = MaxVersion
                 /\ version[i][j] = MaxVersion
+                /\ version[j][i] = MaxVersion
                 /\ version[j][j] = MaxVersion)
 \end{tla}
 \begin{tlatex}
@@ -256,6 +257,7 @@ Liveness ==
  \@x{\@s{16.4} \.{\land} {\Box} {\Diamond} ( \.{\land} version [ i ] [ i
  ]\@s{4.10} \.{=} MaxVersion}%
 \@x{\@s{20.5} \.{\land} version [ i ] [ j ] \.{=} MaxVersion}%
+\@x{\@s{20.5} \.{\land} version [ j ] [ i ] \.{=} MaxVersion}%
 \@x{\@s{20.5} \.{\land} version [ j ] [ j ] \.{=} MaxVersion )}%
 \end{tlatex}
 \\

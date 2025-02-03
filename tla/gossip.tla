@@ -51,6 +51,7 @@ Liveness ==
         /\ i # j
         /\ []<>(/\ version[i][i] = MaxVersion
                 /\ version[i][j] = MaxVersion
+                /\ version[j][i] = MaxVersion
                 /\ version[j][j] = MaxVersion)
 
 Spec ==
