@@ -3,9 +3,6 @@ EXTENDS Naturals, TLC
 VARIABLES forks, eaten
 vars == <<forks, eaten>>
 
-\*  P == {"p0", "p1", "p2"}
-\* forks == {"p0", "p1", "p2"}
-
 P == 3
 UNUSED == 100
 
@@ -13,34 +10,19 @@ Init ==
     /\ forks = [k \in 0.. P-1 |-> UNUSED]
     /\ eaten = [k \in 0.. P-1 |-> 0]
 
-TakeLeft(k) == 
-    LET 
-        left == k 
-    IN 
-        /\ forks[left] = UNUSED
-        /\ forks' = [forks EXCEPT ![left] = k]
-        /\ UNCHANGED eaten
+First(k) == IF k # P-1 THEN k ELSE 0
+Second(k) == IF k # P-1 THEN k+1 ELSE k
 
-TakeRight(k) == 
-    LET 
-        right == (k+1) % P
-    IN 
-        /\ forks[right] = UNUSED
-        /\ forks' = [forks EXCEPT ![right] = k]
-        /\ UNCHANGED eaten
+TakeFirst(k) == 
+    /\ forks[First(k)] = UNUSED
+    /\ forks' = [forks EXCEPT ![First(k)] = k]
+    /\ UNCHANGED eaten
 
-TakeBoth(k) == 
-    LET 
-        left == k 
-        right == (k+1) % P
-        forkp == [forks EXCEPT ![left] = k]
-        forkpp == [forkp EXCEPT ![right] = k]
-    IN 
-        /\ forks[left] = UNUSED
-        /\ forks[right] = UNUSED
-        /\ forks' = forkpp
-        /\ UNCHANGED eaten
-
+TakeSecond(k) ==
+    /\ forks[First(k)] = k
+    /\ forks[Second(k)] = UNUSED
+    /\ forks' = [forks EXCEPT ![Second(k)] = k]
+    /\ UNCHANGED eaten
 
 PutLeft(k) == 
     LET 
@@ -62,28 +44,24 @@ Eat(k) ==
     LET 
         left == k 
         right == (k+1) % P
-        \* forksp == [forks EXCEPT ![left] = ""]
-        \* forkspp == [forksp EXCEPT ![right] = ""]
     IN 
-        \* /\ PrintT("eat")
         /\ forks[left] = k
         /\ forks[right] = k
         /\ eaten' = [eaten EXCEPT ![k] = 1 - eaten[k]]
-        \* /\ forks' = forkspp
         /\ UNCHANGED forks
     
 Liveness ==
-    \A k \in 0..P-1:
+    \E k \in 0..P-1:
         /\ eaten[k] = 0 ~> eaten[k] = 1
         /\ eaten[k] = 1 ~> eaten[k] = 0
 
 Next ==
-    \* \/ \E k \in 0.. P-1:
-    \*     TakeLeft(k)
-    \* \/ \E k \in 0.. P-1:
-    \*     TakeRight(k)
     \/ \E k \in 0.. P-1:
-        TakeBoth(k)
+        TakeFirst(k)
+    \/ \E k \in 0.. P-1:
+        TakeSecond(k)
+    \* \/ \E k \in 0.. P-1:
+    \*     TakeBoth(k)
     \/ \E k \in 0.. P-1:
         PutLeft(k)
     \/ \E k \in 0.. P-1:
@@ -96,9 +74,10 @@ Spec ==
   /\ [][Next]_vars
   /\ WF_vars(Next)
   /\ \A k \in 0..P-1: 
-    \* /\ SF_vars(TakeLeft(k))
+    /\ SF_vars(TakeFirst(k))
+    /\ SF_vars(TakeSecond(k))
     /\ SF_vars(Eat(k))
-    \* /\ SF_vars(TakeLeft(k))
-    \* /\ SF_vars(TakeRight(k))
+    \* /\ SF_vars(TakeFirst(k))
+    \* /\ SF_vars(TakeSecond(k))
     \* /\ WF_vars(TakeBoth(k))
 =============================================================================
