@@ -46,6 +46,24 @@ a few simple requirements:
 \item Clock wraps around at midnight (ie. 23:59 transitions to 00:00)
 \end{itemize}
 
+The state graph for the clock looks like this: 
+\begin{center}
+\begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
+  \node[state]  (q1)                {00:00};
+  \node[state]  (q2) [right of=q1]  {00:01};
+  \node         (q3) [right of=q2]  {...};
+  \node[state]  (q4) [right of=q3]  {23:59};
+
+  \path[->]          (q1)  edge   []   node {} (q2);
+  \path[->]          (q2)  edge   []   node {} (q3);
+  \path[->]          (q3)  edge   []   node {} (q4);
+  \path[->]          (q4)  edge   [bend left=45]   node {} (q1);
+\end{tikzpicture}
+\end{center}
+
+Note that in this particular example each state only has one entry and one exit.
+TLA+ doesn't preclude states with multiple entries and multiple exists. 
+
 \section{Spec}
 
 The \textit{Init} state of such a system can be described as: \newline
