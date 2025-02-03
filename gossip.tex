@@ -30,6 +30,31 @@ With the total number of messages exchanged:
 $messages\_exchanged = \log_k N * k$
 \end{center}
 
+The following represents the state graph of a three node cluster running
+gossip protocol:
+\begin{center}
+\begin{tikzpicture}
+    % Define the nodes
+    \node (A) at (0,0) {A};
+    \node (B) at (3,0) {B};
+    \node (C) at (1.5,2) {C}; % 1.732 is approximately sqrt(3)
+
+    % Draw the edges 
+    \path[<->]          (A)  edge   []   node[below=3mm] {Gossip} (B);
+    \path[<->]          (A)  edge   []   node[left=3mm] {Gossip} (C);
+    \path[<->]          (B)  edge   []   node[right=2mm] {Gossip} (C);
+
+    \path[->]           (A) edge [in=150, out=210, loop, looseness=10] node[left] {Restart} (A);
+    \path[->]           (A) edge [in=240, out=300, loop, looseness=10] node[below] {Bump} (A);
+
+    \path[->]           (B) edge [in=-30, out=30, loop, looseness=10] node[right] {Restart} (B);
+    \path[->]           (B) edge [in=240, out=300, loop, looseness=10] node[below] {Bump} (B);
+
+    \path[->]           (C) edge [in=120, out=180, loop, looseness=10] node[left] {Restart} (C);
+    \path[->]           (C) edge [in=0, out=60, loop, looseness=10] node[right] {Bump} (C);
+\end{tikzpicture}
+\end{center}
+
 \section{Design}
 
 In this chapter, we will implement a simplified gossip model where: 
