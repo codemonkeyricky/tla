@@ -73,7 +73,7 @@ Eat(k) ==
         /\ UNCHANGED forks
     
 Liveness ==
-    \E k \in 0..P-1:
+    \A k \in 0..P-1:
         /\ eaten[k] = 0 ~> eaten[k] = 1
         /\ eaten[k] = 1 ~> eaten[k] = 0
 
