@@ -1,3 +1,4 @@
+
 % \begin{document}
 
 \chapter{SPMC Lockless Queue}
@@ -8,8 +9,8 @@ As the name suggests, an SPMC lockless queue supports a single producer
 % Some design considerations include:
 % \begin{itemize}
 %     \item A resource is exclusively updated by one owner, and read by one or more readers
-%     \item For shared resource that can be updated by multiple owners, the CPU
-%     can guarantee exclusive update from a single resource 
+%     \item For shared resources that can be updated by multiple owners, the CPU
+%     can guarantee exclusive updates from a single resource 
 % \end{itemize}
 
 \begin{center}
@@ -27,7 +28,7 @@ As the name suggests, an SPMC lockless queue supports a single producer
 An SPMC queue can be tricky to get right. There are many things to consider:
 \begin{itemize}
     \item Readers can lapse each other.
-    \item Readers can compete for read indices.
+    \item Readers can compete for reading indices.
     \item Readers can lapse writer.
     \item One reader can starve other readers.
     \item A slow reader can block the system.
@@ -39,11 +40,11 @@ And under all circumstances, system \textit{correctness} must be maintained.
 
 For the design:
 \begin{itemize}
-    \item SPMC is implemented as a circular queue with size of N
-    \item The status of individual index is represented as a status array of size N
+    \item SPMC is implemented as a circular queue with the size of N
+    \item The status of the individual index is represented as a status array of size N
     \item The status of each index is either UNUSED, WRITTEN, or READING
-    \item Each reader maintain its own read pointer
-    \item A \textit{outstanding} counter is incremented by the writer when write is complete, 
+    \item Each reader maintains its own read pointer
+    \item A \textit{outstanding} counter is incremented by the writer when the write is complete, 
     and decremented by the reader when it reserves a read
 \end{itemize}
 
@@ -54,14 +55,13 @@ To read, a reader performs a two-step reservation:
 \begin{itemize}
     \item The reader decrements \textit{outstanding}. A successful decrement means
     the reader is \textit{guaranteed} a read index.
-    \item After successful decrement of \textit{outstanding}, the reader walk
-    its read pointer until it successfully reserve the next available index to
+    \item After successful decrement of \textit{outstanding}, the reader walks its read pointer until it successfully reserves the next available index to
     read. This is done by attempting to CAS update an index from \textit{WRITTEN} to
     \textit{READING}. If the update fails, then the index was already reserved by another 
     reader.
 \end{itemize}
 
-There may be more than one approach in implementing SPMC, the above description
+There may be more than one approach to implementing SPMC, the above description
 is what we will implement in this chapter.
 
 \section{Spec}
@@ -135,18 +135,18 @@ end procedure;
 The reader performs a non-zero check on outstanding. If the outstanding is zero,
 the queue is empty, and the reader early returns.\\
 
-If outstanding is K, then at most K readers can reserve an index to read. If system 
+If outstanding is K, then at most K readers can reserve an index to read. If the system 
 has M readers, then M-K readers will fail to reserve a read index. The readers now 
 compete to reserve a read. More specifically: 
 \begin{itemize}
-    \item Reader loads outstanding, stores that onto local variable counter.
-    \item Reader early returns if counter is zero 
+    \item Reader loads outstanding, and stores that onto the local variable counter.
+    \item Reader early returns if the counter is zero 
     \item Reader attempts to update outstanding with CAS using counter and counter - 1.
     \item If CAS fails, go back to the top and retry.
 \end{itemize}
 
-If rv is non-success, another reader has \textit{won} the reservation. The
-current reader can attempt to reserve again if \textit{outstanding} is
+If the return value is non-success, another reader has \textit{won} the reservation. The
+the current reader can attempt to reserve again if \textit{outstanding} is
 non-zero.\newline
 
 If rv is a success, the reader is \textit{guaranteed} a read. However, readers
@@ -207,16 +207,16 @@ end procedure;
 \end{tlatex}
 \newline
 
-The writer first checks outstanding, and early return if queue is full. After
-fullness check, the writer then checks if the current index is UNUSED.  This is
+The writer first checks outstanding, and early returns if the queue is full. After
+the fullness check, the writer then checks if the current index is UNUSED.  This is
 to account for the edge case where a reader has performed the reservation first
-step to decrement outstanding but haven't done the actual read. If both checks
-pass, then writer now has an \textit{UNUSED} index it can write to.\newline
+step to decrement outstanding but hasn't done the actual read. If both checks
+pass, then the writer now has an \textit{UNUSED} index it can write to.\newline
 
 \section{Safety}
 
 When a reader reserves an index to read, the reader must have exclusive access. 
-This can be described as: For any pair of readers inside critical section, they
+This can be described as: For any pair of readers inside the critical section, they
 must operate on different indices:\newline
 
 \begin{tla}
@@ -237,7 +237,7 @@ ExclusiveReservation ==
 \end{tlatex}
 \newline
 
-Similarly, for any reader and writer inside critical section, they must operate
+Similarly, for any reader and writer inside the critical section, must operate
 on different indices as well:\newline
 \begin{tla}
 ExclusiveReadWrite == 
@@ -257,7 +257,7 @@ ExclusiveReadWrite ==
 \section{Liveness}
 
 All indices must be used as the system runs. The following verifies all unused
-indices are eventually used, and all used indicies are eventually unused:
+indices are eventually used, and all used indices are eventually unused:
 \newline
 \begin{tla}
 Liveness ==
@@ -276,10 +276,9 @@ Liveness ==
 \newline
 
 The following describes a more subtle scenario. We need to ensure the system
-remains functional even if readers complete out-of-order. The following describe
-such scenario, where two non-contiguous indicies have been reserved for reading.
-In this case we expect the indicies to eventually be re-used. This means the
-system remains functional after such scenario.\newline
+remains functional even if readers complete out-of-order. The following describes such a scenario, where two non-contiguous indices have been reserved for reading.
+In this case, we expect the indices to eventually be re-used. This means the
+the system remains functional after such scenario.\newline
 
 \begin{tla}
 Liveness2 == 
