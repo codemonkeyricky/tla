@@ -40,6 +40,11 @@ Next ==
     \/ \E i \in Servers:
         /\ Restart(i)
 
+Safety == 
+    \A i, j \in Servers: 
+       /\ version[i][j] >= 0 
+       /\ version[i][j] <= MaxVersion
+
 \* Ensure multiple modes have made it to MaxVersion and communicated at least once
 Liveness == 
     \E i, j \in Servers: 

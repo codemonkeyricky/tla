@@ -152,6 +152,24 @@ entries in its version cache are wiped).\\
 
 \section{Safety}
 
+One safety property is to confirm \textit{all} version values are within bounds:\\
+\begin{tla}
+Safety == 
+    \A i, j \in Servers: 
+       /\ version[i][j] >= 0 
+       /\ version[i][j] <= MaxVersion
+\end{tla}
+\begin{tlatex}
+\@x{ Safety \.{\defeq}}%
+\@x{\@s{16.4} \A\, i ,\, j \.{\in} Servers \.{:}}%
+\@x{\@s{16.4} \.{\land} version [ i ] [ j ] \.{\geq} 0}%
+\@x{\@s{16.4} \.{\land} version [ i ] [ j ] \.{\leq} MaxVersion}%
+\end{tlatex}
+\\
+
+This can be read as: for all possible pairs of servers i and j, the value of
+\textit{version[i][j]} must be within 0 and \textit{MaxVersion}, inclusive.
+
 \section{Liveness}
 
 \textit{Spec} defines three actions: \textit{Bump}, \textit{Restart},
