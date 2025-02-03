@@ -1,3 +1,4 @@
+
 % \begin{document}
 
 \chapter{Raft Consensus Protocol}
@@ -388,14 +389,14 @@ The handling is split into three cases:
 
 \section{Refinement}
 
-The model checker will run \textit{Spec} as defined, but is unlikely to be
+The model checker will run \textit{Spec} as defined but is unlikely to be
 completed in a reasonable amount of time due to exponential state growth. We
 need to simplify the model, and careful consideration must go into finding the
 right balance between maximizing model correctness and minimizing model checker
 runtime.\newline
 
 The main strategy is to \textit{bound} the state graph. The following describes
-a set of optimization implemented for this example.
+a set of optimizations implemented for this example.
 
 \subsection{Modeling Messages as a Set}
 
@@ -490,7 +491,7 @@ Timeout(i) ==
 \subsection{Normalize Cluster Term}
 
 However, \textit{term} can grow unbounded. A monotonically increasing counter is
-what many consensus protocol rely on to represent the latest reality. We want to
+what many consensus protocols rely on to represent the latest reality. We want to
 \textit{normalize} the range of terms in the cluster so the minimum value resets
 back to 0 to bound the state graph. This is a trick described in \cite{finite}.
 \\
