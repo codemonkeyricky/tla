@@ -1,3 +1,4 @@
+
 % \begin{document}
 
 \chapter{SPSC Lockless Queue}
@@ -22,19 +23,18 @@ using TLA+.\\
 The following describes the SPSC queue requirements: 
 
 \begin{itemize}
-    \item Two executing context, reader and writer
-    \item Writer pointer advances after write 
-    \item Reader pointer advances after read
-    \item If read pointer equals write pointer, queue is empty
-    \item If writer pointer + 1 equals read pointer, queue is full
+      \item Two executing context, reader and writer
+      \item Writer pointer advances after write 
+      \item Reader pointer advances after reading      \item If read pointer equals write pointer, queue is empty
+      \item If writer pointer + 1 equals read pointer, queue is full
 \end{itemize}
 
-The following is an example of a SPSC queue:
+The following is an example of an SPSC queue:
 \begin{center}
 \begin{tikzpicture}
 \foreach \i in {0,1,2,3,4,5,6,7} {
-    \draw[thick] (\i,0) rectangle (\i+1,1); % Draw each spot in the queue
-    \node at (\i+0.5, 0.5) {\i}; % Label each spot
+      \draw[thick] (\i,0) rectangle (\i+1,1); % Draw each spot in the queue
+      \node at (\i+0.5, 0.5) {\i}; % Label each spot
 }
 \draw[thick, ->, red] (1.5, -1) -- (1.5, -0.1) node[midway, left] {Read};
 \draw[thick, ->, blue] (7.5, -1) -- (7.5, -0.1) node[midway, right] {Write};
@@ -44,9 +44,9 @@ The following is an example of a SPSC queue:
 Since the reader and writer execute in different contexts, the instructions in a read
 and write can interleave in \textit{any} way imaginable:
 \begin{itemize}
-    \item Reader empty check can happen just as the writer is writing data
-    \item Writer full check can happen just as the reader is reading data
-    \item Reading and writing can occur concurrently
+      \item Reader empty check can happen just as the writer is writing data
+      \item Writer full check can happen just as the reader is reading data
+      \item Reading and writing can occur concurrently
 \end{itemize}
 
 The key observation is the index held by the write pointer is reserved by the
@@ -68,73 +68,73 @@ The following is a snippet of the spec written in PlusCal:\\
 \begin{ppcal}
 procedure reader()
 begin
-r_chk_empty:        
-    if rptr = wptr then 
-    r_early_ret:            
-        return;
-    end if;
-r_read_buf:         
-    assert buffer[rptr] # 0;
-r_cs:               
-    buffer[rptr] := 0;
-r_upd_rtpr:         
-    rptr := (rptr + 1) % N;
-    return;
+r_chk_empty:            
+      if rptr = wptr then 
+      r_early_ret:                  
+            return;
+      end if;
+r_read_buf:             
+      assert buffer[rptr] # 0;
+r_cs:                      
+      buffer[rptr] := 0;
+r_upd_rtpr:             
+      rptr := (rptr + 1) % N;
+      return;
 end procedure; 
 \end{ppcal}
 \begin{tlatex}
 \@x{ {\p@procedure} reader ( )}%
 \@x{ {\p@begin}}%
 \@x{ r\_chk\_empty\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} {\p@if} rptr \.{=} wptr {\p@then}}%
-\@x{\@s{16.4} r\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
-\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{\@s{24.59} {\p@if} rptr \.{=} wptr {\p@then}}%
+\@x{\@s{24.59} r\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{49.19} {\p@return} {\p@semicolon}}%
+\@x{\@s{24.59} {\p@end} {\p@if} {\p@semicolon}}%
 \@x{ r\_read\_buf\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} {\p@assert} buffer [ rptr ] \.{\neq} 0 {\p@semicolon}}%
+\@x{\@s{24.59} {\p@assert} buffer [ rptr ] \.{\neq} 0 {\p@semicolon}}%
 \@x{ r\_cs\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} buffer [ rptr ] \.{:=} 0 {\p@semicolon}}%
+\@x{\@s{24.59} buffer [ rptr ] \.{:=} 0 {\p@semicolon}}%
 \@x{ r\_upd\_rtpr\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} rptr \.{:=} ( rptr \.{+} 1 ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
+\@x{\@s{24.59} rptr \.{:=} ( rptr \.{+} 1 ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{24.59} {\p@return} {\p@semicolon}}%
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
 
-The reader checks if queue is empty by comparing read and write pointer. If 
-queue is empty, reader early returns. If queue is not empty, reader reads the
+The reader checks if the queue is empty by comparing the read and write pointers. If 
+the queue is empty, reader early returns. If the queue is not empty, the reader reads the
 index and advances the read pointer.\\
 \begin{ppcal}
 procedure writer() 
 begin
-w_chk_full:         
-    if (wptr + 1) % N = rptr then 
-    w_early_ret:
-        return; 
-    end if;
+w_chk_full:             
+      if (wptr + 1) % N = rptr then 
+      w_early_ret:
+            return; 
+      end if;
 w_write_buf:
-    assert buffer[wptr] = 0;
+      assert buffer[wptr] = 0;
 w_cs:
-    buffer[wptr] := wptr + 1000;
+      buffer[wptr] := wptr + 1000;
 w_upd_wptr:
-    wptr := (wptr + 1) % N;
-    return;
+      wptr := (wptr + 1) % N;
+      return;
 end procedure; 
 \end{ppcal}\newline
 \begin{tlatex}
 \@x{ {\p@procedure} writer ( )}%
 \@x{ {\p@begin}}%
 \@x{ w\_chk\_full\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} {\p@if} ( wptr \.{+} 1 ) \.{\%} N \.{=} rptr {\p@then}}%
-\@x{\@s{16.4} w\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{32.8} {\p@return} {\p@semicolon}}%
-\@x{\@s{16.4} {\p@end} {\p@if} {\p@semicolon}}%
+\@x{\@s{24.59} {\p@if} ( wptr \.{+} 1 ) \.{\%} N \.{=} rptr {\p@then}}%
+\@x{\@s{24.59} w\_early\_ret\@s{.5}\textrm{:}\@s{3}}%
+\@x{\@s{49.19} {\p@return} {\p@semicolon}}%
+\@x{\@s{24.59} {\p@end} {\p@if} {\p@semicolon}}%
 \@x{ w\_write\_buf\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} {\p@assert} buffer [ wptr ] \.{=} 0 {\p@semicolon}}%
+\@x{\@s{24.59} {\p@assert} buffer [ wptr ] \.{=} 0 {\p@semicolon}}%
 \@x{ w\_cs\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} buffer [ wptr ] \.{:=} wptr \.{+} 1000 {\p@semicolon}}%
+\@x{\@s{24.59} buffer [ wptr ] \.{:=} wptr \.{+} 1000 {\p@semicolon}}%
 \@x{ w\_upd\_wptr\@s{.5}\textrm{:}\@s{3}}%
-\@x{\@s{16.4} wptr \.{:=} ( wptr \.{+} 1 ) \.{\%} N {\p@semicolon}}%
-\@x{\@s{16.4} {\p@return} {\p@semicolon}}%
+\@x{\@s{24.59} wptr \.{:=} ( wptr \.{+} 1 ) \.{\%} N {\p@semicolon}}%
+\@x{\@s{24.59} {\p@return} {\p@semicolon}}%
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
 \\
@@ -159,11 +159,11 @@ working on the same index. The following formula describes this safety property:
 
 \begin{tla}
 MutualExclusion ==
-    ~ ((pc[WRITER] = "w_cs") /\ (pc[READER] = "r_cs") /\ rptr = wptr)
+      ~ ((pc[WRITER] = "w_cs") /\ (pc[READER] = "r_cs") /\ rptr = wptr)
 \end{tla}
 \begin{tlatex}
 \@x{ MutualExclusion \.{\defeq}}%
- \@x{\@s{16.4} {\lnot} ( ( pc [ WRITER ] \.{=}\@w{w\_cs} ) \.{\land} ( pc [
+ \@x{\@s{24.59} {\lnot} ( ( pc [ WRITER ] \.{=}\@w{w\_cs} ) \.{\land} ( pc [
  READER ] \.{=}\@w{r\_cs} ) \.{\land} rptr \.{=} wptr )}%
 \end{tlatex}
 \\
@@ -175,17 +175,17 @@ all indices are eventually used and unused:\\
 
 \begin{tla}
 Liveness ==
-    /\ \A k \in 0..N-1:
-        buffer[k] # 0 ~> buffer[k] = 0
-    /\ \A k \in 0..N-1:
-        buffer[k] = 0 ~> buffer[k] # 0
+      /\ \A k \in 0..N-1:
+            buffer[k] # 0 ~> buffer[k] = 0
+      /\ \A k \in 0..N-1:
+            buffer[k] = 0 ~> buffer[k] # 0
 \end{tla}
 \begin{tlatex}
 \@x{ Liveness \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
-\@x{\@s{20.5} buffer [ k ] \.{\neq} 0 \.{\leadsto} buffer [ k ] \.{=} 0}%
-\@x{\@s{16.4} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
-\@x{\@s{20.5} buffer [ k ] \.{=} 0 \.{\leadsto} buffer [ k ] \.{\neq} 0}%
+\@x{\@s{24.59} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{24.59} buffer [ k ] \.{\neq} 0 \.{\leadsto} buffer [ k ] \.{=} 0}%
+\@x{\@s{24.59} \.{\land} \A\, k \.{\in} 0 \.{\dotdot} N \.{-} 1 \.{:}}%
+\@x{\@s{24.59} buffer [ k ] \.{=} 0 \.{\leadsto} buffer [ k ] \.{\neq} 0}%
 \end{tlatex}
 
 % \end{document}
