@@ -6,7 +6,7 @@ vars == <<forks, eaten>>
 \*  P == {"p0", "p1", "p2"}
 \* forks == {"p0", "p1", "p2"}
 
-P == 2
+P == 3
 UNUSED == 100
 
 Init ==
