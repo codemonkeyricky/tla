@@ -4,7 +4,7 @@
 
 Years ago, I worked on a proprietary low-power processor in an embedded
 system. The processor ran a microcode featuring a custom instruction set. To
-enter a low-power state, a set of (possibly hundreds) instructions were
+enter a low-power state, a set (possibly hundreds) of instructions were
 executed. These instructions progressively put the system in a lower power state.
 For example: Turn off IP A, then turn off IP B, then turn off the power island
 to the IPs. To save cost and power, the low-power processor had very limited
@@ -13,23 +13,16 @@ debuggability support.\\
 An experienced reader may start to notice some red flags.\\
 
 If the microcode attempts to access the memory interface when the power
-island has been shut off, the processor will hang. Since the power island has
+island has been shut off, the processor will hang. Since the debug power island has
 been shut off, the physical hardware debug port is also unavailable, leaving the
-developer with \textit{no way} of live debugging-related problems. At this point,
-the developer needs to siphon through (possibly hundreds) of instructions to
-catch invariant violation \textit{manually}.\\
-
-If the microcode attempts to access the memory interface when the power
-island has been shut off, the processor will hang. Since the power island has
-been shut off, the physical hardware debug port is also unavailable, leaving
-the developer with no way to debug related problems. At this point, the
-developer needs to manually inspect (possibly hundreds) of instructions to catch
-invariant violations.\\
+developer with \textit{no way} of live debugging problems. At this point,
+the developer needs to search through numerous instructions to
+catch system constraint violations (invariants) \textit{manually}.\\
 
 As one can imagine, maintaining the microcode was very expensive.
 Fortunately, the proprietary low-power processor only had a handful of
-instructions, so I created an emulator for this proprietary processor to verify
-the microcode before deploying it on target. The emulator models the processor
+instructions, so I created a simulator for this proprietary processor to verify
+the microcode before deploying it on-target. The simulator models the processor
 states as a state graph, with executed instruction, transitions the state machine
 to the next state. At every state, all the invariants are verified. Example
 invariants include:
@@ -41,7 +34,7 @@ invariants include:
 The verification algorithm was implemented using a \textit{depth-first-search},
 providing 100\% microcode coverage before deployment on target.\\
 
-To generalize, we can model an arbitrary system as a set of states and a set of invariants that must be upheld at all times. The complexity of such an arbitrarysystem generally grows quadratically as the number of states grows linearly (eg.
+To generalize, we can model an arbitrary system as a set of states and a set of invariants that must be upheld at all times. The complexity of such an arbitrary system generally grows quadratically as the number of states grows linearly (eg.
 In an N-state system, adding state N+1 may introduce N transitions into the new
 state). There are many engineering problems with a large number of states, such
 as lockless or wait-free data structures, distributed algorithms, OS schedulers,
@@ -63,8 +56,8 @@ past decade or so, to allow TLA+ to demonstrate its strength.\newline
 We are at a point in the technology curve where vertical scaling is no
 longer practical, with CPU speed plateaued in the past decade or so. The industry
 is exploring horizontal scaling solutions, such as hardware vendors focusing on
-adding more CPU cores, or software vendors buying many low-end hardware instead
-of a few high-end hardware. This shifts the technology complexity from vertical
+adding more CPU cores, or software vendors buying more low-end hardware instead
+of a less high-end hardware. This shifts the technology complexity from vertical
 to horizontal, demanding solutions to maximize concurrent resource
 utilization. There is one slight problem though:\\
 
@@ -75,7 +68,7 @@ all scenarios in one's mind to ensure an arbitrary design accommodates all
 the corner cases is challenging.\\
 
 Consider a distributed system. The system is a cluster of independently operating
-entities and need to somehow collectively offer the correct system behavior,
+entities, which need to somehow collectively offer the correct system behavior,
 while any one of the machines may receive instructions out of order, crash,
 recover, etc.\\
 
@@ -108,7 +101,7 @@ state space (either per state or a sequence of states).
 
 \section{About This Book}
 To my surprise, there is not as much material on TLA+ as I assumed for
-such critical tools in a designer's toolbox. This book was initially a set of
+such a critical tool in a designer's toolbox. This book was initially a set of
 notes I took while learning TLA+. I decided to formalize these notes into this
 short book, which I hope the readers will find helpful in their TLA+
 journey.\newline
@@ -118,7 +111,7 @@ provide confidence in \textit{design correctness}. This book is targeted at
 software designers, hardware designers, system architects, and in general anyone
 interested in designing correct systems.\newline 
 
-To get the most out of the book, the reader should have general computing
+To get the most out of the book, the reader should have general computer
 science knowledge. The reader doesn't need to be an expert in a particular
 language to understand this book; TLA+ is effectively its language. This book is
 example-driven and will go through designs such as lockless queues, simple
