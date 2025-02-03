@@ -10,8 +10,8 @@ Init ==
     /\ forks = [k \in 0.. P-1 |-> UNUSED]
     /\ eaten = [k \in 0.. P-1 |-> 0]
 
-First(k) == IF k # P-1 THEN k ELSE 0
-Second(k) == IF k # P-1 THEN k+1 ELSE k
+First(k) == k
+Second(k) == (k+1 )% P
 
 TakeFirst(k) == 
     /\ forks[First(k)] = UNUSED
