@@ -68,9 +68,9 @@ as both hour and minute are 0.\newline
 
 The spec also always includes a \textit{Next} definition, an \textit{action
 formula} describing how the system transitions from one state to another. Action
-formula contains \textit{primed} variables, representing the change to variables in its
-next state. The \textit{Next} action for the digital clock can be defined
-as:\newline
+formula contains \textit{primed} variables, representing values of variables in
+their next state. The \textit{Next} action for the digital clock can be defined
+as:\\
 
 \begin{tla}
     NextHour ==
@@ -100,15 +100,19 @@ as:\newline
 \end{tlatex}
  \newline
 
-Note that $\lor$ is the \textit{logical or} symbol.
 
 Here's a breakdown of what the spec does:
 \begin{itemize}
-    \item \textit{Next} can take either \textit{NextHour} or \textit{NextMinute}
+    \item \textit{Next} can take either \textit{NextHour} or \textit{NextMinute}.
+    $\lor$ is the \textit{logical or} operator.
     \item \textit{Next} takes \textit{NextMinute} when \textit{minute} is not
-    59. \textit{NextMinute} doesn't update \textit{Hour} and increments \textit{Minute}.
+    59. When \textit{NextMinute} takes: \textit{hour} in the next state equals
+    to \textit{hour} in the current state, but \textit{minute} in the next state 
+    is \textit{minute} in current state plus one.
     \item \textit{Next} takes \textit{NextHour} when \textit{minute} is 59.
-    \textit{NextHour} increments \textit{hour} modulus 24 and sets \textit{minute} to 0.
+    When \textit{NextMinute} takes: \textit{hour} in the next state equals to
+    \textit{hour} in the current state plus one and modulus by number of hours in
+    a day and \textit{minute} in the next state equals to zero. 
 \end{itemize}
 
 Note that the formulas are \textit{state descriptions}, not \textit{assignment}.
