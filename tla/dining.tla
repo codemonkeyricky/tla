@@ -71,13 +71,4 @@ Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-\*   /\ \A k \in 0..P-1: 
-\*     /\ WF_vars(TakeFirst(k))
-\*   /\ \A k \in 0..P-1: 
-\*     /\ SF_vars(TakeSecond(k))
-\*   /\ \A k \in 0..P-1: 
-\*     /\ SF_vars(Eat(k))
-    \* /\ SF_vars(TakeFirst(k))
-    \* /\ SF_vars(TakeSecond(k))
-    \* /\ WF_vars(TakeBoth(k))
 =============================================================================
