@@ -2,23 +2,22 @@
 
 \chapter{Simple Scheduler}
 
-Task schedulers are fairly ubiquitous. Every device implements
+Task schedulers are ubiquitous. Every device implements
 \textit{something} to manage tasks. Modern desktop or mobile device processes
 are non-trivial OS abstractions. Every process maintains its own virtual memory
-space, and context switching process requires the OS to "clean" the hardware
+space, and the context-switching process requires the OS to "clean" the hardware
 before running the new process for security reasons.\\
 
 For embedded devices such as hard drives or network cards, the security
 consideration may be relaxed as users are typically not allowed to run arbitrary
 code on the device. Sometimes these products don't have a full-blown operating
-system to save on memory and storage footprint, but still need some sort of
-scheduler to manage the tasks.\\
+system to save on memory and storage footprint but still need some scheduler to manage the tasks.\\
 
 To solve the C10k \cite{c10k} problem, languages like Rust supports asynchronous
 programming. Asynchronous programming enables task scheduling \textit{within} a
 process to scale up system throughput. However, Rust only provides
 \textit{language support} for asynchronous programming, and user must supply
-their own runtime. The runtime must also include a scheduler to manage the
+their runtime. The runtime must also include a scheduler to manage the
 tasks inside the process.\\
 
 In this chapter, we will implement a very simple cooperative scheduler with
@@ -30,7 +29,7 @@ The task scheduler has the following features:
 \begin{itemize}
     \item Supporting N execution context (ie. CPUs).
     \item Supporting T number of tasks.
-    \item Tasks have identical priority and are scheduled cooperatively.
+    \item Tasks have identical priorities and are scheduled cooperatively.
     \item System shares a single locked resource.
     \item Any task can attempt to access the resource. Any task attempting to
     access the resource is guaranteed to have access at some point.
@@ -40,7 +39,7 @@ The task scheduler has the following features:
 
 \section{Spec}
 
-We will model scheduler using the following variables:\newline
+We will model the scheduler using the following variables:\newline
 \begin{tla}
 Init ==
     /\ cpus = [i \in 0..N-1 |-> ""] 
@@ -61,17 +60,17 @@ Init ==
 A few things to note:
 \begin{itemize}
     \item The system has \textit{N} executing context, represented as number of CPUs.
-    When a task is running, \textit{cpus[k]} is set to \textit{taskName}. When CPU is idle,
+    When a task is running, \textit{cpus[k]} is set to \textit{taskName}. When the CPU is idle,
     \textit{tcpus[k]} is set to an empty string. 
     \item \textit{ready\_q} and \textit{blocked\_q} are initialized as \textit{ordered tuple},
     due to the cooperative scheduling requirement.
     \item \textit{SetToSeq} is a macro from the community module \cite{tla_comm}
-    to converts a set into a ordered tuple. To use community module, one can
-    install required .tla files into the tla project source directly.
-    \item \textit{lock\_owner} represents the task that is current holding the lock. 
+    to convert a set into an ordered tuple. To use the community module, one can
+    install required .tla files into the TLA+ project source directly.
+    \item \textit{lock\_owner} represents the task that is currently holding the lock. 
 \end{itemize}
 
-A task can be in three possible state: \textit{Ready}, \textit{Blocked} and
+A task can be in three possible states: \textit{Ready}, \textit{Blocked}, and
 \textit{Running}. The Spec describes required lock contention handling.\newline
 
 \begin{tla}
@@ -115,7 +114,7 @@ Next ==
 Next can update either a task that is running, or a task waiting to be
 scheduled.\newline
 
-A \textit{Ready} task is popped off the ready queue and put onto a idle CPU.
+A \textit{Ready} task is popped off the ready queue and put onto an idle CPU.
 Since ready\_q is implemented as an ordered tuple, fetching and popping the
 front is done using \textit{Head} and \textit{Tail}, respectively.\newline
 
@@ -144,7 +143,7 @@ MoveToReady(k) ==
 \end{tlatex}
 \newline
 
-\textit{MoveToReady} defines the where task voluntarily go back to ready
+\textit{MoveToReady} defines the where task voluntarily goes back to the ready
 queue.\newline
 
 \begin{tla}
@@ -187,8 +186,8 @@ Lock(k) ==
 \newline
 
 \textit{Lock} represents when a running task attempts to acquire the global
-lock. When the lock is free, the task grabs the lock and move on. When the lock 
-is already held, the task moves into blocked queue to be scheduled when the lock
+lock. When the lock is free, the task grabs the lock and moves on. When the lock 
+is already held, the task moves into the blocked queue to be scheduled when the lock
 is released. If multiple tasks attempt to acquire the lock while the lock is
 being held, the tasks will be inserted in the block queue in request order.
 \newline
@@ -231,12 +230,12 @@ Unlock(k) ==
 
 \textit{Unlock} represents when a running task releases the lock. If there are
 no blocked tasks, the running task carries on as before. If there are blocked
-tasks, the first blocked task is scheduled to run immediately and running task
+tasks, the first blocked task is scheduled to run immediately, and the running task
 is inserted at the end of the ready queue. 
 
 \section{Safety}
 
-We can define safety property to detect programmatic failures. For example: if a
+We can define safety properties to detect programmatic failures. For example: if a
 task is running on a CPU, this \textit{implies} task cannot be blocked:\newline
 
 \begin{tla}
@@ -254,9 +253,7 @@ Safety ==
 
 \section{Liveness}
 
-Any tasks attempting to acquire the lock when the lock is already taken becomes
-blocked. A liveness property we can define is to check the scheduler gaurantee
-any blocked task eventually acquire the lock and run. Before we describe this
+Any tasks attempting to acquire the lock when the lock is already taken become blocked. A liveness property we can define is to check the scheduler guaranteeany blocked task eventually acquires the lock and run. Before we describe this
 liveness property, we need to first make sure no task can \textit{cannot} hold
 onto the lock indefinitely (which is something the model checker \textit{will
 try}):\newline
