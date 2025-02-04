@@ -3,7 +3,7 @@ EXTENDS Naturals, TLC
 VARIABLES forks, eaten
 vars == <<forks, eaten>>
 
-P == 2
+P == 3
 UNUSED == 100
 
 Init ==
@@ -39,18 +39,18 @@ Eat(k) ==
         /\ eaten' = [eaten EXCEPT ![k] = 1]
         /\ UNCHANGED forks
 
-Put(k) == 
-    LET 
-        left == k 
-        right == (k+1) % P
-        forksp == [forks EXCEPT ![left] = 0]
-        forkspp == [forksp EXCEPT ![right] = 0]
-    IN 
-        /\ eaten[k] = 1
-        /\ forks[left] = k 
-        /\ forks[right] = k
-        /\ forks' = forkspp
-        /\ eaten' = [eaten EXCEPT ![k] = 0]
+PutFirst(k) == 
+    /\ eaten[k] = 1
+    /\ forks[First(k)] = k 
+    /\ forks' = [forks EXCEPT ![First(k)] = UNUSED]
+    /\ UNCHANGED eaten
+
+PutSecond(k) == 
+    /\ eaten[k] = 1
+    /\ forks[First(k)] # k 
+    /\ forks[Second(k)] = k 
+    /\ forks' = [forks EXCEPT ![Second(k)] = UNUSED]
+    /\ eaten' = [eaten EXCEPT ![k] = 0]
 
 Liveness ==
     \E k \in 0..P-1:
@@ -65,10 +65,14 @@ Next ==
     \/ \E k \in 0.. P-1:
         Eat(k)
     \/ \E k \in 0.. P-1:
-        Put(k)
+        PutFirst(k)
+    \/ \E k \in 0.. P-1:
+        PutSecond(k)
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
+\*   /\ \A k \in 0..P-1:
+\*     WF_vars(PutFirst(k))
 =============================================================================
