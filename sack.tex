@@ -60,13 +60,14 @@ algorithm.\newline
 Since packets may arrive out-of-order, the server stamps the packets with
 sequence numbers to allow the client to order the packets as they arrive.
 Once the client has a set of ordered packets, it moves the packets from the 
-receive buffer into the decoding engine to be displayed.\newline
+receive buffer into the decoding engine to be displayed.\\
 
 The video packets are often sent via unreliable channels to minimize network
 overhead and latency. The client sends an acknowledgement back to the server to
 acknowledge the received packet. This indicates to the server it can send more
-video data to the client. Acknowledgements are not latency-sensitive and take up a very small proportion of bandwidth, so they are
-transported through reliable channels.\newline
+video data to the client. Acknowledgements are not latency-sensitive and take up
+a very small proportion of bandwidth, so they are transported through reliable
+channels.\\
 
 The following illustrates packet reorder handling:
 \begin{center}

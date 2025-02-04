@@ -5,37 +5,36 @@
 Task schedulers are fairly ubiquitous. Every device implements
 \textit{something} to manage tasks. Modern desktop or mobile device processes
 are non-trivial OS abstractions. Every process maintains its own virtual memory
-space for security reasons. Context switching process requires the OS to "clean"
-the hardware before running the new process.\newline
+space, and context switching process requires the OS to "clean" the hardware
+before running the new process for security reasons.\\
 
 For embedded devices such as hard drives or network cards, the security
 consideration may be relaxed as users are typically not allowed to run arbitrary
 code on the device. Sometimes these products don't have a full-blown operating
 system to save on memory and storage footprint, but still need some sort of
-scheduler to manage the tasks.\newline
+scheduler to manage the tasks.\\
 
-To solve the C10k \cite{c10k} problem, some languages (eg. Rust) support 
-asynchronous programming, allowing the user to enable task switching \textit{within} in the same process to scale up system throughput. However,
-language like Rust only provides the \textit{language support} for asynchronous
-programming, and user must supply their async runtime. The async runtime
-must also include a scheduler to manage the tasks.\newline
+To solve the C10k \cite{c10k} problem, languages like Rust supports asynchronous
+programming. Asynchronous programming enables task scheduling \textit{within} a
+process to scale up system throughput. However, Rust only provides
+\textit{language support} for asynchronous programming, and user must supply
+their own runtime. The runtime must also include a scheduler to manage the
+tasks inside the process.\\
 
-Hopefully, this provides enough context as to why implementing a scheduler may be of
-interest. In this chapter, we will implement a very simple cooperative
-scheduler with tasks that share a single lock.
+In this chapter, we will implement a very simple cooperative scheduler with
+tasks that share a single lock.
 
 \section{Design}
 
-In this section we will define a spec for a simple task scheduler. The task sechdeuler has the following
-requirements:
+The task scheduler has the following features:
 \begin{itemize}
-    \item Supporting N execution context (ie. CPUs)
-    \item Supporting T number of tasks
-    \item Tasks have identical priority and are scheduled coopertively
-    \item System has a single global lock
-    \item Any task can attempt to acquire the lock, Any task attempting to
-    acquire the lock are gauranteed to be scheduled.
-    \item If multiple tasks attempt to grab the lock, the tasks will be
+    \item Supporting N execution context (ie. CPUs).
+    \item Supporting T number of tasks.
+    \item Tasks have identical priority and are scheduled cooperatively.
+    \item System shares a single locked resource.
+    \item Any task can attempt to access the resource. Any task attempting to
+    access the resource is guaranteed to have access at some point.
+    \item If multiple tasks attempt to access the lock, the tasks will be
     scheduled in lock request order. 
 \end{itemize}
 
