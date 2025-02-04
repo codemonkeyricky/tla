@@ -145,15 +145,16 @@ compete to reserve a read. More specifically:
     \item If CAS fails, go back to the top and retry.
 \end{itemize}
 
-If the return value is non-success, another reader has \textit{won} the reservation. The
-the current reader can attempt to reserve again if \textit{outstanding} is
-non-zero.\newline
+If non-success is returned, another reader has \textit{won} the reservation. The
+current reader can attempt to reserve again if \textit{outstanding} is
+non-zero.\\
 
-If rv is a success, the reader is \textit{guaranteed} a read. However, readers
-may still compete during index reservation. To reserve an index, a reader issues
-CAS to update the index status from \textit{WRITTEN} to \textit{READING}. CAS
-failure indicates another reader has already reserved this index. The reader
-will bump the read pointer and try to reserve the next index.\\
+If success is returned, the reader is \textit{guaranteed} a read. However,
+readers may still compete during index reservation. To reserve an index, a
+reader issues CAS to update the index status from \textit{WRITTEN} to
+\textit{READING}. CAS failure indicates another reader has already reserved this
+index. The reader will bump the read pointer and try to reserve the next
+index.\\
 
 Now let us take a look at the writer implementation:\\
 
