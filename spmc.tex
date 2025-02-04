@@ -42,7 +42,7 @@ For the design:
 \begin{itemize}
     \item SPMC is implemented as a circular queue with the size of N
     \item The status of the individual index is represented as a status array of size N
-    \item The status of each index is either UNUSED, WRITTEN, or READING
+    \item The status of each index is either \textit{UNUSED}, \textit{WRITTEN}, or \textit{READING}
     \item Each reader maintains its own read pointer
     \item A \textit{outstanding} counter is incremented by the writer when the write is complete, 
     and decremented by the reader when it reserves a read
