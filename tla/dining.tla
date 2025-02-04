@@ -29,6 +29,16 @@ TakeSecond(k) ==
     /\ forks' = [forks EXCEPT ![Second(k)] = k]
     /\ UNCHANGED eaten
 
+Eat(k) == 
+    LET 
+        left == k 
+        right == (k+1) % P
+    IN 
+        /\ forks[left] = k
+        /\ forks[right] = k
+        /\ eaten' = [eaten EXCEPT ![k] = 1]
+        /\ UNCHANGED forks
+
 Put(k) == 
     LET 
         left == k 
@@ -42,16 +52,6 @@ Put(k) ==
         /\ forks' = forkspp
         /\ eaten' = [eaten EXCEPT ![k] = 0]
 
-Eat(k) == 
-    LET 
-        left == k 
-        right == (k+1) % P
-    IN 
-        /\ forks[left] = k
-        /\ forks[right] = k
-        /\ eaten' = [eaten EXCEPT ![k] = 1]
-        /\ UNCHANGED forks
-    
 Liveness ==
     \E k \in 0..P-1:
         /\ eaten[k] = 0 ~> eaten[k] = 1
@@ -63,9 +63,9 @@ Next ==
     \/ \E k \in 0.. P-1:
         TakeSecond(k)
     \/ \E k \in 0.. P-1:
-        Put(k)
-    \/ \E k \in 0.. P-1:
         Eat(k)
+    \/ \E k \in 0.. P-1:
+        Put(k)
 
 Spec ==
   /\ Init
