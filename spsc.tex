@@ -144,11 +144,11 @@ to. If the queue is full, the writer early exists. If the queue is not full, a w
 writes to the queue and advances the write pointer.\\
 
 The key insight here is the read and write pointer effectively \textit{reserves}
-the index they are pointing to. The state of the indices is unknown to the
-other context. Assume a reader index of k, the writer cannot write to index k
-since the reader might be reading from it. The only time a writer can write to k
-is when the read index is no longer k, suggesting the reader is done with the index. 
-The reason works symmetrically with the write index.
+the index they are pointing to. The state of the indices is unknown to the other
+context. Assume a reader index of k, the writer cannot write to index k since
+the reader might be reading from it. The only time a writer can write to k is
+when the read index is no longer k, suggesting the reader is done with the
+index. Symmetrically reasoning applies with the write index.
 
 \section{Safety}
 
