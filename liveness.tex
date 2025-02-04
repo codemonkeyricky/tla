@@ -5,20 +5,21 @@
 
 While safety properties can catch per-state contradictions, liveness properties
 allow you to verify the behavior across a series of states. This is TLA+'s
-\textit{superpower}. We are rarely interested only in the correctness of one
-state in the system, but rather in the correctness of system behavior \textit{across} a set of states.\\
+\textit{superpower}. Designers are rarely interested only in the correctness of
+individual states in the system, but also the correctness of system 
+\textit{across} a set of states.\\
 
-This book has already provided a few examples of liveness properties: eg.
-The elevator eventually makes it to the top floor, consensus protocol eventually
-converges, the scheduling algorithm guarantees a lock requester eventually gets the
-lock, etc. I argue any system worth the reader's time to model using TLA+ must 
-have interesting liveness properties to verify.\\
+This book has provided a few examples of liveness properties so far: eg.  The
+elevator eventually makes it to the top floor, consensus protocol eventually
+converges, the scheduling algorithm guarantees a lock requester eventually gets
+the lock, etc. I argue any system worth the reader's time to model using TLA+
+must have interesting liveness properties to verify.\\
 
 Unfortunately, liveness check also takes \textit{much} longer, since the very
 definition of verifying property across a series of states makes the task very
 hard to parallelize. Care must go into refining the model to keep the model
-checker runtime reasonable. In this chapter, we will go through a very simple
-state machine to demonstrate liveness properties. \\
+checker runtime reasonable. In this chapter, we will discuss a simple state
+machine example to illustrates liveness properties. \\
 
 Assume a simple three-system system:\\
 
