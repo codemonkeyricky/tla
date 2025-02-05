@@ -78,7 +78,7 @@ PhaseTrim ==
                    \/ /\ out[src] = out[dst] /\ in[src] = in[dst]
                       /\ UNCHANGED new_edges
                 /\ edges' = edges \ {e}
-           /\ UNCHANGED <<phase, in, out, updated, converged>>
+          /\ UNCHANGED <<phase, in, out, updated, converged>>
 
 Next == 
     \/ PhaseInit
