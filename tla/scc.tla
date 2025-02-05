@@ -33,17 +33,17 @@ PhaseInit ==
 PhaseUpdate == 
     /\ phase = "Update"
     /\ \/ /\ \E e \in edges: 
-                LET 
-                    src == e[1]
-                    dst == e[2]
-                IN 
-                    /\ vin' = [vin EXCEPT ![src] = Max(vin[src], vin[dst])]
-                    /\ vout' = [vin EXCEPT ![src] = Max(vout[src], vout[dst])]
-                    /\ edges' = edges \ {e}
-                    /\ \/ /\ vin' # vin \/ vout' # vout
-                          /\ updated' = 1
-                       \/ /\ vin' = vin /\ vout' = vout
-                          /\ updated' = 0
+            LET 
+                src == e[1]
+                dst == e[2]
+            IN 
+                /\ vin' = [vin EXCEPT ![src] = Max(vin[src], vin[dst])]
+                /\ vout' = [vin EXCEPT ![src] = Max(vout[src], vout[dst])]
+                /\ edges' = edges \ {e}
+                /\ \/ /\ vin' # vin \/ vout' # vout
+                      /\ updated' = 1
+                   \/ /\ vin' = vin /\ vout' = vout
+                      /\ updated' = 0
           /\ UNCHANGED <<phase, converged>>
        \/ /\ edges = {}
           /\ updated = 0
