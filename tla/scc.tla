@@ -5,7 +5,7 @@ vars == <<edges>>
 
 Vertex == {0, 1, 2}
 
-Edges == {{0,1}, {1,0}, {2,2}}
+Edges == {<<0,1>>, <<1,0>>, <<2,2>>}
 
 INIT    == "Init"
 UPDATE  == "Update"
