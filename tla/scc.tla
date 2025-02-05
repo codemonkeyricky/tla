@@ -37,8 +37,8 @@ PhaseUpdate ==
                 src == e[1]
                 dst == e[2]
             IN 
-                /\ vin' = [vin EXCEPT ![src] = Max(vin[src], vin[dst])]
-                /\ vout' = [vout EXCEPT ![dst] = Max(vout[src], vout[dst])]
+                /\ vin' = [vin EXCEPT ![dst] = Max(vin[src], vin[dst])]
+                /\ vout' = [vout EXCEPT ![src] = Max(vout[src], vout[dst])]
                 /\ edges' = edges \ {e}
                 /\ \/ /\ vin' # vin \/ vout' # vout
                       /\ updated' = 1
