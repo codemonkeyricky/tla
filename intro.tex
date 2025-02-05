@@ -34,12 +34,15 @@ invariants include:
 The verification algorithm was implemented using a \textit{depth-first-search},
 providing 100\% microcode coverage before deployment on target.\\
 
-To generalize, we can model an arbitrary system as a set of states and a set of invariants that must be upheld at all times. The complexity of such an arbitrary system generally grows quadratically as the number of states grows linearly (eg.
-In an N-state system, adding state N+1 may introduce N transitions into the new
-state). There are many engineering problems with a large number of states, such
-as lockless or wait-free data structures, distributed algorithms, OS schedulers,
-consensus protocols, and more. As the number of states grows, the problem becomes
-more challenging for designers to reason about.\\
+To generalize, we can model an arbitrary system as a set of states and a set
+of invariants that must be upheld at all times. The complexity of such an
+arbitrary system generally grows quadratically as the number of states grows
+linearly (eg.  In an N-state system, adding state N+1 may introduce N
+transitions into the new state). There are many engineering problems with a
+large number of states, such as lockless or wait-free data structures,
+distributed algorithms, OS schedulers, consensus protocols, and more. As the
+number of states grows, the problem becomes more challenging for designers to
+reason about.\\
 
 So, how do we produce a system that is \textit{correct by design?} 
 
