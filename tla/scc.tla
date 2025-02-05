@@ -54,7 +54,6 @@ PhaseUpdate ==
        \/ /\ edges = {}
           /\ updated # 0
           /\ edges' = new_edges
-          /\ new_edges' = new_edges
           /\ UNCHANGED <<phase, new_edges, in, out, updated, converged>>
 
 PhaseTrim == 
@@ -62,6 +61,7 @@ PhaseTrim ==
     /\ \/ /\ edges = {}
           /\ in = out
           /\ converged' = 1
+        \*   /\ Assert(0,"")
           /\ UNCHANGED <<phase, new_edges, edges, in, out, updated>>
        \/ /\ edges = {}
           /\ in # out
