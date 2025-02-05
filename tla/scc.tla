@@ -38,7 +38,7 @@ PhaseUpdate ==
                 dst == e[2]
             IN 
                 /\ vin' = [vin EXCEPT ![src] = Max(vin[src], vin[dst])]
-                /\ vout' = [vin EXCEPT ![src] = Max(vout[src], vout[dst])]
+                /\ vout' = [vout EXCEPT ![dst] = Max(vout[src], vout[dst])]
                 /\ edges' = edges \ {e}
                 /\ \/ /\ vin' # vin \/ vout' # vout
                       /\ updated' = 1
@@ -60,7 +60,7 @@ PhaseTrim ==
           /\ converged' = 1
           /\ UNCHANGED <<phase, edges, vin, vout, updated>>
        \/ /\ vin # vout
-          /\ phase' = PhaseInit
+          /\ phase' = "Init"
           /\ UNCHANGED <<vin, edges, vout, updated, converged>>
 
 Next == 
