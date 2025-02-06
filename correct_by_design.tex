@@ -4,8 +4,10 @@
 \documentclass{kdp}
 \usepackage{geometry}
 
-% \usepackage{algorithm}
-\usepackage{algpseudocode}
+% \usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
+% \usepackage{algorithm}% http://ctan.org/pkg/algorithms
+% \usepackage{algpseudocode}
 \usepackage{tlatex}
 \usepackage{listings}
 \usepackage{xcolor}
@@ -84,13 +86,13 @@ the readers into world of TLA+.
 
 % \include{blinking}
 
-\include{gossip}
-
-\include{scheduler}
-
 \include{dining}
 
 \include{scc}
+
+\include{scheduler}
+
+\include{gossip}
 
 \include{sack}
 
