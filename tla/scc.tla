@@ -3,9 +3,25 @@ EXTENDS Naturals, TLC, Sequences
 VARIABLES phase, edges, new_edges, in, out, updated, converged
 vars == <<edges>>
 
-Vertex == {0, 1, 2, 3}
+Vertex == {0, 1, 2, 3,4,5,6,7,8,9,10,11}
 
-Edges == {<<0,1>>, <<1,2>>, <<2,3>>, <<3,0>>}
+Edges == {
+    <<3,7>>, 
+    <<3,11>>, 
+    <<4,10>>, 
+    <<6,7>>, 
+
+    <<7,4>>,
+    <<7,6>>,
+
+    <<8,3>>,
+    <<8,10>>,
+
+    <<10,4>>,
+
+    <<11,3>>,
+    <<11,8>>
+    }
 
 INIT    == "Init"
 UPDATE  == "Update"
@@ -61,7 +77,6 @@ PhaseTrim ==
     /\ \/ /\ edges = {}
           /\ in = out
           /\ converged' = 1
-        \*   /\ Assert(0,"")
           /\ UNCHANGED <<phase, new_edges, edges, in, out, updated>>
        \/ /\ edges = {}
           /\ in # out
@@ -84,6 +99,9 @@ Next ==
     \/ PhaseInit
     \/ PhaseUpdate
     \/ PhaseTrim
+
+Termination == 
+    converged = 0
 
 Spec ==
   /\ Init
