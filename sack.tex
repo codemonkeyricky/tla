@@ -530,7 +530,7 @@ server\_tx\_limit allowing it to send more data. The server can also receive a
 retransmit request and send the requested data. \textit{lost} is configurable to
 determine how many packets can be dropped at the same time.
 
-\section{Refinement}
+\section{Model Reduction}
 
 \subsection{Removing Stale Acknowlegement}
 
@@ -538,7 +538,7 @@ When the server acknowledges K, it has already received all the packets before
 K. Likewise, when the client receives an acknowledgement for K, it can assume
 all previous packets have been received. The client may receive the
 acknowledgement out-of-order due to unfavourable network conditions. One
-refinement we can make to the model is simply \textit{remove all stale
+reduction we can make to the model is simply \textit{remove all stale
 acknowledgements}. In a practical implementation, this is also how the client
 can react when it receives stale acknowledgements.\\
 
