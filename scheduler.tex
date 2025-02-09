@@ -253,10 +253,12 @@ Safety ==
 
 \section{Liveness}
 
-Any tasks attempting to acquire the lock when the lock is already taken become blocked. A liveness property we can define is to check the scheduler guaranteeany blocked task eventually acquires the lock and run. Before we describe this
-liveness property, we need to first make sure no task can \textit{cannot} hold
-onto the lock indefinitely (which is something the model checker \textit{will
-try}):\newline
+Any tasks attempting to acquire the lock when the lock is already taken become
+blocked. A liveness property we can define is to check the scheduler
+guarantee any blocked task eventually acquires the lock and run. Before we
+describe this liveness property, we need to first make sure no task can
+\textit{cannot} hold onto the lock indefinitely (which is something the model
+checker \textit{will try}):\newline
 
 \begin{tla}
 Fairness ==
