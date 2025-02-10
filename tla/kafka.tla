@@ -13,44 +13,31 @@ GetPart(p) ==
 Empty == {}
 
 Init ==
-    /\ topic = [k \in Empty |-> 0] 
-    /\ c_offset = 0 \* [p \in 0..P-1 |-> 0]
+    /\ topic = [p \in 0..P-1 |-> [k \in Empty |-> 0]]
+    /\ c_offset = [p \in 0..P-1 |-> p]
     /\ p_seq = 0
 
 Produce == 
-    /\ p_seq \notin DOMAIN topic 
+    /\ p_seq \notin DOMAIN topic[GetPart(p_seq)]
     /\ p_seq' = (p_seq + 1) % N
-    /\ topic' = topic @@ (p_seq :> p_seq)
+    /\ topic' = [topic EXCEPT ![GetPart(p_seq)] = topic[GetPart(p_seq)] @@ (p_seq :> p_seq)]
     /\ UNCHANGED <<c_offset>>
 
-Consume == 
+Consume(p) == 
     LET 
-        k == c_offset
-        v == topic[k]
+        k == c_offset[p]
+        v == topic[p][k]
         remove == (k :> v)
     IN 
-        /\ Cardinality(DOMAIN topic) # 0
-        /\ topic' = [i \in DOMAIN topic \ DOMAIN remove |-> topic[i]] 
-        /\ c_offset' = (c_offset + 1) % N
+        /\ Cardinality(DOMAIN topic[p]) # 0
+        /\ topic' = [topic EXCEPT ![p] = [i \in DOMAIN topic[p] \ DOMAIN remove |-> topic[p][i]]] 
+        /\ c_offset' = [c_offset EXCEPT ![p] = (c_offset[p] + 2) % N]
         /\ UNCHANGED <<p_seq>>
 
-\* Consume(p) == 
-    \* LET 
-        \* map == topic[p]
-        \* size == Cardinality(map)
-        \* v == map[c_offset[p]]
-        \* remove == [c_offset[p] |-> v]
-    \* IN 
-        \* /\ map # {}
-        \* /\ c_offset' = [c_offset EXCEPT ![p] = (c_offset[p] + 1) % N]
-        \* /\ topic' = [topic EXCEPT ![p] = {}]
-        \* /\ UNCHANGED <<p_seq>>
-\* 
 Next ==
     \/ Produce
-    \/ Consume
-    \* \/ \E p \in 0..P-1: 
-    \*     Consume(p)
+    \/ \E p \in 0..P-1: 
+        Consume(p)
 
 Spec ==
   /\ Init
