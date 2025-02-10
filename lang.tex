@@ -125,6 +125,15 @@ b == <<2, 3, 4>>
 \* tuple: 0, 1, 2, 2, 3, 4
 c == A \o B
 
+\* tuple: 0, 1, 2, 3
+c2 == Append(A, 3) 
+
+\* gets head: 0
+c3 == Head(A) 
+
+\* removes head: 1, 2
+c4 == Tail(A) 
+
 \* 6
 d == Len(c)                         
 
@@ -148,6 +157,27 @@ g == {x \in 1..Len(c) : c[x] = 2}
 }%
 \@xx{}%
 \@x{ c \.{\defeq} A \.{\circ} B}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  tuple: 0, 1, 2, 3
+}%
+\@xx{}%
+\@x{ c2 \.{\defeq} Append ( A ,\, 3 )}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  gets head: 0
+}%
+\@xx{}%
+\@x{ c3 \.{\defeq} Head ( A )}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  removes head: 1, 2
+}%
+\@xx{}%
+\@x{ c4 \.{\defeq} Tail ( A )}%
 \@pvspace{8.0pt}%
 \@x{}%
 \@y{%

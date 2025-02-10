@@ -27,9 +27,20 @@ E == \A x \in 1..Len(C) : C[x] # 10 \* TRUE - every C[x] is not 10
                                     \* First tuple element is at index 1 (not 0)
 F == \E x \in 1..Len(C) : C[x] = 2  \* TRUE - there exists a C[x] that is 2
 G == {x \in 1..Len(C) : C[x] = 2}   \* {3, 4} - when index is 3 or 4, C[x] = 2
+
+c2 == Append(A, 3) 
+
+\* gets head: 0
+c3 == Head(A) 
+
+\* removes head: 1, 2
+c4 == Tail(A) 
  
 
 Init ==
+    /\ PrintT(c2)
+    /\ PrintT(c3)
+    /\ PrintT(c4)
     /\ PrintT(a)
     /\ PrintT(b)
     /\ PrintT(c)
