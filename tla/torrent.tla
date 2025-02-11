@@ -7,7 +7,7 @@ vars == <<tracker, data>>
 Chunks == 4
 AllChunks == {1,2,3,4}
 
-Client == {"c0", "c1", "c2"}
+Client == {"c0", "c1", "c2", "c3"}
 Seed == "c0"
 
 Init ==
@@ -25,31 +25,39 @@ NewClient ==
 
 Download == 
     LET 
-        u == CHOOSE k \in tracker : Cardinality(data[k]) # Chunks
-        v == CHOOSE k \in tracker : Cardinality(data[k]) = Chunks
-        missing == AllChunks \ data[u]
+        \* find incomplete client
+        u == CHOOSE k \in tracker : data[k] # AllChunks
+        \* find v that has other data
+        v == CHOOSE k \in tracker : (data[k] \ data[u]) # {}
+        missing == data[v] \ data[u]
         m == CHOOSE m \in missing: TRUE
     IN 
+        /\ \E k \in tracker : data[k] # AllChunks
         /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
         /\ UNCHANGED <<tracker>>
 
-RemoveComplete == 
+AllDataWithout(k) == 
     LET 
-        complete == {k \in tracker: Cardinality(data[k]) = Chunks}
+        set == tracker \ {k}
     IN 
-        /\ Cardinality(complete) > 1
-        /\ tracker' = tracker \ {CHOOSE k \in complete: TRUE}
+        UNION {data[i] : i \in set}
+
+Restart == 
+    LET 
+        u == CHOOSE k \in tracker : AllDataWithout(k) = AllChunks
+    IN 
+        /\ \E k \in tracker : AllDataWithout(k) = AllChunks
+        /\ tracker' = tracker \ {u}
         /\ UNCHANGED <<data>>
 
-PendingClient == 
-    \E k \in tracker: Cardinality(data[k]) # Chunks
+\* PendingClient == 
+\*     \E k \in tracker: Cardinality(data[k]) # Chunks
 
 Next ==
     \/ /\ tracker # Client
        /\ NewClient
-    \/ /\ PendingClient
-       /\ Download
-    \/ RemoveComplete
+    \/ Download
+    \/ Restart
 
 Safety == 
     LET 
