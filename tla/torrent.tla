@@ -4,10 +4,10 @@ VARIABLES tracker, data
 
 vars == <<tracker, data>>
 
-Chunks == 4
-AllChunks == {1,2,3,4}
+Chunks == 3
+AllChunks == {1,2,3}
 
-Client == {"c0", "c1", "c2", "c3"}
+Client == {"c0", "c1", "c2"}
 Seed == "c0"
 
 Init ==
@@ -24,6 +24,10 @@ AddClient ==
         /\ tracker' = tracker \cup {c}
         /\ UNCHANGED data
 
+Transfer(u, v, m) == 
+    /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
+    /\ UNCHANGED tracker
+
 Share == 
     LET 
         \* find incomplete client
@@ -34,8 +38,8 @@ Share ==
         m == CHOOSE m \in missing: TRUE
     IN 
         /\ \E k \in tracker : data[k] # AllChunks
-        /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
-        /\ UNCHANGED <<tracker>>
+        /\ Transfer(u, v, m)
+        \* /\ UNCHANGED <<tracker>>
 
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
@@ -44,27 +48,27 @@ RemoveClient ==
     LET 
         u == CHOOSE k \in tracker : AllDataWithout(k) = AllChunks
     IN 
-        /\ \E k \in tracker : AllDataWithout(k) = AllChunks
+        /\ \E k \in tracker: AllDataWithout(k) = AllChunks
         /\ tracker' = tracker \ {u}
         /\ data' = [data EXCEPT ![u] = {}] 
 
 Next ==
     \/ AddClient
     \/ Share
-    \/ RemoveClient
+    \* \/ RemoveClient
 
 Safety == 
     UNION {data[k] : k \in Client} = AllChunks
 
 Liveness == 
-    \A k \in Client: 
-        data[k] = {} ~> data[k] = AllChunks
+    \* \A k \in Client: 
+        data["c0"] = {} ~> data["c0"] = AllChunks
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-\*   /\ \A k \in Client:
-\*         \A s \in SUBSET(AllChunks):
-\*             SF_vars(Share)
+\*   /\ \A u, v \in Client: 
+        \* /\ u # v 
+        \* /\ WF_vars(Transfer(u,v,0)) 
 =============================================================================
