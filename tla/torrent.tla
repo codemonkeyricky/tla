@@ -51,11 +51,11 @@ AllDataWithout(k) ==
 RemoveComplete == 
     LET 
         u == CHOOSE k \in tracker : 
-            /\ data[k] = AllChunks
+            \* /\ data[k] = AllChunks
             /\ AllDataWithout(k) = AllChunks
     IN 
         /\ \E k \in tracker: 
-            /\ data[k] = AllChunks 
+            \* /\ data[k] = AllChunks 
             /\ AllDataWithout(k) = AllChunks
         /\ tracker' = tracker \ {u}
         /\ data' = [data EXCEPT ![u] = {}] 
@@ -79,7 +79,7 @@ Spec ==
   /\ [][Next]_vars
   /\ WF_vars(Next)
   /\ \A s \in SUBSET AllChunks: 
-    /\ WF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
+    /\ SF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
     \* /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
     \* /\ SF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
 =============================================================================
