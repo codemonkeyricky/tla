@@ -43,7 +43,7 @@ AllDataWithout(k) ==
     IN 
         UNION {data[i] : i \in set}
 
-Restart == 
+RemoveClient == 
     LET 
         u == CHOOSE k \in tracker : AllDataWithout(k) = AllChunks
     IN 
@@ -57,7 +57,7 @@ Restart ==
 Next ==
     \/ AddClient
     \/ Download
-    \/ Restart
+    \/ RemoveClient
 
 Safety == 
     LET 
