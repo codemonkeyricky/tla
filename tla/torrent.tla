@@ -12,7 +12,7 @@ Seed == "c0"
 
 Init ==
     /\ tracker = {Seed}
-    /\ data = [k \in Client |-> AllChunks]
+    /\ data = [k \in Client |-> IF k = Seed THEN AllChunks ELSE {}]
 
 AddClient ==
     LET 
