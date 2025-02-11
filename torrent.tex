@@ -3,11 +3,17 @@
 
 \chapter{BitTorrent Protocol}
 
-BitTorrent is a peer-to-peer file sharing protocol that allows users to 
-distribute data in a decentralized fashion.\\
+BitTorrent is a peer-to-peer file sharing protocol that allows nodes to 
+distribute data in a de-centralized fashion. The tracker is the central server
+that knows all the members in the cluster. A node coming online learns about its
+peers by talking to the tracker. Once a node learned about the peer nodes, the
+node can initiate data exchange with its peers directly.
+
+\pagebreak
+
+The following is a BitTorrent cluster with five nodes:
 
 \begin{center}
-
 \begin{tikzpicture}
     % Draw 5 "client" nodes in a bigger circle, labeled from 1 to 5
     \foreach \angle/\label in {0/1, 72/2, 144/3, 216/4, 288/5} {
@@ -31,5 +37,12 @@ distribute data in a decentralized fashion.\\
         }
     }
 \end{tikzpicture}
-
 \end{center}
+
+\section{Design}
+
+\section{Spec}
+
+\begin{tla}
+    
+\end{tla}

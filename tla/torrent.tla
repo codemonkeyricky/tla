@@ -13,14 +13,10 @@ Init ==
     /\ tracker = {Seed}
     /\ data = [k \in Client |-> IF k = Seed THEN AllChunks ELSE {}]
 
-JoinCluster(k) == 
+Join(k) == 
     /\ k \notin tracker
     /\ tracker' = tracker \cup {k}
     /\ UNCHANGED data
-
-Join ==
-    /\ \E k \in Client: 
-        JoinCluster(k) 
 
 Progress(u) == 
     /\ u \in tracker
@@ -49,7 +45,8 @@ Leave ==
         LeaveCluster(k) 
 
 Next ==
-    \/ Join
+    \/ \E k \in Client: 
+        Join(k) 
     \/ Share
     \/ Leave
 
@@ -67,7 +64,7 @@ Spec ==
     /\ [][Next]_vars
     /\ WF_vars(Next)
     \* targeted fairness description
-    /\ SF_vars(JoinCluster(NodeToVerify))
+    /\ SF_vars(Join(NodeToVerify))
     /\ \A s \in SUBSET AllChunks: 
         SF_vars(data[NodeToVerify] = s /\ Progress(NodeToVerify))
 =============================================================================
