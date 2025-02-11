@@ -7,7 +7,7 @@ vars == <<tracker, data>>
 Chunks == 4
 AllChunks == {1,2,3,4}
 
-Client == {"c0", "c1"}
+Client == {"c0", "c1", "c2"}
 Seed == "c0"
 
 Init ==
@@ -30,11 +30,7 @@ Download ==
         missing == AllChunks \ data[u]
         m == CHOOSE m \in missing: TRUE
     IN 
-        \* /\ PrintT(missing)
         /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
-        \* /\ Assert(0, "")
-        \* PrintT(data[u])
-        \* /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
         /\ UNCHANGED <<tracker>>
 
 RemoveComplete == 
@@ -54,6 +50,12 @@ Next ==
     \/ /\ PendingClient
        /\ Download
     \/ RemoveComplete
+
+Safety == 
+    LET 
+        all == UNION {data[k] : k \in Client}
+    IN 
+        all = AllChunks
 
 Spec ==
   /\ Init
