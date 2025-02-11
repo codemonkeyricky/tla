@@ -38,10 +38,7 @@ Download ==
         /\ UNCHANGED <<tracker>>
 
 AllDataWithout(k) == 
-    LET 
-        set == tracker \ {k}
-    IN 
-        UNION {data[i] : i \in set}
+    UNION {data[i] : i \in tracker \ {k}}
 
 RemoveClient == 
     LET 
@@ -60,10 +57,7 @@ Next ==
     \/ RemoveClient
 
 Safety == 
-    LET 
-        all == UNION {data[k] : k \in Client}
-    IN 
-        all = AllChunks
+    UNION {data[k] : k \in Client} = AllChunks
 
 Spec ==
   /\ Init
