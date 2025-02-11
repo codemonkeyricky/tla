@@ -48,9 +48,6 @@ RemoveClient ==
         /\ tracker' = tracker \ {u}
         /\ UNCHANGED <<data>>
 
-\* PendingClient == 
-\*     \E k \in tracker: Cardinality(data[k]) # Chunks
-
 Next ==
     \/ AddClient
     \/ Download
