@@ -13,15 +13,14 @@ Init ==
     /\ tracker = {Seed}
     /\ data = [k \in Client |-> IF k = Seed THEN AllChunks ELSE {}]
 
+JoinCluster(k) == 
+    /\ k \notin tracker
+    /\ tracker' = tracker \cup {k}
+    /\ UNCHANGED data
+
 Join ==
-    LET 
-        potential == Client \ tracker    
-        c == CHOOSE k \in potential : TRUE
-    IN 
-        /\ tracker # Client
-        /\ potential # {}
-        /\ tracker' = tracker \cup {c}
-        /\ UNCHANGED data
+    /\ \E k \in Client: 
+        JoinCluster(k) 
 
 Transfer(u, v, k) == 
     /\ data[u] # AllChunks
