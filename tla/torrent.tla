@@ -14,11 +14,12 @@ Init ==
     /\ tracker = {Seed}
     /\ data = [k \in Client |-> AllChunks]
 
-NewClient ==  
+AddClient ==
     LET 
         potential == Client \ tracker    
-        c == IF potential # {} THEN CHOOSE k \in potential : TRUE ELSE "nil"
+        c == CHOOSE k \in potential : TRUE
     IN 
+        /\ tracker # Client
         /\ potential # {}
         /\ tracker' = tracker \cup {c}
         /\ data' = [data EXCEPT ![c] = {}] 
@@ -54,8 +55,7 @@ Restart ==
 \*     \E k \in tracker: Cardinality(data[k]) # Chunks
 
 Next ==
-    \/ /\ tracker # Client
-       /\ NewClient
+    \/ AddClient
     \/ Download
     \/ Restart
 
