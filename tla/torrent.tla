@@ -56,8 +56,15 @@ Next ==
 Safety == 
     UNION {data[k] : k \in Client} = AllChunks
 
+Liveness == 
+    \A k \in Client: 
+        data[k] = {} ~> data[k] = AllChunks
+
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
+\*   /\ \A k \in Client:
+\*         \A s \in SUBSET(AllChunks):
+\*             SF_vars(Share)
 =============================================================================
