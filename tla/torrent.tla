@@ -44,25 +44,29 @@ Share ==
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
 
-RemoveClient == 
+RemoveComplete == 
     LET 
-        u == CHOOSE k \in tracker : AllDataWithout(k) = AllChunks
+        u == CHOOSE k \in tracker : 
+            /\ data[k] = AllChunks
+            /\ AllDataWithout(k) = AllChunks
     IN 
-        /\ \E k \in tracker: AllDataWithout(k) = AllChunks
+        /\ \E k \in tracker: 
+            /\ data[k] = AllChunks 
+            /\ AllDataWithout(k) = AllChunks
         /\ tracker' = tracker \ {u}
         /\ data' = [data EXCEPT ![u] = {}] 
 
 Next ==
     \/ AddClient
     \/ Share
-    \* \/ RemoveClient
+    \/ RemoveComplete
 
 Safety == 
     UNION {data[k] : k \in Client} = AllChunks
 
 Liveness == 
-    \* \A k \in Client: 
-        data["c0"] = {} ~> data["c0"] = AllChunks
+    \A k \in Client: 
+        data[k] = {} ~> data[k] = AllChunks
 
 Spec ==
   /\ Init
