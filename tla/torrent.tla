@@ -22,13 +22,13 @@ AddClient ==
         /\ tracker # Client
         /\ potential # {}
         /\ tracker' = tracker \cup {c}
-        /\ data' = [data EXCEPT ![c] = {}] 
+        /\ UNCHANGED data
 
 Share == 
     LET 
         \* find incomplete client
         u == CHOOSE k \in tracker : data[k] # AllChunks
-        \* find v that has other data
+        \* find v that has more data
         v == CHOOSE k \in tracker : (data[k] \ data[u]) # {}
         missing == data[v] \ data[u]
         m == CHOOSE m \in missing: TRUE
@@ -46,7 +46,7 @@ RemoveClient ==
     IN 
         /\ \E k \in tracker : AllDataWithout(k) = AllChunks
         /\ tracker' = tracker \ {u}
-        /\ UNCHANGED <<data>>
+        /\ data' = [data EXCEPT ![u] = {}] 
 
 Next ==
     \/ AddClient
