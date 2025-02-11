@@ -68,8 +68,9 @@ Spec ==
     /\ WF_vars(Next)
     /\ \A k \in Client:
         SF_vars(JoinCluster(k))
-    /\ \A s \in SUBSET AllChunks: 
-            SF_vars(data["c1"] = s /\ Progress("c1"))
+    /\ \A k \in Client:
+        \A s \in SUBSET AllChunks: 
+            SF_vars(data[k] = s /\ Progress(k))
     \* /\ \A u, v \in Client: 
     \*     \A k \in AllChunks:
     \*         SF_vars(Copy(u, v, k))
