@@ -43,6 +43,7 @@ RemoveComplete ==
     IN 
         /\ Cardinality(complete) > 1
         /\ tracker' = tracker \ {CHOOSE k \in complete: TRUE}
+        /\ UNCHANGED <<data>>
 
 Next ==
     \/ /\ tracker # Client
