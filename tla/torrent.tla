@@ -24,21 +24,23 @@ AddClient ==
         /\ tracker' = tracker \cup {c}
         /\ UNCHANGED data
 
-Transfer(u, v, m) == 
-    /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
-    /\ UNCHANGED tracker
-
-Share == 
+Download(u) == 
     LET 
-        \* find incomplete client
-        u == CHOOSE k \in tracker : data[k] # AllChunks
         \* find v that has more data
         v == CHOOSE k \in tracker : (data[k] \ data[u]) # {}
         missing == data[v] \ data[u]
         m == CHOOSE m \in missing: TRUE
     IN 
+        /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
+        /\ UNCHANGED tracker
+
+Share == 
+    LET 
+        \* find incomplete client
+        u == CHOOSE k \in tracker : data[k] # AllChunks
+    IN 
         /\ \E k \in tracker : data[k] # AllChunks
-        /\ Transfer(u, v, m)
+        /\ Transfer(u)
         \* /\ UNCHANGED <<tracker>>
 
 AllDataWithout(k) == 
@@ -72,7 +74,6 @@ Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-\*   /\ \A u, v \in Client: 
-        \* /\ u # v 
-        \* /\ WF_vars(Transfer(u,v,0)) 
+\*   /\ \A u \in Client: 
+\*         /\ WF_vars(Transfer(u,v,0)) 
 =============================================================================
