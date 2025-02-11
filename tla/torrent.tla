@@ -23,8 +23,8 @@ Join ==
         JoinCluster(k) 
 
 Transfer(u, v, k) == 
-    /\ data[u] # AllChunks
-    /\ k \notin data[u] 
+    /\ data[u] # AllChunks  \* u is incomplete
+    /\ k \notin data[u]     \* v has something u doesn't
     /\ k \in data[v] 
     /\ data' = [data EXCEPT ![u] = data[u] \cup {k}]
     /\ UNCHANGED tracker
