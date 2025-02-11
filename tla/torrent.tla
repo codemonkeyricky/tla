@@ -53,35 +53,21 @@ Next ==
     \/ Share
     \/ Leave
 
+NodeToVerify == "c0"
+
 Safety == 
     UNION {data[k] : k \in Client} = AllChunks
 
 Liveness == 
-    \* \A k \in Client: 
-        data["c1"] = {} ~> data["c1"] = AllChunks
-    \* \A k \in Client: 
-    \*     data[0] = {} ~> data[k] = AllChunks
+    \* targeted liveness condition
+    data[NodeToVerify] = {} ~> data[NodeToVerify] = AllChunks
 
 Spec ==
     /\ Init
     /\ [][Next]_vars
     /\ WF_vars(Next)
-    /\ \A k \in Client:
-        SF_vars(JoinCluster(k))
-    /\ \A k \in Client:
-        \A s \in SUBSET AllChunks: 
-            SF_vars(data[k] = s /\ Progress(k))
-    \* /\ \A u, v \in Client: 
-    \*     \A k \in AllChunks:
-    \*         SF_vars(Copy(u, v, k))
-
-    \* /\ \A s \in SUBSET AllChunks: 
-    \*     \A v \in Client: 
-    \*         \A k \in AllChunks:
-    \*             SF_vars(s # AllChunks /\ Copy("c0", v, k))
-
-    \* /\ \A s \in SUBSET AllChunks: 
-    \*     /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
-    \* /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
-    \* /\ SF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
+    \* targeted fairness description
+    /\ SF_vars(JoinCluster(NodeToVerify))
+    /\ \A s \in SUBSET AllChunks: 
+        SF_vars(data[NodeToVerify] = s /\ Progress(NodeToVerify))
 =============================================================================
