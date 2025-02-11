@@ -45,10 +45,13 @@ RemoveComplete ==
         /\ tracker' = tracker \ {CHOOSE k \in complete: TRUE}
         /\ UNCHANGED <<data>>
 
+PendingClient == 
+    \E k \in tracker: Cardinality(data[k]) # Chunks
+
 Next ==
     \/ /\ tracker # Client
        /\ NewClient
-    \/ /\ \E k \in tracker: Cardinality(data[k]) # Chunks
+    \/ /\ PendingClient
        /\ Download
     \/ RemoveComplete
 
