@@ -24,7 +24,7 @@ AddClient ==
         /\ tracker' = tracker \cup {c}
         /\ data' = [data EXCEPT ![c] = {}] 
 
-Download == 
+Share == 
     LET 
         \* find incomplete client
         u == CHOOSE k \in tracker : data[k] # AllChunks
@@ -50,7 +50,7 @@ RemoveClient ==
 
 Next ==
     \/ AddClient
-    \/ Download
+    \/ Share
     \/ RemoveClient
 
 Safety == 
