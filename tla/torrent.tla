@@ -13,7 +13,7 @@ Init ==
     /\ tracker = {Seed}
     /\ data = [k \in Client |-> IF k = Seed THEN AllChunks ELSE {}]
 
-AddClient ==
+Join ==
     LET 
         potential == Client \ tracker    
         c == CHOOSE k \in potential : TRUE
@@ -23,31 +23,22 @@ AddClient ==
         /\ tracker' = tracker \cup {c}
         /\ UNCHANGED data
 
-Download(u) == 
-    LET 
-        \* find v that has more data
-        v == CHOOSE k \in tracker : (data[k] \ data[u]) # {}
-        missing == data[v] \ data[u]
-        m == CHOOSE m \in missing: TRUE
-    IN 
-        \* /\ PrintT("download")
-        \* /\ PrintT(u)
-        /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
-        /\ UNCHANGED tracker
+Transfer(u, v, k) == 
+    /\ data[u] # AllChunks
+    /\ k \notin data[u] 
+    /\ k \in data[v] 
+    /\ data' = [data EXCEPT ![u] = data[u] \cup {k}]
+    /\ UNCHANGED tracker
 
 Share == 
-    LET 
-        \* find incomplete client
-        u == CHOOSE k \in tracker : data[k] # AllChunks
-    IN 
-        /\ \E k \in tracker : data[k] # AllChunks
-        /\ Download(u)
-        \* /\ UNCHANGED <<tracker>>
+    \E u, v \in tracker: 
+        \E k \in AllChunks:
+            Transfer(u, v, k)
 
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
 
-RemoveComplete == 
+Leave == 
     LET 
         u == CHOOSE k \in tracker : 
             \* /\ data[k] = AllChunks
@@ -60,9 +51,9 @@ RemoveComplete ==
         /\ data' = [data EXCEPT ![u] = {}] 
 
 Next ==
-    \/ AddClient
+    \/ Join
     \/ Share
-    \/ RemoveComplete
+    \/ Leave
 
 Safety == 
     UNION {data[k] : k \in Client} = AllChunks
@@ -77,8 +68,8 @@ Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-    /\ \A s \in SUBSET AllChunks: 
-        /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
+    \* /\ \A s \in SUBSET AllChunks: 
+    \*     /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
     \* /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
     \* /\ SF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
 =============================================================================
