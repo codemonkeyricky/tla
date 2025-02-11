@@ -35,20 +35,23 @@ Share ==
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
 
-LeaveCluster(k) == 
+Leave(k) == 
+    /\ k \in tracker
     /\ AllDataWithout(k) = AllChunks
     /\ tracker' = tracker \ {k}
     /\ data' = [data EXCEPT ![k] = {}] 
 
-Leave == 
-    /\ \E k \in tracker: 
-        LeaveCluster(k) 
+\* Leave == 
+\*     /\ \E k \in tracker: 
+\*         LeaveCluster(k) 
 
 Next ==
     \/ \E k \in Client: 
         Join(k) 
-    \/ Share
-    \/ Leave
+    \/ \E k \in Client: 
+        Progress(k)
+    \/ \E k \in Client: 
+        Leave(k)
 
 NodeToVerify == "c0"
 
