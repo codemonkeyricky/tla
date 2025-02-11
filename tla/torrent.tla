@@ -6,7 +6,7 @@ vars == <<tracker, data>>
 
 AllChunks == {1,2,3}
 
-Client == {"c0", "c1", "c2","c3"}
+Client == {"c0", "c1", "c2"}
 Seed == "c0"
 
 Init ==
@@ -22,7 +22,9 @@ Join ==
     /\ \E k \in Client: 
         JoinCluster(k) 
 
-Transfer(u, v, k) == 
+Copy(u, v, k) == 
+    /\ u \in tracker
+    /\ v \in tracker
     /\ data[u] # AllChunks  \* u is incomplete
     /\ k \notin data[u]     \* v has something u doesn't
     /\ k \in data[v] 
@@ -32,7 +34,7 @@ Transfer(u, v, k) ==
 Share == 
     \E u, v \in tracker: 
         \E k \in AllChunks:
-            Transfer(u, v, k)
+            Copy(u, v, k)
 
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
@@ -61,9 +63,20 @@ Liveness ==
     \*     data[0] = {} ~> data[k] = AllChunks
 
 Spec ==
-  /\ Init
-  /\ [][Next]_vars
-  /\ WF_vars(Next)
+    /\ Init
+    /\ [][Next]_vars
+    /\ WF_vars(Next)
+    /\ \A s \in SUBSET AllChunks: 
+        /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Share)
+    \* /\ \A u, v \in Client: 
+    \*     \A k \in AllChunks:
+    \*         SF_vars(Copy(u, v, k))
+
+    \* /\ \A s \in SUBSET AllChunks: 
+    \*     \A v \in Client: 
+    \*         \A k \in AllChunks:
+    \*             SF_vars(s # AllChunks /\ Copy("c0", v, k))
+
     \* /\ \A s \in SUBSET AllChunks: 
     \*     /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
     \* /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
