@@ -22,19 +22,19 @@ Join ==
     /\ \E k \in Client: 
         JoinCluster(k) 
 
-Copy(u, v) == 
+Progress(u) == 
     /\ u \in tracker
-    /\ v \in tracker
     /\ data[u] # AllChunks  \* u is incomplete
-    /\ \E k \in AllChunks:
-        /\ k \notin data[u]     \* v has something u doesn't
-        /\ k \in data[v] 
-        /\ data' = [data EXCEPT ![u] = data[u] \cup {k}]
-        /\ UNCHANGED tracker
+    /\ \E v \in tracker:
+        \E k \in AllChunks:
+            /\ k \notin data[u]     \* v has something u doesn't
+            /\ k \in data[v] 
+            /\ data' = [data EXCEPT ![u] = data[u] \cup {k}]
+            /\ UNCHANGED tracker
 
 Share == 
-    \E u, v \in tracker: 
-        Copy(u, v)
+    \E u \in tracker: 
+        Progress(u)
 
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
@@ -66,9 +66,9 @@ Spec ==
     /\ Init
     /\ [][Next]_vars
     /\ WF_vars(Next)
-    /\ \A v \in Client: 
-        \A s \in SUBSET AllChunks: 
-            SF_vars(data["c1"] = s /\ Copy("c1", v))
+    \* /\ \A v \in Client: 
+    \*     \A s \in SUBSET AllChunks: 
+    \*         SF_vars(data["c1"] = s /\ Copy("c1", v))
     \* /\ \A u, v \in Client: 
     \*     \A k \in AllChunks:
     \*         SF_vars(Copy(u, v, k))
