@@ -31,6 +31,8 @@ Download(u) ==
         missing == data[v] \ data[u]
         m == CHOOSE m \in missing: TRUE
     IN 
+        \* /\ PrintT("download")
+        \* /\ PrintT(u)
         /\ data' = [data EXCEPT ![u] = data[u] \cup {m}]
         /\ UNCHANGED tracker
 
@@ -40,7 +42,7 @@ Share ==
         u == CHOOSE k \in tracker : data[k] # AllChunks
     IN 
         /\ \E k \in tracker : data[k] # AllChunks
-        /\ Transfer(u)
+        /\ Download(u)
         \* /\ UNCHANGED <<tracker>>
 
 AllDataWithout(k) == 
@@ -67,13 +69,13 @@ Safety ==
     UNION {data[k] : k \in Client} = AllChunks
 
 Liveness == 
-    \A k \in Client: 
-        data[k] = {} ~> data[k] = AllChunks
+    \* \A k \in Client: 
+        data["c2"] = {} ~> data["c2"] = AllChunks
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-\*   /\ \A u \in Client: 
-\*         /\ WF_vars(Transfer(u,v,0)) 
+  /\ \A s \in SUBSET AllChunks: 
+    /\ SF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
 =============================================================================
