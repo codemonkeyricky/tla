@@ -9,10 +9,6 @@ AllChunks == {1,2,3}
 Client == {"c0", "c1", "c2"}
 Seed == "c0"
 
-Init ==
-    /\ tracker = {Seed}
-    /\ data = [k \in Client |-> IF k = Seed THEN AllChunks ELSE {}]
-
 Join(k) == 
     /\ k \notin tracker
     /\ tracker' = tracker \cup {k}
@@ -41,9 +37,9 @@ Leave(k) ==
     /\ tracker' = tracker \ {k}
     /\ data' = [data EXCEPT ![k] = {}] 
 
-\* Leave == 
-\*     /\ \E k \in tracker: 
-\*         LeaveCluster(k) 
+Init ==
+    /\ tracker = {Seed}
+    /\ data = [k \in Client |-> IF k = Seed THEN AllChunks ELSE {}]
 
 Next ==
     \/ \E k \in Client: 
