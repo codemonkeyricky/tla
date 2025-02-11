@@ -38,17 +38,14 @@ Share ==
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
 
+LeaveCluster(k) == 
+    /\ AllDataWithout(k) = AllChunks
+    /\ tracker' = tracker \ {k}
+    /\ data' = [data EXCEPT ![k] = {}] 
+
 Leave == 
-    LET 
-        u == CHOOSE k \in tracker : 
-            \* /\ data[k] = AllChunks
-            /\ AllDataWithout(k) = AllChunks
-    IN 
-        /\ \E k \in tracker: 
-            \* /\ data[k] = AllChunks 
-            /\ AllDataWithout(k) = AllChunks
-        /\ tracker' = tracker \ {u}
-        /\ data' = [data EXCEPT ![u] = {}] 
+    /\ \E k \in tracker: 
+        LeaveCluster(k) 
 
 Next ==
     \/ Join
