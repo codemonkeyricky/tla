@@ -4,10 +4,9 @@ VARIABLES tracker, data
 
 vars == <<tracker, data>>
 
-Chunks == 3
 AllChunks == {1,2,3}
 
-Client == {"c0", "c1", "c2"}
+Client == {"c0", "c1", "c2","c3"}
 Seed == "c0"
 
 Init ==
@@ -70,7 +69,7 @@ Safety ==
 
 Liveness == 
     \* \A k \in Client: 
-        data["c2"] = {} ~> data["c2"] = AllChunks
+        data["c1"] = {} ~> data["c1"] = AllChunks
     \* \A k \in Client: 
     \*     data[0] = {} ~> data[k] = AllChunks
 
@@ -78,8 +77,8 @@ Spec ==
   /\ Init
   /\ [][Next]_vars
   /\ WF_vars(Next)
-  /\ \A s \in SUBSET AllChunks: 
-    /\ SF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
+    /\ \A s \in SUBSET AllChunks: 
+        /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
     \* /\ SF_vars(s # AllChunks /\ data["c1"] = s /\ Download("c1"))
     \* /\ SF_vars(s # AllChunks /\ data["c2"] = s /\ Download("c2"))
 =============================================================================
