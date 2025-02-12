@@ -187,8 +187,8 @@ Safety ==
 \section{Liveness}
 
 We want to verify a newly joined node eventually gets the entire file. However, 
-verifying all nodes eventually get the entire file took too long. We will define
-check liveness property for only one node:\\
+verifying \textit{all} nodes eventually get the entire file will take too long.
+We will define check liveness property for only one node:\\
 
 \begin{tla}
 NodeToVerify == "c0"
@@ -196,15 +196,6 @@ NodeToVerify == "c0"
 Liveness == 
     \* targeted liveness condition
     data[NodeToVerify] = {} ~> data[NodeToVerify] = AllChunks
-
-Spec ==
-    /\ Init
-    /\ [][Next]_vars
-    /\ WF_vars(Next)
-    \* targeted fairness description
-    /\ SF_vars(Join(NodeToVerify))
-    /\ \A s \in SUBSET AllChunks: 
-        SF_vars(data[NodeToVerify] = s /\ Progress(NodeToVerify))
 \end{tla}
 \begin{tlatex}
 \@x{ NodeToVerify \.{\defeq}\@w{c0}}%
@@ -217,7 +208,23 @@ Spec ==
 \@xx{}%
  \@x{\@s{16.4} data [ NodeToVerify ] \.{=} \{ \} \.{\leadsto} data [
  NodeToVerify ] \.{=} AllChunks}%
-\@pvspace{8.0pt}%
+\end{tlatex}
+\\
+
+The liveness property checks for a node with no data eventually gets all the
+data.\\
+
+\begin{tla}
+Spec ==
+    /\ Init
+    /\ [][Next]_vars
+    /\ WF_vars(Next)
+    \* targeted fairness description
+    /\ SF_vars(Join(NodeToVerify))
+    /\ \A s \in SUBSET AllChunks: 
+        SF_vars(data[NodeToVerify] = s /\ Progress(NodeToVerify))   
+\end{tla}
+\begin{tlatex}
 \@x{ Spec \.{\defeq}}%
 \@x{\@s{16.4} \.{\land} Init}%
 \@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
@@ -234,10 +241,7 @@ Spec ==
 \end{tlatex}
 \\
 
-The liveness property checks for a node with no data eventually gets all the
-data. \\
-
-However, without fairness, \textit{Spec} permits a node to \textit{never} make
+Without fairness, \textit{Spec} permits a node to \textit{never} make
 progress by having it repeatedly joining and leaving the cluster. To ensure 
 \textit{NodeToVerify} always make progress, we need to enable strong fairness 
 for \textit{Progress(NodeToVerify)}. However, this alone is not enough. We need 
