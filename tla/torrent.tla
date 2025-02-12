@@ -24,10 +24,6 @@ Progress(u) ==
             /\ data' = [data EXCEPT ![u] = data[u] \cup {k}]
             /\ UNCHANGED tracker
 
-Share == 
-    \E u \in tracker: 
-        Progress(u)
-
 AllDataWithout(k) == 
     UNION {data[i] : i \in tracker \ {k}}
 
@@ -49,10 +45,11 @@ Next ==
     \/ \E k \in Client: 
         Leave(k)
 
-NodeToVerify == "c0"
 
 Safety == 
     UNION {data[k] : k \in Client} = AllChunks
+
+NodeToVerify == "c0"
 
 Liveness == 
     \* targeted liveness condition

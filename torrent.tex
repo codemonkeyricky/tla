@@ -1,3 +1,4 @@
+% \begin{document}
 
 \usetikzlibrary{arrows.meta} % For double arrows
 
@@ -7,7 +8,9 @@ BitTorrent is a peer-to-peer file sharing protocol that allows nodes to
 distribute data in a de-centralized fashion. The tracker is the central server
 that knows all the members in the cluster. A node coming online learns about its
 peers by talking to the tracker. Once a node learned about the peer nodes, the
-node can initiate data exchange with its peers directly.
+node can initiate data exchange with its peers directly. Files are exchanged in 
+chunks, and a node will contact its peers to figure out who has data it doesn't
+have.
 
 \pagebreak
 
@@ -17,7 +20,7 @@ The following is a BitTorrent cluster with five nodes:
 \begin{tikzpicture}
     % Draw 5 "client" nodes in a bigger circle, labeled from 1 to 5
     \foreach \angle/\label in {0/1, 72/2, 144/3, 216/4, 288/5} {
-        \node[draw, circle] (client\angle) at (\angle:5cm) {Client \label}; % Increased radius to 5cm
+        \node[draw, circle] (client\angle) at (\angle:5cm) {Node \label}; % Increased radius to 5cm
     }
 
     % Draw the "tracker" node in the center
@@ -41,8 +44,204 @@ The following is a BitTorrent cluster with five nodes:
 
 \section{Design}
 
+In this chapter we will implement a simple BitTorrent cluster. The cluster will
+have a single tracker and N nodes. A node can join or leave the cluster, and
+make progress while inside the cluster.\\
+
+To simplify the model, we assume a single file with N chunks is shared within
+the cluster. We also assume at any moment the cluster contains the entire file.
+This means while a node can leave the cluster at any time, it can only leave if
+the cluster still have the entire file after it leaves.
+
+% \pagebreak
+
 \section{Spec}
 
+The cluster starts with a single \textit{Seed} node that has the entire data
+set. In every step, a node can \textit{Join}, \textit{Progress}, or
+\textit{Leave}.\\
+
 \begin{tla}
-    
+Init ==
+    /\ tracker = {Seed}
+    /\ data = [k \in Client |-> IF k = Seed THEN AllChunks ELSE {}]
+
+Next ==
+    \/ \E k \in Client: 
+        Join(k) 
+    \/ \E k \in Client: 
+        Progress(k)
+    \/ \E k \in Client: 
+        Leave(k)
 \end{tla}
+\begin{tlatex}
+\@x{ Init \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} tracker \.{=} \{ Seed \}}%
+ \@x{\@s{16.4} \.{\land} data \.{=} [ k \.{\in} Client \.{\mapsto} {\IF} k
+ \.{=} Seed \.{\THEN} AllChunks \.{\ELSE} \{ \} ]}%
+\@pvspace{8.0pt}%
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \E\, k \.{\in} Client \.{:}}%
+\@x{\@s{20.5} Join ( k )}%
+\@x{\@s{16.4} \.{\lor} \E\, k \.{\in} Client \.{:}}%
+\@x{\@s{20.5} Progress ( k )}%
+\@x{\@s{16.4} \.{\lor} \E\, k \.{\in} Client \.{:}}%
+\@x{\@s{20.5} Leave ( k )}%
+\end{tlatex}
+\\
+
+A node can join a cluster if it's not currently part of it:\\
+\begin{tla}
+Join(k) == 
+    /\ k \notin tracker
+    /\ tracker' = tracker \cup {k}
+    /\ UNCHANGED data
+\end{tla}
+\begin{tlatex}
+\@x{ Join ( k ) \.{\defeq}}%
+\@x{ \.{\land} k \.{\notin} tracker}%
+\@x{ \.{\land} tracker \.{'} \.{=} tracker \.{\cup} \{ k \}}%
+\@x{ \.{\land} {\UNCHANGED} data}%
+\end{tlatex}
+\\
+
+A node can leave a cluster. To simplify the model, a node k can leave if and
+only if the cluster still have the full data set without k. Node a node can
+\textit{Leave} even if it doesn't have the whole set of data:\\
+
+\begin{tla}
+AllDataWithout(k) == 
+    UNION {data[i] : i \in tracker \ {k}}
+
+Leave(k) == 
+    /\ k \in tracker
+    /\ AllDataWithout(k) = AllChunks
+    /\ tracker' = tracker \ {k}
+    /\ data' = [data EXCEPT ![k] = {}] 
+\end{tla}
+\begin{tlatex}
+\@x{ AllDataWithout ( k ) \.{\defeq}}%
+ \@x{\@s{16.4} {\UNION} \{ data [ i ] \.{:} i \.{\in} tracker
+ \.{\,\backslash\,} \{ k \} \}}%
+\@pvspace{8.0pt}%
+\@x{ Leave ( k ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} k \.{\in} tracker}%
+\@x{\@s{16.4} \.{\land} AllDataWithout ( k ) \.{=} AllChunks}%
+ \@x{\@s{16.4} \.{\land} tracker \.{'} \.{=} tracker \.{\,\backslash\,} \{ k
+ \}}%
+ \@x{\@s{16.4} \.{\land} data \.{'} \.{=} [ data {\EXCEPT} {\bang} [ k ] \.{=}
+ \{ \} ]}%
+\end{tlatex}
+\\
+
+Finally, for a node U to make progress: U must have incomplete set of data and
+there's another node V that has data U doesn't have:\\
+
+\begin{tla}
+Progress(u) == 
+    /\ u \in tracker
+    /\ data[u] # AllChunks  \* u is incomplete
+    /\ \E v \in tracker:
+        \E k \in AllChunks:
+            /\ k \notin data[u]     \* v has something u doesn't
+            /\ k \in data[v] 
+            /\ data' = [data EXCEPT ![u] = data[u] \cup {k}]
+            /\ UNCHANGED tracker
+\end{tla}
+\begin{tlatex}
+\@x{ Progress ( u ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} u \.{\in} tracker}%
+\@x{\@s{16.4} \.{\land} data [ u ] \.{\neq} AllChunks\@s{4.1}}%
+\@y{%
+  u is incomplete
+}%
+\@xx{}%
+\@x{\@s{16.4} \.{\land} \E\, v \.{\in} tracker \.{:}}%
+\@x{\@s{20.5} \E\, k \.{\in} AllChunks \.{:}}%
+\@x{\@s{24.6} \.{\land} k \.{\notin} data [ u ]\@s{16.4}}%
+\@y{%
+  v has something u doesn't
+}%
+\@xx{}%
+\@x{\@s{24.6} \.{\land} k \.{\in} data [ v ]}%
+ \@x{\@s{24.6} \.{\land} data \.{'} \.{=} [ data {\EXCEPT} {\bang} [ u ] \.{=}
+ data [ u ] \.{\cup} \{ k \} ]}%
+\@x{\@s{24.6} \.{\land} {\UNCHANGED} tracker}%
+\end{tlatex}
+
+\section{Safety}
+
+A requirement we imposed on the design is to ensure the cluster contain the
+entire file at all times:\\
+
+\begin{tla}
+Safety == 
+    UNION {data[k] : k \in Client} = AllChunks
+\end{tla}
+\begin{tlatex}
+\@x{ Safety \.{\defeq}}%
+ \@x{\@s{16.4} {\UNION} \{ data [ k ] \.{:} k \.{\in} Client \} \.{=}
+ AllChunks}%
+\end{tlatex}
+
+\section{Liveness}
+
+We want to verify a newly joined node eventually gets the entire file. However, 
+verifying all nodes eventually get the entire file took too long. We will define
+check liveness property for only one node:\\
+
+\begin{tla}
+NodeToVerify == "c0"
+
+Liveness == 
+    \* targeted liveness condition
+    data[NodeToVerify] = {} ~> data[NodeToVerify] = AllChunks
+
+Spec ==
+    /\ Init
+    /\ [][Next]_vars
+    /\ WF_vars(Next)
+    \* targeted fairness description
+    /\ SF_vars(Join(NodeToVerify))
+    /\ \A s \in SUBSET AllChunks: 
+        SF_vars(data[NodeToVerify] = s /\ Progress(NodeToVerify))
+\end{tla}
+\begin{tlatex}
+\@x{ NodeToVerify \.{\defeq}\@w{c0}}%
+\@pvspace{8.0pt}%
+\@x{ Liveness \.{\defeq}}%
+\@x{\@s{16.4}}%
+\@y{%
+  targeted liveness condition
+}%
+\@xx{}%
+ \@x{\@s{16.4} data [ NodeToVerify ] \.{=} \{ \} \.{\leadsto} data [
+ NodeToVerify ] \.{=} AllChunks}%
+\@pvspace{8.0pt}%
+\@x{ Spec \.{\defeq}}%
+\@x{\@s{16.4} \.{\land} Init}%
+\@x{\@s{16.4} \.{\land} {\Box} [ Next ]_{ vars}}%
+\@x{\@s{16.4} \.{\land} {\WF}_{ vars} ( Next )}%
+\@x{\@s{16.4}}%
+\@y{%
+  targeted fairness description
+}%
+\@xx{}%
+\@x{\@s{16.4} \.{\land} {\SF}_{ vars} ( Join ( NodeToVerify ) )}%
+\@x{\@s{16.4} \.{\land} \A\, s \.{\in} {\SUBSET} AllChunks \.{:}}%
+ \@x{\@s{20.5} {\SF}_{ vars} ( data [ NodeToVerify ] \.{=} s \.{\land}
+ Progress ( NodeToVerify ) )}%
+\end{tlatex}
+\\
+
+The liveness property checks for a node with no data eventually gets all the
+data. \\
+
+However, without fairness, \textit{Spec} permits a node to \textit{never} make
+progress by having it repeatedly joining and leaving the cluster. To ensure 
+\textit{NodeToVerify} always make progress, we need to enable strong fairness 
+for \textit{Progress(NodeToVerify)}. However, this alone is not enough. We need 
+to ensure \textit{Progress(NodeToVerify)} is called for \textit{all} possible
+\textit{NodeToVerify} state, this is solved using the \textit{SUBSET} keyword.
+
+% \end{document}
