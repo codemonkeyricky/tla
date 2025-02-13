@@ -4,12 +4,12 @@
 
 \chapter{BitTorrent Protocol}
 
-BitTorrent is a peer-to-peer file sharing protocol that allows nodes to 
-distribute data in a de-centralized fashion. The tracker is the central server
+BitTorrent is a peer-to-peer file-sharing protocol that allows nodes to 
+distribute data in a decentralized fashion. The tracker is the central server
 that knows all the members in the cluster. A node coming online learns about its
-peers by talking to the tracker. Once a node learned about the peer nodes, the
+peers by talking to the tracker. Once a node learns about the peer nodes, the
 node can initiate data exchange with its peers directly. Files are exchanged in 
-chunks, and a node will contact its peers to figure out who has data it doesn't
+chunks, and a node will contact its peers to determine who has data it doesn't
 have.
 
 \pagebreak
@@ -44,14 +44,14 @@ The following is a BitTorrent cluster with five nodes:
 
 \section{Design}
 
-In this chapter we will implement a simple BitTorrent cluster. The cluster will
+In this chapter, we will implement a simple BitTorrent cluster. The cluster will
 have a single tracker and N nodes. A node can join or leave the cluster, and
 make progress while inside the cluster.\\
 
 To simplify the model, we assume a single file with N chunks is shared within
 the cluster. We also assume at any moment the cluster contains the entire file.
 This means while a node can leave the cluster at any time, it can only leave if
-the cluster still have the entire file after it leaves.
+the cluster still has the entire file after it leaves.
 
 % \pagebreak
 
@@ -106,7 +106,7 @@ Join(k) ==
 \\
 
 A node can leave a cluster. To simplify the model, a node k can leave if and
-only if the cluster still have the full data set without k. A node can
+only if the cluster still has the full data set without k. A node can
 \textit{Leave} even if it doesn't have the entire file:\\
 
 \begin{tla}
@@ -134,7 +134,7 @@ Leave(k) ==
 \end{tlatex}
 \\
 
-Finally, for a node U to make progress: U must have incomplete set of data and
+Finally, for a node U to make progress: U must have an incomplete set of data and
 there's another node V that has data U doesn't have:\\
 
 \begin{tla}
@@ -171,7 +171,7 @@ Progress(u) ==
 
 \section{Safety}
 
-A requirement we imposed on the design is to ensure the cluster contain the
+A requirement we imposed on the design is to ensure the cluster contains the
 entire file at all times:\\
 
 \begin{tla}
@@ -187,8 +187,8 @@ Safety ==
 \section{Liveness}
 
 We want to verify a newly joined node eventually gets the entire file. However, 
-verifying \textit{all} nodes eventually get the entire file will take too long.
-We will define check liveness property for only one node:\\
+verifying \textit{all} nodes eventually get the whole file will take too long.
+We will define the check liveness property for only one node:\\
 
 \begin{tla}
 NodeToVerify == "c0"
@@ -211,7 +211,7 @@ Liveness ==
 \end{tlatex}
 \\
 
-The liveness property checks for a node with no data eventually gets all the
+The liveness property checks for a node with no data and eventually gets all the
 data.\\
 
 \begin{tla}
@@ -241,11 +241,12 @@ Spec ==
 \end{tlatex}
 \\
 
-Without fairness, \textit{Spec} permits a node to \textit{never} make
-progress by having it repeatedly joining and leaving the cluster. To ensure 
-\textit{NodeToVerify} always make progress, we need to enable strong fairness 
-for \textit{Progress(NodeToVerify)}. However, this alone is not enough. We need 
-to ensure \textit{Progress(NodeToVerify)} is called for \textit{all} possible
-\textit{NodeToVerify} state, this is solved using the \textit{SUBSET} keyword.
+Without fairness, \textit{Spec} permits a node to \textit{never} make progress
+by having it repeatedly join and leave the cluster. To ensure 
+\textit{NodeToVerify} always makes progress, we need to enable strong fairness 
+for \textit{Progress}. However, this alone is not enough. We need to ensure
+\textit{Progress} is called for \textit{all} possible \textit{NodeToVerify}
+state, this is solved using the \textit{SUBSET} keyword.
 
 % \end{document}
+
