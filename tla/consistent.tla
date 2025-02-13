@@ -16,8 +16,8 @@ Init ==
     /\ local = [k \in Nodes |-> EmptyFunction]
         \* global[token] -> node
     /\ global = EmptyFunction
-        \* store[node][key] -> value
-    /\ local_kv = [k \in Nodes |-> EmptyFunction]
+        \* store[node] = { ... keys ... }
+    /\ local_kv = [k \in Nodes |-> {}]
         \* all values written
     /\ global_kv = {}
     \* /\ status = [k \in Nodes |-> "offline"]
@@ -32,10 +32,12 @@ Join(u) ==
         /\ global' = [x \in (DOMAIN global) \cup {claim} |->
                         IF x = claim THEN u ELSE global[x]]
         /\ local' = [local EXCEPT ![u] = global']
-    /\ UNCHANGED <<cluster, global_kv, local_kv>>
+    /\ cluster' = cluster \cup {u}
+    /\ UNCHANGED <<global_kv, local_kv>>
 
 Gossip(u) == 
     /\ local' = [local EXCEPT ![u] = global]
+    /\ UNCHANGED <<cluster, global, local_kv, global_kv>>
 
 Leave(u) == 
     TRUE
@@ -48,29 +50,41 @@ Find(lookup, k) ==
         Find(lookup, (k + 1) % Cardinality(KeySpace))
 
 Read(u, k) == 
-    \* key exists
-    /\ \E key \in DOMAIN global: key = k
-    /\ local_kv[Find(local[u], k)][k]
+    LET 
+        owner == Find(local[u], k)
+    IN 
+        \* key exists
+        /\ \E key \in DOMAIN global: key = k
+        \* /\ PrintT(local_kv)
+        \* /\ PrintT(owner)
+        \* /\ PrintT(k)
+        /\ k \in local_kv[owner]
+        /\ UNCHANGED <<cluster, local, global, local_kv, global_kv>>
 
 Write(u, k) == 
     LET 
         owner == Find(local[u], k)
     IN 
-        /\ local_kv' = [local_kv EXCEPT ![owner] = local_kv[u] \cup {k}]
+        \* /\ PrintT(local_kv[u])
+        \* /\ PrintT(k)
+        /\ local_kv' = [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
         /\ global_kv' = global_kv \cup {k}
+        /\ UNCHANGED <<cluster, local, global>>
+
+NotInCluster ==
+    Nodes \ {cluster}
 
 Next ==
-    \/ \E u \in Nodes \ cluster: 
+    \/ \E u \in Nodes:
+        /\ u \notin cluster
         /\ Join(u) 
-    \/ \E u \in cluster:
-        Leave(u)
     \/ \E u \in cluster:
         Gossip(u)
     \/ \E u \in cluster:
         \E k \in global_kv:
             Read(u, k)
     \/ \E u \in cluster:
-        \E k \in KeySpace:
+        /\ \E k \in KeySpace:
             Write(u, k)
 
 \* Safety == 
