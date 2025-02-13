@@ -1,8 +1,8 @@
 --------------------------- MODULE consistent ----------------------------
 EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt
-VARIABLES cluster, status, local, global, local_kv, global_kv
+VARIABLES cluster, local, global, local_kv, global_kv
 
-vars == <<cluster, local, status, global, local_kv, global_kv>>
+vars == <<cluster, local, global, local_kv, global_kv>>
 
 Nodes == {"n0", "n1", "n2"}
 KeySpace == {0, 1, 2, 3, 4, 5, 6, 7}
@@ -20,15 +20,19 @@ Init ==
     /\ local_kv = [k \in Nodes |-> EmptyFunction]
         \* all values written
     /\ global_kv = {}
-    /\ status = [k \in Nodes |-> "offline"]
+    \* /\ status = [k \in Nodes |-> "offline"]
 
 Claimed == 
-    {local[k] : k \in DOMAIN global}
+    DOMAIN global
 
 Join(u) == 
-    /\ \E claim \in Claimed:
-        /\ global' = [global EXCEPT ![claim] = u]
+    /\ \E claim \in KeySpace:
+        \* /\ PrintT(claim)
+        /\ claim \notin Claimed
+        /\ global' = [x \in (DOMAIN global) \cup {claim} |->
+                        IF x = claim THEN u ELSE global[x]]
         /\ local' = [local EXCEPT ![u] = global']
+    /\ UNCHANGED <<cluster, global_kv, local_kv>>
 
 Gossip(u) == 
     /\ local' = [local EXCEPT ![u] = global]
@@ -56,16 +60,16 @@ Write(u, k) ==
         /\ global_kv' = global_kv \cup {k}
 
 Next ==
-    \/ \E u \in Nodes: 
-        Join(u) 
-    \/ \E u \in Nodes:
+    \/ \E u \in Nodes \ cluster: 
+        /\ Join(u) 
+    \/ \E u \in cluster:
         Leave(u)
-    \/ \E u \in Nodes:
+    \/ \E u \in cluster:
         Gossip(u)
-    \/ \E u \in Nodes:
+    \/ \E u \in cluster:
         \E k \in global_kv:
             Read(u, k)
-    \/ \E u \in Nodes:
+    \/ \E u \in cluster:
         \E k \in KeySpace:
             Write(u, k)
 
