@@ -1,8 +1,8 @@
 --------------------------- MODULE consistent ----------------------------
 EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt
-VARIABLES cluster, local, global, local_kv, global_kv
+VARIABLES cluster, local_ring, global_ring, local_kv, global_kv
 
-vars == <<cluster, local, global, local_kv, global_kv>>
+vars == <<cluster, local_ring, global_ring, local_kv, global_kv>>
 
 Nodes == {"n0", "n1", "n2"}
 KeySpace == {0, 1, 2, 3, 4, 5, 6, 7}
@@ -13,9 +13,9 @@ EmptyFunction ==
 Init ==
     /\ cluster = {}
         \* local[node][token] -> node
-    /\ local = [k \in Nodes |-> EmptyFunction]
-        \* global[token] -> node
-    /\ global = EmptyFunction
+    /\ local_ring = [k \in Nodes |-> EmptyFunction]
+        \* global_ring[token] -> node
+    /\ global_ring = EmptyFunction
         \* store[node] = { ... keys ... }
     /\ local_kv = [k \in Nodes |-> {}]
         \* all values written
@@ -23,21 +23,21 @@ Init ==
     \* /\ status = [k \in Nodes |-> "offline"]
 
 Claimed == 
-    DOMAIN global
+    DOMAIN global_ring
 
 Join(u) == 
     /\ \E claim \in KeySpace:
         \* /\ PrintT(claim)
         /\ claim \notin Claimed
-        /\ global' = [x \in (DOMAIN global) \cup {claim} |->
-                        IF x = claim THEN u ELSE global[x]]
-        /\ local' = [local EXCEPT ![u] = global']
+        /\ global_ring' = [x \in (DOMAIN global_ring) \cup {claim} |->
+                        IF x = claim THEN u ELSE global_ring[x]]
+        /\ local_ring' = [local_ring EXCEPT ![u] = global_ring']
     /\ cluster' = cluster \cup {u}
     /\ UNCHANGED <<global_kv, local_kv>>
 
 Gossip(u) == 
-    /\ local' = [local EXCEPT ![u] = global]
-    /\ UNCHANGED <<cluster, global, local_kv, global_kv>>
+    /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
+    /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv>>
 
 Leave(u) == 
     TRUE
@@ -51,25 +51,26 @@ Find(lookup, k) ==
 
 Read(u, k) == 
     LET 
-        owner == Find(local[u], k)
+        owner == Find(local_ring[u], k)
     IN 
         \* key exists
-        /\ \E key \in DOMAIN global: key = k
+        /\ \E key \in DOMAIN global_ring: key = k
         \* /\ PrintT(local_kv)
         \* /\ PrintT(owner)
         \* /\ PrintT(k)
         /\ k \in local_kv[owner]
-        /\ UNCHANGED <<cluster, local, global, local_kv, global_kv>>
+        /\ UNCHANGED <<cluster, local_ring, global_ring, local_kv, global_kv>>
 
 Write(u, k) == 
     LET 
-        owner == Find(local[u], k)
+        owner == Find(local_ring[u], k)
     IN 
-        \* /\ PrintT(local_kv[u])
+        \* /\ PrintT(local_ring[u])
         \* /\ PrintT(k)
+        \* /\ PrintT(owner)
         /\ local_kv' = [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
         /\ global_kv' = global_kv \cup {k}
-        /\ UNCHANGED <<cluster, local, global>>
+        /\ UNCHANGED <<cluster, local_ring, global_ring>>
 
 NotInCluster ==
     Nodes \ {cluster}
@@ -87,8 +88,12 @@ Next ==
         /\ \E k \in KeySpace:
             Write(u, k)
 
-\* Safety == 
-\*     UNION {data[k] : k \in Client} = AllChunks
+Safety == 
+    \A u, v \in cluster:
+        IF u # v /\ local_kv[u] # {} /\ local_kv[v] # {} THEN 
+           local_kv[u] \intersect local_kv[v] = {}
+        ELSE 
+            TRUE
 
 \* NodeToVerify == "c0"
 
