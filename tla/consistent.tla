@@ -6,6 +6,7 @@ vars == <<cluster, local_ring, global_ring, local_kv, global_kv>>
 
 Nodes == {"n0", "n1", "n2"}
 KeySpace == {0, 1, 2, 3, 4, 5, 6, 7}
+N == Cardinality(KeySpace)
 
 EmptyFunction == 
     [kk \in {} |-> ""]
@@ -25,6 +26,20 @@ Init ==
 Claimed == 
     DOMAIN global_ring
 
+RECURSIVE Find(_, _)
+Find(lookup, k) ==
+    IF k \in DOMAIN lookup THEN
+        lookup[k] 
+    ELSE 
+        Find(lookup, (k + 1) % N) 
+
+RECURSIVE FindPrevKey(_, _)
+FindPrevKey(lookup, k) ==
+    IF k \in DOMAIN lookup THEN
+        k
+    ELSE 
+        FindPrevKey(lookup, (k - 1 + N) % N) 
+
 Join(u) == 
     /\ \E claim \in KeySpace:
         \* /\ PrintT(claim)
@@ -36,18 +51,18 @@ Join(u) ==
     /\ UNCHANGED <<global_kv, local_kv>>
 
 Gossip(u) == 
-    /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
-    /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv>>
+    LET 
+        my_key == {global_ring[x] = u: x \in DOMAIN global_ring}
+        p == FindPrevKey(global_ring, CHOOSE only \in my_key : TRUE)
+    IN 
+        /\ PrintT(p)
+        /\ Assert(0,"")
+        /\ Cardinality(DOMAIN global_ring) > 1
+        /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
+        /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv>>
 
 Leave(u) == 
     TRUE
-
-RECURSIVE Find(_, _)
-Find(lookup, k) == 
-    IF k \in DOMAIN lookup THEN
-        lookup[k] 
-    ELSE 
-        Find(lookup, (k + 1) % Cardinality(KeySpace))
 
 Read(u, k) == 
     LET 
