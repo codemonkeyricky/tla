@@ -63,7 +63,9 @@ Read(u, k) ==
 
 Write(u, k) == 
     LET 
-        owner == Find(local_ring[u], k)
+        \* TODO
+        \* owner == Find(local_ring[u], k)
+        owner == Find(global_ring, k)
     IN 
         \* /\ PrintT(local_ring[u])
         \* /\ PrintT(k)
@@ -86,7 +88,8 @@ Next ==
             Read(u, k)
     \/ \E u \in cluster:
         /\ \E k \in KeySpace:
-            Write(u, k)
+            /\ k \notin global_kv
+            /\ Write(u, k)
 
 Safety == 
     \A u, v \in cluster:
