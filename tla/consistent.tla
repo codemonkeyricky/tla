@@ -52,11 +52,11 @@ Join(u) ==
 
 Gossip(u) == 
     LET 
-        my_key == {global_ring[x] = u: x \in DOMAIN global_ring}
+        my_key == {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE}
         p == FindPrevKey(global_ring, CHOOSE only \in my_key : TRUE)
     IN 
-        /\ PrintT(p)
-        /\ Assert(0,"")
+        /\ PrintT(my_key)
+        \* /\ Assert(0,"")
         /\ Cardinality(DOMAIN global_ring) > 1
         /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
         /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv>>
