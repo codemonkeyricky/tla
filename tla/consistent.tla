@@ -147,14 +147,18 @@ Next ==
             /\ k \notin global_kv
             /\ Write(u, k)
 
-Safety == 
+KVConsistent == 
+    UNION {local_kv[n] : n \in Nodes} = global_kv
+
+RingConsistent == 
+    UNION {DOMAIN local_ring[n] : n \in Nodes} = DOMAIN global_ring
+
+\* Safety == 
     \* \A u, v \in cluster:
     \*     IF u # v /\ local_kv[u] # {} /\ local_kv[v] # {} THEN 
     \*        local_kv[u] \intersect local_kv[v] = {}
     \*     ELSE 
     \*         TRUE
-    /\ UNION {local_kv[n] : n \in Nodes} = global_kv
-    /\ UNION {DOMAIN local_ring[n] : n \in Nodes} = DOMAIN global_ring
     \* /\ Cardinality(global_kv) < 7
 
 \* NodeToVerify == "c0"
