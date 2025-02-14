@@ -60,19 +60,25 @@ Gossip(u) ==
     LET 
         my_key_set == {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE}
         my_key == CHOOSE only \in my_key_set : TRUE
-        prev_key == FindPrevKey(global_ring, my_key-1)
+        prev_key == FindPrevKey(global_ring, (my_key + N -1) % N)
+        pkey_next == (prev_key + 1) % N
         \* TODO: add to book
         to_add == 
-            IF prev_key < my_key THEN
-                {k \in prev_key..my_key: k \in DOMAIN global_ring}    
+            IF pkey_next <= my_key THEN
+                {k \in pkey_next..my_key:   k \in global_kv}
             ELSE 
-                {k \in prev_key..N-1:   k \in DOMAIN global_ring} \cup
-                {k \in 0..my_key:       k \in DOMAIN global_ring}
+                {k \in pkey_next..N-1:      k \in global_kv} \cup
+                {k \in 0..my_key:           k \in global_kv}
     IN 
         /\ Cardinality(DOMAIN global_ring) > 1
         /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
-        \* /\ PrintT(prev_key)
+        \* /\ PrintT(u) 
+        \* /\ PrintT(pkey_next)
         \* /\ PrintT(my_key)
+        \* /\ PrintT({k \in pkey_next..my_key: k \in global_kv})
+        \* /\ PrintT(global_kv)
+        \* /\ PrintT(prev_key)
+        \* /\ PrintT(to_add)
         /\ local_kv' = [local_kv EXCEPT ![u] = local_kv[u] \cup to_add]
         /\ UNCHANGED <<cluster, global_ring, global_kv>>
 
