@@ -124,12 +124,17 @@ Write(u, k) ==
         owner == Find(global_ring, k)
         owner_key == ValueToKey(global_ring, owner)
         owner_next == Find(global_ring, (owner_key + 1) % N)
+
+        up1 == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
+        up2 == [up1 EXCEPT ![owner_next] = up1[owner_next] \cup {k}]
+
     IN 
+        /\ Assert(RF = 2, "")
         \* /\ PrintT(local_ring[u])
         \* /\ PrintT(k)
         \* /\ PrintT(owner)
         \* /\ PrintT(owner_next)
-        /\ local_kv' = [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
+        /\ local_kv' = up2
         /\ global_kv' = global_kv \cup {k}
         /\ UNCHANGED <<cluster, local_ring, global_ring>>
 
