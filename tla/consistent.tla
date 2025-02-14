@@ -12,10 +12,6 @@ KeySpace == {0, 1, 2, 3, 4, 5}
 
 N == Cardinality(KeySpace)
 
-\* UnionLocalKV == 
-
-RF == 2
-
 EmptyFunction == 
     [kk \in {} |-> ""]
 
@@ -58,7 +54,6 @@ DataSet(ring, my_key) ==
 
 Join(u) == 
     /\ \E key \in KeySpace:
-        \* /\ PrintT(claim)
         /\ key \notin KeysClaimed
         /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
                         IF x = key THEN u ELSE global_ring[x]]
