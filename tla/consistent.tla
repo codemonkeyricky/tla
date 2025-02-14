@@ -30,7 +30,7 @@ Init ==
     /\ global_kv = {}
     \* /\ status = [k \in Nodes |-> "offline"]
 
-Claimed == 
+KeysClaimed == 
     DOMAIN global_ring
 
 RECURSIVE Find(_, _)
@@ -47,25 +47,9 @@ FindPrevKey(lookup, k) ==
     ELSE 
         FindPrevKey(lookup, (k - 1 + N) % N) 
 
-Join(u) == 
-    /\ \E claim \in KeySpace:
-        \* /\ PrintT(claim)
-        /\ claim \notin Claimed
-        /\ global_ring' = [x \in (DOMAIN global_ring) \cup {claim} |->
-                        IF x = claim THEN u ELSE global_ring[x]]
-        /\ local_ring' = [local_ring EXCEPT ![u] = global_ring']
-    /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<global_kv, local_kv>>
-
-\* ValueToKey(f, v) == 
-\*     {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE}
-
-\* TestRing == 
-\*     {1,2,3,4,5,6,7}
-
-DataSet(my_key) == 
+DataSet(ring, my_key) == 
     LET 
-        prev_key == FindPrevKey(global_ring, (my_key + N -1) % N)
+        prev_key == FindPrevKey(ring, (my_key + N -1) % N)
         pkey_next == (prev_key + 1) % N
         \* TODO: add to book
     IN 
@@ -74,11 +58,27 @@ DataSet(my_key) ==
         ELSE 
             {k \in pkey_next..N-1:      k \in global_kv} \cup
             {k \in 0..my_key:           k \in global_kv}
-        
+
+Join(u) == 
+    /\ \E key \in KeySpace:
+        \* /\ PrintT(claim)
+        /\ key \notin KeysClaimed
+        /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
+                        IF x = key THEN u ELSE global_ring[x]]
+        /\ local_ring' = [local_ring EXCEPT ![u] = global_ring']
+        /\  IF Cardinality(cluster) # 0 THEN
+                local_kv' = [local_kv EXCEPT ![u] = 
+                    DataSet(global_ring', key) \cup 
+                    DataSet(global_ring', FindPrevKey(global_ring', (key + N -1)% N))]
+            ELSE 
+                UNCHANGED local_kv
+    /\ cluster' = cluster \cup {u}
+    /\ UNCHANGED <<global_kv>>
+       
 Gossip(u) == 
     LET 
         my_key == CHOOSE only \in {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE} : TRUE
-        to_add == DataSet(my_key)
+        to_add == DataSet(global_ring, my_key)
     IN 
         \* /\ Cardinality(DOMAIN global_ring) > 1
         /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
