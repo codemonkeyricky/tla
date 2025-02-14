@@ -104,7 +104,6 @@ Next ==
         \E k \in global_kv:
             Read(u, k)
     \/ \E u \in cluster:
-        \* /\ Cardinality(cluster) >= RF
         /\ \E k \in KeySpace:
             /\ k \notin global_kv
             /\ Write(u, k)
