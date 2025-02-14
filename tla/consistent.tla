@@ -1,5 +1,5 @@
 --------------------------- MODULE consistent ----------------------------
-EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt
+EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt, Integers
 VARIABLES cluster, local_ring, global_ring, local_kv, global_kv
 
 vars == <<cluster, local_ring, global_ring, local_kv, global_kv>>
@@ -50,19 +50,31 @@ Join(u) ==
     /\ cluster' = cluster \cup {u}
     /\ UNCHANGED <<global_kv, local_kv>>
 
+\* ValueToKey(f, v) == 
+\*     {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE}
+
+\* TestRing == 
+\*     {1,2,3,4,5,6,7}
+
 Gossip(u) == 
     LET 
         my_key_set == {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE}
         my_key == CHOOSE only \in my_key_set : TRUE
         prev_key == FindPrevKey(global_ring, my_key-1)
+        \* TODO: add to book
+        to_add == 
+            IF prev_key < my_key THEN
+                {k \in prev_key..my_key: k \in DOMAIN global_ring}    
+            ELSE 
+                {k \in prev_key..N-1:   k \in DOMAIN global_ring} \cup
+                {k \in 0..my_key:       k \in DOMAIN global_ring}
     IN 
         /\ Cardinality(DOMAIN global_ring) > 1
-        /\ PrintT(u)
-        /\ PrintT(my_key)
-        /\ PrintT(prev_key)
-        /\ Assert(0,"")
         /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
-        /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv>>
+        \* /\ PrintT(prev_key)
+        \* /\ PrintT(my_key)
+        /\ local_kv' = [local_kv EXCEPT ![u] = local_kv[u] \cup to_add]
+        /\ UNCHANGED <<cluster, global_ring, global_kv>>
 
 Leave(u) == 
     TRUE
