@@ -9,10 +9,14 @@ KeySpace == {0, 1, 2, 3, 4, 5, 6, 7}
 N == Cardinality(KeySpace)
 
 \* UnionLocalKV == 
-    
+
+RF == 2
 
 EmptyFunction == 
     [kk \in {} |-> ""]
+
+ValueToKey(f, v) == 
+    CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
 
 Init ==
     /\ cluster = {}
@@ -88,9 +92,6 @@ Gossip(u) ==
         \* /\ PrintT(prev_key)
         \* /\ PrintT(to_add)
 
-ValueToKey(f, v) == 
-    CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
-
 Leave(u) == 
     LET 
         k == ValueToKey(global_ring, u)
@@ -121,10 +122,13 @@ Write(u, k) ==
         \* TODO
         \* owner == Find(local_ring[u], k)
         owner == Find(global_ring, k)
+        owner_key == ValueToKey(global_ring, owner)
+        owner_next == Find(global_ring, (owner_key + 1) % N)
     IN 
         \* /\ PrintT(local_ring[u])
         \* /\ PrintT(k)
         \* /\ PrintT(owner)
+        \* /\ PrintT(owner_next)
         /\ local_kv' = [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
         /\ global_kv' = global_kv \cup {k}
         /\ UNCHANGED <<cluster, local_ring, global_ring>>
@@ -144,6 +148,7 @@ Next ==
         \E k \in global_kv:
             Read(u, k)
     \/ \E u \in cluster:
+        /\ Cardinality(cluster) >= RF
         /\ \E k \in KeySpace:
             /\ k \notin global_kv
             /\ Write(u, k)
