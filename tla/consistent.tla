@@ -8,6 +8,9 @@ Nodes == {"n0", "n1", "n2"}
 KeySpace == {0, 1, 2, 3, 4, 5, 6, 7}
 N == Cardinality(KeySpace)
 
+\* UnionLocalKV == 
+    
+
 EmptyFunction == 
     [kk \in {} |-> ""]
 
@@ -70,11 +73,12 @@ Gossip(u) ==
                 {k \in pkey_next..N-1:      k \in global_kv} \cup
                 {k \in 0..my_key:           k \in global_kv}
     IN 
-        /\ Cardinality(DOMAIN global_ring) > 1
+        \* /\ Cardinality(DOMAIN global_ring) > 1
         /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
         \* TODO: account for to_remove?
         /\ local_kv' = [local_kv EXCEPT ![u] = local_kv[u] \cup to_add]
         /\ UNCHANGED <<cluster, global_ring, global_kv>>
+        \* /\ PrintT(UnionLocalKV)
 
         \* /\ PrintT(u) 
         \* /\ PrintT(pkey_next)
@@ -130,11 +134,13 @@ Next ==
             /\ Write(u, k)
 
 Safety == 
-    \A u, v \in cluster:
-        IF u # v /\ local_kv[u] # {} /\ local_kv[v] # {} THEN 
-           local_kv[u] \intersect local_kv[v] = {}
-        ELSE 
-            TRUE
+    \* \A u, v \in cluster:
+    \*     IF u # v /\ local_kv[u] # {} /\ local_kv[v] # {} THEN 
+    \*        local_kv[u] \intersect local_kv[v] = {}
+    \*     ELSE 
+    \*         TRUE
+    /\ UNION {local_kv[n] : n \in Nodes} = global_kv
+    \* /\ Cardinality(global_kv) < 7
 
 \* NodeToVerify == "c0"
 
