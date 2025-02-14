@@ -89,7 +89,10 @@ Gossip(u) ==
         \* /\ PrintT(to_add)
 
 Leave(u) == 
-    TRUE
+    /\ Cardinality(cluster) = Cardinality(Nodes)
+    /\ \E k \in cluster:
+        /\ global_ring' = [n \in DOMAIN global_ring \ {k} |-> global_ring[n]]
+        /\ local_kv' = [local_kv EXCEPT ![k] = {}]
 
 Read(u, k) == 
     LET 
@@ -97,11 +100,12 @@ Read(u, k) ==
     IN 
         \* key exists
         /\ \E key \in DOMAIN global_ring: key = k
+        /\ k \in local_kv[owner]
+        /\ UNCHANGED <<cluster, local_ring, global_ring, local_kv, global_kv>>
+
         \* /\ PrintT(local_kv)
         \* /\ PrintT(owner)
         \* /\ PrintT(k)
-        /\ k \in local_kv[owner]
-        /\ UNCHANGED <<cluster, local_ring, global_ring, local_kv, global_kv>>
 
 Write(u, k) == 
     LET 
@@ -140,6 +144,7 @@ Safety ==
     \*     ELSE 
     \*         TRUE
     /\ UNION {local_kv[n] : n \in Nodes} = global_kv
+    /\ UNION {DOMAIN local_ring[n] : n \in Nodes} = DOMAIN global_ring
     \* /\ Cardinality(global_kv) < 7
 
 \* NodeToVerify == "c0"
