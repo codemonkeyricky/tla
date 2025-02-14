@@ -100,7 +100,8 @@ Leave(u) ==
         \* /\ PrintT(k)
         /\ global_ring' = [n \in DOMAIN global_ring \ {k} |-> global_ring[n]]
         /\ local_kv' = [local_kv EXCEPT ![u] = {}]
-        /\ UNCHANGED <<cluster, local_ring, global_kv>>
+        /\ cluster' = cluster \ {u}
+        /\ UNCHANGED <<local_ring, global_kv>>
 
 Read(u, k) == 
     LET 
