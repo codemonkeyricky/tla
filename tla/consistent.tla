@@ -63,19 +63,22 @@ Join(u) ==
 \* TestRing == 
 \*     {1,2,3,4,5,6,7}
 
-Gossip(u) == 
+DataSet(my_key) == 
     LET 
-        my_key_set == {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE}
-        my_key == CHOOSE only \in my_key_set : TRUE
         prev_key == FindPrevKey(global_ring, (my_key + N -1) % N)
         pkey_next == (prev_key + 1) % N
         \* TODO: add to book
-        to_add == 
-            IF pkey_next <= my_key THEN
-                {k \in pkey_next..my_key:   k \in global_kv}
-            ELSE 
-                {k \in pkey_next..N-1:      k \in global_kv} \cup
-                {k \in 0..my_key:           k \in global_kv}
+    IN 
+        IF pkey_next <= my_key THEN
+            {k \in pkey_next..my_key:   k \in global_kv}
+        ELSE 
+            {k \in pkey_next..N-1:      k \in global_kv} \cup
+            {k \in 0..my_key:           k \in global_kv}
+        
+Gossip(u) == 
+    LET 
+        my_key == CHOOSE only \in {x \in DOMAIN global_ring: IF global_ring[x] = u THEN TRUE ELSE FALSE} : TRUE
+        to_add == DataSet(my_key)
     IN 
         \* /\ Cardinality(DOMAIN global_ring) > 1
         /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
