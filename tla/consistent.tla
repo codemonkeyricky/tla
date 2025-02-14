@@ -72,6 +72,10 @@ Gossip(u) ==
     IN 
         /\ Cardinality(DOMAIN global_ring) > 1
         /\ local_ring' = [local_ring EXCEPT ![u] = global_ring]
+        \* TODO: account for to_remove?
+        /\ local_kv' = [local_kv EXCEPT ![u] = local_kv[u] \cup to_add]
+        /\ UNCHANGED <<cluster, global_ring, global_kv>>
+
         \* /\ PrintT(u) 
         \* /\ PrintT(pkey_next)
         \* /\ PrintT(my_key)
@@ -79,8 +83,6 @@ Gossip(u) ==
         \* /\ PrintT(global_kv)
         \* /\ PrintT(prev_key)
         \* /\ PrintT(to_add)
-        /\ local_kv' = [local_kv EXCEPT ![u] = local_kv[u] \cup to_add]
-        /\ UNCHANGED <<cluster, global_ring, global_kv>>
 
 Leave(u) == 
     TRUE
