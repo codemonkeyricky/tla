@@ -88,11 +88,19 @@ Gossip(u) ==
         \* /\ PrintT(prev_key)
         \* /\ PrintT(to_add)
 
+ValueToKey(f, v) == 
+    CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
+
 Leave(u) == 
-    /\ Cardinality(cluster) = Cardinality(Nodes)
-    /\ \E k \in cluster:
+    LET 
+        k == ValueToKey(global_ring, u)
+    IN 
+        /\ Cardinality(cluster) = Cardinality(Nodes)
+        \* /\ PrintT(u)
+        \* /\ PrintT(k)
         /\ global_ring' = [n \in DOMAIN global_ring \ {k} |-> global_ring[n]]
-        /\ local_kv' = [local_kv EXCEPT ![k] = {}]
+        /\ local_kv' = [local_kv EXCEPT ![u] = {}]
+        /\ UNCHANGED <<cluster, local_ring, global_kv>>
 
 Read(u, k) == 
     LET 
