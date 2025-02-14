@@ -4,23 +4,16 @@ VARIABLES cluster, global_ring, local_kv, global_kv
 
 vars == <<cluster, global_ring, local_kv, global_kv>>
 
-\* Nodes == {"n0", "n1", "n2"}
-\* KeySpace == {0, 1, 2, 3, 4, 5, 6, 7}
-
 Nodes == {"n0", "n1", "n2"}
 KeySpace == {0, 1, 2, 3, 4, 5}
-
 N == Cardinality(KeySpace)
-
-EmptyFunction == 
-    [kk \in {} |-> ""]
-
+    
 ValueToKey(f, v) == 
     CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
 
 Init ==
     /\ cluster = {}
-    /\ global_ring = EmptyFunction
+    /\ global_ring = [kk \in {} |-> ""]
     /\ local_kv = [k \in Nodes |-> {}]
     /\ global_kv = {}
 
@@ -111,30 +104,13 @@ Next ==
         \E k \in global_kv:
             Read(u, k)
     \/ \E u \in cluster:
-        /\ Cardinality(cluster) >= RF
+        \* /\ Cardinality(cluster) >= RF
         /\ \E k \in KeySpace:
             /\ k \notin global_kv
             /\ Write(u, k)
 
 KVConsistent == 
     UNION {local_kv[n] : n \in Nodes} = global_kv
-
-\* RingConsistent == 
-    \* UNION {DOMAIN local_ring[n] : n \in Nodes} = DOMAIN global_ring
-
-\* Safety == 
-    \* \A u, v \in cluster:
-    \*     IF u # v /\ local_kv[u] # {} /\ local_kv[v] # {} THEN 
-    \*        local_kv[u] \intersect local_kv[v] = {}
-    \*     ELSE 
-    \*         TRUE
-    \* /\ Cardinality(global_kv) < 7
-
-\* NodeToVerify == "c0"
-
-\* Liveness == 
-\*     \* targeted liveness condition
-\*     data[NodeToVerify] = {} ~> data[NodeToVerify] = AllChunks
 
 Spec ==
     /\ Init

@@ -18,7 +18,9 @@ In consistent hashing, the hash space is assumed to be a ring, where the largest
 hash value plus one wraps around back to hash of 0. Servers in a consistent hashing 
 cluster takes up different ranges in the ring. For a given request, the client 
 where the request lands by hashing the request first, then walk the ring clockwise 
-until it finds a server. Assume the following example:
+until it finds a server. \\ 
+
+Assume the following example:
 
 \begin{center}
 \begin{tikzpicture}[scale=1.5]
@@ -83,6 +85,14 @@ Similarly, if a new node n5 is added:
 Part of what n4 used to service will now be serviced by n5.
 
 \section{Design}
+
+In this chapter we will implement a simple distributed key value store that
+supports horizontal scale-out. The service provider can add server into the
+cluster dynamically to reduce the load on individual servers. Similarly, the
+service provider can also remove servers dynamically during off hours to
+minimize server cost.\\
+
+The design does not include replication or fault recovery to limit the scope.
 
 \section{Spec}
 
