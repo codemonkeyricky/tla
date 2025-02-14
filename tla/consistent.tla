@@ -128,6 +128,8 @@ Next ==
         /\ u \notin cluster
         /\ Join(u) 
     \/ \E u \in cluster:
+        /\ Leave(u) 
+    \/ \E u \in cluster:
         Gossip(u)
     \/ \E u \in cluster:
         \E k \in global_kv:
