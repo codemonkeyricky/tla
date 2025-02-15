@@ -11,32 +11,26 @@ N == Cardinality(KeySpace)
 ValueToKey(f, v) == 
     CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
 
-Init ==
-    /\ cluster = {}
-    /\ global_ring = [kk \in {} |-> ""]
-    /\ local_kv = [k \in Nodes |-> {}]
-    /\ global_kv = {}
-
 KeysClaimed == 
     DOMAIN global_ring
 
-RECURSIVE FindNextKey(_, _)
-FindNextKey(ring, k) ==
+RECURSIVE FindNextToken(_, _)
+FindNextToken(ring, k) ==
     IF k \in DOMAIN ring THEN
         k 
     ELSE 
-        FindNextKey(ring, (k + 1) % N) 
+        FindNextToken(ring, (k + 1) % N) 
 
-RECURSIVE FindPrevKey(_, _)
-FindPrevKey(ring, k) ==
+RECURSIVE FindPrevToken(_, _)
+FindPrevToken(ring, k) ==
     IF k \in DOMAIN ring THEN
         k
     ELSE 
-        FindPrevKey(ring, (k - 1 + N) % N) 
+        FindPrevToken(ring, (k - 1 + N) % N) 
 
 DataSet(ring, my_key) == 
     LET 
-        prev_key == FindPrevKey(ring, (my_key + N -1) % N)
+        prev_key == FindPrevToken(ring, (my_key + N -1) % N)
         pkey_next == (prev_key + 1) % N
     IN 
         IF pkey_next <= my_key THEN
@@ -44,6 +38,13 @@ DataSet(ring, my_key) ==
         ELSE 
             {k \in pkey_next..N-1:      k \in global_kv} \cup
             {k \in 0..my_key:           k \in global_kv}
+
+Init ==
+    /\ cluster = {}
+    /\ global_ring = [kk \in {} |-> ""]
+    /\ local_kv = [k \in Nodes |-> {}]
+    /\ global_kv = {}
+
 
 Join(u) == 
     /\ \E key \in KeySpace:
@@ -60,7 +61,7 @@ Join(u) ==
 Leave(u) == 
     LET 
         k == ValueToKey(global_ring, u)
-        key_next == FindNextKey(global_ring, (k + 1) % N)
+        key_next == FindNextToken(global_ring, (k + 1) % N)
         owner_next == global_ring[key_next]
         kv1 == [local_kv EXCEPT ![u] = {}]
         kv2 == [kv1 EXCEPT ![owner_next] = kv1[owner_next] \cup DataSet(global_ring, k)]
@@ -73,17 +74,17 @@ Leave(u) ==
 
 Read(u, k) == 
     LET 
-        kk == FindNextKey(global_ring, k)
+        kk == FindNextToken(global_ring, k)
         owner == global_ring[kk]
     IN 
         \* key exists
-        /\ \E key \in DOMAIN global_ring: key = k
+        /\ Assert(\E key \in DOMAIN global_ring: key = k,"")
         /\ k \in local_kv[owner]
         /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv>>
 
 Write(u, k) == 
     LET 
-        key == FindNextKey(global_ring, k)
+        key == FindNextToken(global_ring, k)
         owner == global_ring[key]
         up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
     IN 
@@ -100,9 +101,9 @@ Next ==
         /\ Join(u) 
     \/ \E u \in cluster:
         /\ Leave(u) 
-    \/ \E u \in cluster:
-        \E k \in global_kv:
-            Read(u, k)
+    \* \/ \E u \in cluster:
+    \*     \E k \in global_kv:
+    \*         Read(u, k)
     \/ \E u \in cluster:
         /\ \E k \in KeySpace:
             /\ k \notin global_kv
