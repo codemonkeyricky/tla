@@ -1,8 +1,8 @@
 --------------------------- MODULE consistent ----------------------------
 EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt, Integers
-VARIABLES cluster, global_ring, local_kv, global_kv
+VARIABLES cluster, global_ring, local_kv, global_kv, debug
 
-vars == <<cluster, global_ring, local_kv, global_kv>>
+vars == <<cluster, global_ring, local_kv, global_kv, debug>>
 
 Nodes == {"n0", "n1", "n2"}
 KeySpace == {0, 1, 2, 3, 4, 5}
@@ -44,7 +44,7 @@ Init ==
     /\ global_ring = [kk \in {} |-> ""]
     /\ local_kv = [k \in Nodes |-> {}]
     /\ global_kv = {}
-
+    /\ debug = {}
 
 Join(u) == 
     /\ \E key \in KeySpace:
@@ -52,11 +52,19 @@ Join(u) ==
         /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
                         IF x = key THEN u ELSE global_ring[x]]
         /\  IF Cardinality(cluster) # 0 THEN
-                local_kv' = [local_kv EXCEPT ![u] = DataSet(global_ring', key)]
+                LET 
+                    data == DataSet(global_ring', key)
+                    updated == [n \in DOMAIN local_kv \cup {u} |-> 
+                                IF n # u THEN 
+                                    local_kv[n] \ data 
+                                ELSE 
+                                    data]
+                IN 
+                    /\ local_kv' = updated
             ELSE 
                 UNCHANGED local_kv
     /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<global_kv>>
+    /\ UNCHANGED <<global_kv, debug>>
        
 Leave(u) == 
     LET 
@@ -65,12 +73,14 @@ Leave(u) ==
         owner_next == global_ring[key_next]
         kv1 == [local_kv EXCEPT ![u] = {}]
         kv2 == [kv1 EXCEPT ![owner_next] = kv1[owner_next] \cup DataSet(global_ring, k)]
+        updated_set == DOMAIN global_ring \ {k}
     IN 
         /\ Cardinality(cluster) > 1
-        /\ global_ring' = [n \in DOMAIN global_ring \ {k} |-> global_ring[n]]
+        \* /\ PrintT(updated_set)
+        /\ global_ring' = [x \in DOMAIN global_ring \ {k} |-> global_ring[x]]
         /\ local_kv' = kv2
         /\ cluster' = cluster \ {u}
-        /\ UNCHANGED << global_kv>>
+        /\ UNCHANGED <<global_kv, debug>>
 
 Read(u, k) == 
     LET 
@@ -80,7 +90,7 @@ Read(u, k) ==
         \* key exists
         /\ Assert(\E key \in DOMAIN global_ring: key = k,"")
         /\ k \in local_kv[owner]
-        /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv>>
+        /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv, debug>>
 
 Write(u, k) == 
     LET 
@@ -90,7 +100,7 @@ Write(u, k) ==
     IN 
         /\ local_kv' = up
         /\ global_kv' = global_kv \cup {k}
-        /\ UNCHANGED <<cluster, global_ring>>
+        /\ UNCHANGED <<cluster, global_ring, debug>>
 
 NotInCluster ==
     Nodes \ {cluster}
