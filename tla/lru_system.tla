@@ -9,17 +9,19 @@ LRU == INSTANCE lru
 DataSet == 
     {"a", "b", "c", "d", "e", "f", "g", "h"}
 
-\* vars == <<kv>>
-
-\* \* N == 4
-\* \* KV == {"a", "b", "c", "d", "e", "f"}
-
 Init ==
     /\ LRU!Init 
 
 Next ==
-    \E d \in DataSet:
+    \* write 
+    \/ \E d \in DataSet:
         LRU!Put(d, d)
+    \* read
+    \/ \E d \in DataSet:
+        IF LRU!Contains(d) THEN 
+           /\ LRU!Get(d)
+        ELSE 
+           /\ LRU!Put(d, d)
 
 Consistent == 
     \A d \in DataSet:

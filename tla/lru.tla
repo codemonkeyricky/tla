@@ -10,7 +10,8 @@ N == 4
 KV == {"a", "b", "c", "d", "e", "f"}
 
 Get(k) == 
-    kv[k] 
+    /\ recency' = Append(SelectSeq(recency, LAMBDA x : x # k), k)
+    /\ UNCHANGED kv
 
 Contains(k) == 
     /\ k \in DOMAIN kv 
