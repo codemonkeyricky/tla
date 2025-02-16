@@ -3,15 +3,17 @@ EXTENDS Naturals, TLC, Sequences, FiniteSets
 
 VARIABLES kv, recency
 
-vars == <<kv>>
+vars == <<kv, recency>>
 
 N == 4
 
 KV == {"a", "b", "c", "d", "e", "f"}
 
 Get(k) == 
-    /\ recency' = Append(SelectSeq(recency, LAMBDA x : recency[x] # k), k)
-    /\ UNCHANGED kv
+    kv[k] 
+
+Contains(k) == 
+    /\ k \in DOMAIN kv 
 
 Put(k, v) == 
     IF Len(recency) # N THEN 
@@ -34,6 +36,9 @@ Put(k, v) ==
 Init ==
     /\ kv = [k \in {} |-> 0]
     /\ recency = <<>>
+
+Unchanged == 
+    /\ UNCHANGED <<kv, recency>>
 
 Next ==
     \E k \in KV: 
