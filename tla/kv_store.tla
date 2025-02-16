@@ -1,7 +1,9 @@
 --------------------------- MODULE kv_store ----------------------------
 EXTENDS Naturals, TLC, Sequences, FiniteSets
 
-VARIABLES kv, latency, recency
+VARIABLES 
+    lru_recency, lru_kv, \* LRU imports
+    kv, latency
 
 vars == <<kv, latency>>
 
@@ -10,7 +12,6 @@ LATENCY == 100
 LRU == INSTANCE lru
 
 N == 4
-
 KV == {"a", "b", "c", "d", "e", "f"}
 
 Read(k) == 

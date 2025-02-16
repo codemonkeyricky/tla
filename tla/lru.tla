@@ -7,7 +7,7 @@ vars == <<lru_kv, lru_recency>>
 
 N == 4
 
-lru_kv == {"a", "b", "c", "d", "e", "f"}
+KV == {"a", "b", "c", "d", "e", "f"}
 
 Get(k) == 
     /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
@@ -20,19 +20,19 @@ Put(k, v) ==
     IF Len(lru_recency) # N THEN 
         IF k \in DOMAIN lru_kv THEN 
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
-            /\ lru_kv' = [n \in DOMAIN kv \ {k} |-> n]
+            /\ lru_kv' = [n \in DOMAIN lru_kv \ {k} |-> n]
         ELSE 
             /\ lru_recency' = Append(lru_recency, k)
-            /\ lru_kv' = [n \in DOMAIN kv \cup {k} |-> n]
+            /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
     ELSE  \* Cardinality(lru_kv) = N 
         IF k \in DOMAIN lru_kv THEN 
             \* refresh
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
-            /\ lru_kv' = [n \in DOMAIN kv \ {k} |-> kv[n]]
+            /\ lru_kv' = [n \in DOMAIN lru_kv \ {k} |-> lru_kv[n]]
         ELSE 
             \* remove oldest
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
-            /\ lru_kv' = [n \in (DOMAIN kv \cup {k}) \ {lru_recency[1]} |-> n]
+            /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
 
 Init ==
     /\ lru_kv = [k \in {} |-> 0]
@@ -42,7 +42,7 @@ Unchanged ==
     /\ UNCHANGED <<lru_kv, lru_recency>>
 
 Next ==
-    \E k \in lru_kv: 
+    \E k \in KV: 
         Put(k ,"v")
 
 Spec ==
