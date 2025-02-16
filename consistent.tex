@@ -134,7 +134,7 @@ Before we define the \textit{Spec}, we need to first create a few helper functio
 ValueToKey(f, v) == 
     CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
 
-KeysClaimed == 
+TokensClaimed == 
     DOMAIN global_ring
 \end{tla}
 \begin{tlatex}
@@ -142,7 +142,7 @@ KeysClaimed ==
  \@x{\@s{16.4} {\CHOOSE} only \.{\in} \{ n \.{\in} {\DOMAIN} f \.{:} f [ n ]
  \.{=} v \} \.{:} {\TRUE}}%
 \@pvspace{8.0pt}%
-\@x{ KeysClaimed \.{\defeq}}%
+\@x{ TokensClaimed \.{\defeq}}%
 \@x{\@s{16.4} {\DOMAIN} global\_ring}%
 \end{tlatex}
 \\
@@ -154,12 +154,12 @@ not as part of a set. The definition then uses \textit{CHOOSE} to remove the set
 container. \textit{CHOOSE} always return the same value in the set. This is
 acceptable for a set containing a single value.\\
 
-\textit{KeysClaimed} returns all the keys that has been taken on the ring. Since
+\textit{TokensClaimed} returns all the keys that has been taken on the ring. Since
 \textit{global\_ring} is a function mapping containing both key and value, to
 return keys only as a set, we use the \textit{DOMAIN} keyword.\\
 
-Working with a hash ring often requires \textit{walking} the ring.  We will
-define a few helper functions below:
+Working with a hash ring often requires \textit{walking} the ring. We will
+define a few helper functions below:\\
 
 \begin{tla}
 RECURSIVE FindNextToken(_, _)
@@ -269,7 +269,7 @@ Let us look at \textit{Join} first:\\
 \begin{tla}
 Join(u) == 
     /\ \E key \in KeySpace:
-        /\ key \notin KeysClaimed
+        /\ key \notin TokensClaimed
         /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
                         IF x = key THEN u ELSE global_ring[x]]
         /\  IF Cardinality(cluster) # 0 THEN
@@ -282,7 +282,7 @@ Join(u) ==
 \begin{tlatex}
 \@x{ Join ( u ) \.{\defeq}}%
 \@x{ \.{\land} \E\, key \.{\in} KeySpace \.{:}}%
-\@x{\@s{4.1} \.{\land} key \.{\notin} KeysClaimed}%
+\@x{\@s{4.1} \.{\land} key \.{\notin} TokensClaimed}%
  \@x{\@s{4.1} \.{\land} global\_ring \.{'} \.{=} [ x \.{\in} ( {\DOMAIN}
  global\_ring ) \.{\cup} \{ key \} \.{\mapsto}}%
 \@x{\@s{4.1} {\IF} x \.{=} key \.{\THEN} u \.{\ELSE} global\_ring [ x ] ]}%

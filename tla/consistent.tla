@@ -11,7 +11,7 @@ N == Cardinality(KeySpace)
 ValueToKey(f, v) == 
     CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
 
-KeysClaimed == 
+TokensClaimed == 
     DOMAIN global_ring
 
 RECURSIVE FindNextToken(_, _)
@@ -48,7 +48,7 @@ Init ==
 
 Join(u) == 
     /\ \E key \in KeySpace:
-        /\ key \notin KeysClaimed
+        /\ key \notin TokensClaimed
         /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
                         IF x = key THEN u ELSE global_ring[x]]
         /\  IF Cardinality(cluster) # 0 THEN
@@ -101,9 +101,6 @@ Next ==
         /\ Join(u) 
     \/ \E u \in cluster:
         /\ Leave(u) 
-    \* \/ \E u \in cluster:
-    \*     \E k \in global_kv:
-    \*         Read(u, k)
     \/ \E u \in cluster:
         /\ \E k \in KeySpace:
             /\ k \notin global_kv
