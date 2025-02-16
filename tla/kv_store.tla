@@ -15,26 +15,24 @@ LRU == INSTANCE lru
 N == 4
 KV == {"a", "b", "c", "d", "e", "f"}
 
-\* Put(k, v) == 
-\*     /\ PrintT("ww")
-    \* IF LRU!Contains(k) THEN 
-    \*      /\ LRU!Put(k, v)
-    \*      /\ UNCHANGED  kv
-    \*      /\ latency = CACHED
-    \* ELSE 
-    \*      /\ LRU!IsFull => kv' = kv @@ LRU!GetLeastRecent
-    \*      /\ LRU!Put(k, v)
-    \*      /\ latency = EVICT
-
+Put(k, v) == 
+    IF LRU!Contains(k) THEN 
+         /\ LRU!Put(k, v)
+         /\ UNCHANGED  kv
+         /\ latency = CACHED
+    ELSE 
+         /\ LRU!IsFull => kv' = kv @@ LRU!GetLeastRecent
+         /\ LRU!Put(k, v)
+         /\ latency = EVICT
+\* 
 Init ==
     /\ LRU!Init
     /\ kv = [k \in {} |-> 0]
     /\ latency = 0
 
 Next ==
-    TRUE
-    \* \E k \in KV: 
-    \*     Put(k ,"v")
+    \E k \in KV: 
+        Put(k ,"v")
 
 Spec ==
   /\ Init
