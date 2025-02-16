@@ -16,6 +16,16 @@ Get(k) ==
 Contains(k) == 
     /\ k \in DOMAIN lru_kv 
 
+IsFull == 
+    Len(lru_recency) = N
+
+GetLeastRecent == 
+    LET 
+        k == Head(lru_recency)
+        v == lru_kv[k]
+    IN 
+        [kk \in {k} |-> v]
+
 Put(k, v) == 
     IF Len(lru_recency) # N THEN 
         IF k \in DOMAIN lru_kv THEN 

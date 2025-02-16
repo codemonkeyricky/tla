@@ -7,20 +7,24 @@ VARIABLES
 
 vars == <<kv, latency>>
 
-LATENCY == 100
+EVICT == 100
+CACHED == 10
 
 LRU == INSTANCE lru
 
 N == 4
 KV == {"a", "b", "c", "d", "e", "f"}
 
-Read(k) == 
-    kv[k] 
-
-Put(k, v) == 
-    /\ kv' = [n \in DOMAIN kv \cup {k} |-> n]
-    /\ latency' = LATENCY
-    /\ LRU!Unchanged
+\* Put(k, v) == 
+\*     /\ PrintT("ww")
+    \* IF LRU!Contains(k) THEN 
+    \*      /\ LRU!Put(k, v)
+    \*      /\ UNCHANGED  kv
+    \*      /\ latency = CACHED
+    \* ELSE 
+    \*      /\ LRU!IsFull => kv' = kv @@ LRU!GetLeastRecent
+    \*      /\ LRU!Put(k, v)
+    \*      /\ latency = EVICT
 
 Init ==
     /\ LRU!Init
@@ -28,8 +32,9 @@ Init ==
     /\ latency = 0
 
 Next ==
-    \E k \in KV: 
-        Put(k ,"v")
+    TRUE
+    \* \E k \in KV: 
+    \*     Put(k ,"v")
 
 Spec ==
   /\ Init
