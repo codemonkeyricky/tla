@@ -76,21 +76,20 @@ Leave(u) ==
         updated_set == DOMAIN global_ring \ {k}
     IN 
         /\ Cardinality(cluster) > 1
-        \* /\ PrintT(updated_set)
         /\ global_ring' = [x \in DOMAIN global_ring \ {k} |-> global_ring[x]]
         /\ local_kv' = kv2
         /\ cluster' = cluster \ {u}
         /\ UNCHANGED <<global_kv, debug>>
 
-Read(u, k) == 
-    LET 
-        kk == FindNextToken(global_ring, k)
-        owner == global_ring[kk]
-    IN 
-        \* key exists
-        /\ Assert(\E key \in DOMAIN global_ring: key = k,"")
-        /\ k \in local_kv[owner]
-        /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv, debug>>
+\* Read(u, k) == 
+\*     LET 
+\*         kk == FindNextToken(global_ring, k)
+\*         owner == global_ring[kk]
+\*     IN 
+\*         \* key exists
+\*         /\ Assert(\E key \in DOMAIN global_ring: key = k,"")
+\*         /\ k \in local_kv[owner]
+\*         /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv, debug>>
 
 Write(u, k) == 
     LET 
