@@ -4,10 +4,10 @@
 
 \chapter{Consistent Hashing}
 
-To a distributed system, traffic is hashed then distributed to different servers
+In a distributed system, traffic is hashed and then distributed to different servers
 for load balancing. Given the intent of a distributed system is to enable
 horizontal scaling, the system needs to support dynamic upscaling of the
-cluster. With traditional hashing algorithm, changing the size of hash space
+cluster. With a traditional hashing algorithm, changing the size of the hash space
 requires data movement of the entire cluster. This is very undesirable.
 Consistent hashing was introduced to minimize data movement, data movement is
 only required when introducing nodes in the affected range. 
@@ -15,9 +15,9 @@ only required when introducing nodes in the affected range.
 \pagebreak
 
 In consistent hashing, the hash space is assumed to be a ring, where the largest
-hash value plus one wraps around back to hash of 0. Servers in a consistent hashing 
-cluster takes up different ranges in the ring. For a given request, the client 
-where the request lands by hashing the request first, then walk the ring clockwise 
+hash value plus one wraps around to the hash of 0. Servers in a consistent hashing 
+cluster take up different ranges in the ring. For a given request, the client 
+where the request lands by hashing the request first, then walks the ring clockwise 
 until it finds a server. \\ 
 
 Assume the following example:
@@ -60,7 +60,7 @@ Assume a case where n4 goes offline:
 \end{tikzpicture}
 \end{center}
 
-In such case requests that were processed by n4 will land on n3 instead.
+In such a case, requests previously processed by n4 will land on n3 instead.
 Similarly, if a new node n5 is added:
 
 \begin{center}
@@ -86,14 +86,14 @@ Part of what n4 used to service will now be serviced by n5.
 
 \section{Design}
 
-In this chapter we will implement a simple distributed key value store that
-supports horizontal scale-out. The service provider can add server into the
+In this chapter, we will implement a simple distributed key-value store that
+supports horizontal scale-out. The service provider can add servers into the
 cluster dynamically to reduce the load on individual servers. Similarly, the
 service provider can also remove servers dynamically during off hours to
-minimize server cost.\\
+minimize server costs.\\
 
 A new server \textit{K} joining the cluster claims a token \textit{T} on the
-ring. Starting from \textit{T}, walk the ring coounter-clockwise to find the
+ring. Starting from \textit{T}, walk the ring counter-clockwise to find the
 first neighboring token \textit{P}, \textit{K} owns the range of keys from
 \textit{P} (exclusive) to \textit{T} (inclusive).\\
 
@@ -121,7 +121,7 @@ Init ==
 \end{tlatex}
 
 \begin{itemize}
-    \item \textit{cluster} is a set that include all the nodes that are currently in the distributed key-value store.
+    \item \textit{cluster} is a set that includes all the nodes currently in the distributed key-value store.
     \item \textit{global\_ring} is a function that implements key-to-node mapping.
     \item \textit{local\_kv} represents the per node key-value store. For
     simplicity the key and value are assumed to be the same, thus represented
@@ -129,7 +129,7 @@ Init ==
     \item \textit{global\_kv} represents the system key-value store, used to check consistency.
 \end{itemize}
 
-Before we define the \textit{Spec}, we need to first create a few helper functions:\\
+Before we define the \textit{Spec}, we need create a few helper functions:\\
 \begin{tla}
 ValueToKey(f, v) == 
     CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
@@ -149,12 +149,12 @@ TokensClaimed ==
 
 \textit{ValueToKey} takes the value to a function and returns the corresponding
 key. The definition first creates a set (using set comprehension) containing the
-key that corresponds to the value. However, we want to return the key itself,
-not as part of a set. The definition then uses \textit{CHOOSE} to remove the set
-container. \textit{CHOOSE} always return the same value in the set. This is
+key corresponding to the value. However, we want to return the key itself,
+not as part of a set. The definition uses \textit{CHOOSE} to remove the set
+container. \textit{CHOOSE} always returns the same value in the set. This is
 acceptable for a set containing a single value.\\
 
-\textit{TokensClaimed} returns all the keys that has been taken on the ring. Since
+\textit{TokensClaimed} returns all the tokens taken on the ring. Since
 \textit{global\_ring} is a function mapping containing both key and value, to
 return keys only as a set, we use the \textit{DOMAIN} keyword.\\
 
@@ -195,9 +195,9 @@ FindPrevToken(ring, k) ==
 
 \textit{FindNextToken} walks the ring clockwise looking for the next token.
 Similarly, \textit{FindPrevToken} walks the ring counter-clockwise looking for the
-previous token. \textit{Walking} the ring is implemented recursively by adding or 
-subtracting one. Note that in the couhnter-clockwise case care is applied to
-ensure wrap around works correctly.\\
+previous token. Walking the ring is implemented recursively by adding or 
+subtracting one. Note that in the counter-clockwise case, care is applied to
+ensure the wrap-around works correctly.\\
 
 \begin{tla}
 DataSet(ring, my_key) == 
@@ -220,10 +220,10 @@ DataSet(ring, my_key) ==
 \@x{\@s{16.4} \.{\IN}}%
 \@x{\@s{32.8} {\IF} pkey\_next \.{\leq} my\_key \.{\THEN}}%
  \@x{\@s{36.89} \{ k \.{\in} pkey\_next \.{\dotdot} my\_key \.{:} k \.{\in}
- global\_kv \}}%
+ global\_kv \}}%
 \@x{\@s{32.8} \.{\ELSE}}%
  \@x{\@s{49.19} \{ k \.{\in} pkey\_next \.{\dotdot} N \.{-} 1 \.{:} k \.{\in}
- global\_kv \} \.{\cup}}%
+ global\_kv \} \.{\cup}}%
  \@x{\@s{49.19} \{ k \.{\in} 0 \.{\dotdot} my\_key \.{:} k \.{\in} global\_kv
  \}}%
 \end{tlatex}
@@ -272,7 +272,7 @@ Join(u) ==
         /\ key \notin TokensClaimed
         /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
                         IF x = key THEN u ELSE global_ring[x]]
-        /\  IF Cardinality(cluster) # 0 THEN
+        /\  IF Cardinality(cluster) # 0 THEN
                 local_kv' = [local_kv EXCEPT ![u] = DataSet(global_ring', key)]
             ELSE 
                 UNCHANGED local_kv
@@ -284,7 +284,7 @@ Join(u) ==
 \@x{ \.{\land} \E\, key \.{\in} KeySpace \.{:}}%
 \@x{\@s{4.1} \.{\land} key \.{\notin} TokensClaimed}%
  \@x{\@s{4.1} \.{\land} global\_ring \.{'} \.{=} [ x \.{\in} ( {\DOMAIN}
- global\_ring ) \.{\cup} \{ key \} \.{\mapsto}}%
+ global\_ring ) \.{\cup} \{ key \} \.{\mapsto}}%
 \@x{\@s{4.1} {\IF} x \.{=} key \.{\THEN} u \.{\ELSE} global\_ring [ x ] ]}%
  \@x{\@s{4.1} \.{\land}\@s{4.1} {\IF} Cardinality ( cluster ) \.{\neq} 0
  \.{\THEN}}%
@@ -325,7 +325,7 @@ Leave(u) ==
 \@x{\@s{16.4} \.{\LET}}%
 \@x{\@s{32.8} k \.{\defeq} ValueToKey ( global\_ring ,\, u )}%
  \@x{\@s{32.8} key\_next \.{\defeq} FindNextToken ( global\_ring ,\, ( k \.{+}
- 1 ) \.{\%} N )}%
+ 1 ) \.{\%} N )}%
 \@x{\@s{32.8} owner\_next \.{\defeq} global\_ring [ key\_next ]}%
  \@x{\@s{32.8} kv1 \.{\defeq} [ local\_kv {\EXCEPT} {\bang} [ u ] \.{=} \{ \}
  ]}%
@@ -335,7 +335,7 @@ Leave(u) ==
 \@x{\@s{16.4} \.{\IN}}%
 \@x{\@s{32.8} \.{\land} Cardinality ( cluster ) \.{>} 1}%
  \@x{\@s{32.8} \.{\land} global\_ring \.{'} \.{=} [ n \.{\in} {\DOMAIN}
- global\_ring \.{\,\backslash\,} \{ k \} \.{\mapsto} global\_ring [ n ] ]}%
+ global\_ring \.{\,\backslash\,} \{ k \} \.{\mapsto} global\_ring [ n ] ]}%
 \@x{\@s{32.8} \.{\land} local\_kv \.{'} \.{=} kv2}%
  \@x{\@s{32.8} \.{\land} cluster \.{'} \.{=} cluster \.{\,\backslash\,} \{ u
  \}}%
@@ -345,7 +345,7 @@ Leave(u) ==
 
 Opposite to \textit{Join}: when a node \textit{Leave}, it needs to copy data to
 the \textit{next} token. We can find the next token using \textit{FindNextToken},
-then copy leaving node's to it.\\
+then copy the leaving nodes to it.\\
 
 Finally, let us look at the definition of \textit{Write}:\\
 \begin{tla}
@@ -365,7 +365,7 @@ Write(u, k) ==
 \@x{\@s{32.8} key \.{\defeq} FindNextToken ( global\_ring ,\, k )}%
 \@x{\@s{32.8} owner \.{\defeq} global\_ring [ key ]}%
  \@x{\@s{32.8} up \.{\defeq} [ local\_kv {\EXCEPT} {\bang} [ owner ] \.{=}
- local\_kv [ owner ] \.{\cup} \{ k \} ]}%
+ local\_kv [ owner ] \.{\cup} \{ k \} ]}%
 \@x{\@s{16.4} \.{\IN}}%
 \@x{\@s{32.8} \.{\land} local\_kv \.{'} \.{=} up}%
 \@x{\@s{32.8} \.{\land} global\_kv \.{'} \.{=} global\_kv \.{\cup} \{ k \}}%
@@ -374,12 +374,44 @@ Write(u, k) ==
 \end{tlatex}
 \\
 
-To write a key-value pair, we need to first find the first token claimed by a
+To write a key-value pair, we need to find the first token claimed by a
 server by walking the ring clockwise with \textit{FindNextToken}. We then find
-the corresponding server for the token, then write to the key-value pair to the
+the corresponding server for the token and write the key-value pair to the
 local KV store.
 
 \section{Safety} 
+
+Under all circumstances, the distributed key-value store contains the 
+entire data set. This is described by the following safety property by unionizing
+the data of all nodes.\\
+
+\begin{tla}
+KVConsistent == 
+    /\ UNION {local_kv[n] : n \in Nodes} = global_kv
+\end{tla}
+\begin{tlatex}
+\@x{ KVConsistent \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} {\UNION} \{ local\_kv [ n ] \.{:} n \.{\in} Nodes \}
+ \.{=} global\_kv}%
+\end{tlatex}
+\\
+
+While the distributed key-value contains the entire data set, we also want to
+ensure the per-node key-value stores do not overlap. This can
+be done with \textit{imply} operator. For any pair of distinct nodes,
+their key value should not overlap.\\
+
+\begin{tla}
+KVXOR == 
+    Cardinality(cluster) > 1 => 
+        \A u, v \in cluster: u # v => (local_kv[u] \intersect local_kv[v]) = {}
+\end{tla}
+\begin{tlatex}
+\@x{ KVXOR \.{\defeq}}%
+\@x{\@s{16.4} Cardinality ( cluster ) \.{>} 1 \.{\implies}}%
+ \@x{\@s{32.8} \A\, u ,\, v \.{\in} cluster \.{:} u \.{\neq} v \.{\implies} (
+ local\_kv [ u ] \.{\cap} local\_kv [ v ] ) \.{=} \{ \}}%
+\end{tlatex}
 
 \section{Liveness}
 
