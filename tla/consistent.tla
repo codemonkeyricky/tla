@@ -116,7 +116,11 @@ Next ==
             /\ Write(u, k)
 
 KVConsistent == 
-    UNION {local_kv[n] : n \in Nodes} = global_kv
+    /\ UNION {local_kv[n] : n \in Nodes} = global_kv
+
+KVXOR == 
+    Cardinality(cluster) > 1 => 
+        \A u, v \in cluster: u # v => (local_kv[u] \intersect local_kv[v]) = {}
 
 Spec ==
     /\ Init
