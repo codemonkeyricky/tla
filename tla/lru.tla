@@ -1,48 +1,48 @@
 --------------------------- MODULE lru ----------------------------
 EXTENDS Naturals, TLC, Sequences, FiniteSets
 
-VARIABLES kv, recency
+VARIABLES lru_kv, lru_recency
 
-vars == <<kv, recency>>
+vars == <<lru_kv, lru_recency>>
 
 N == 4
 
-KV == {"a", "b", "c", "d", "e", "f"}
+lru_kv == {"a", "b", "c", "d", "e", "f"}
 
 Get(k) == 
-    /\ recency' = Append(SelectSeq(recency, LAMBDA x : x # k), k)
-    /\ UNCHANGED kv
+    /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
+    /\ UNCHANGED lru_kv
 
 Contains(k) == 
-    /\ k \in DOMAIN kv 
+    /\ k \in DOMAIN lru_kv 
 
 Put(k, v) == 
-    IF Len(recency) # N THEN 
-        IF k \in DOMAIN kv THEN 
-            /\ recency' = Append(SelectSeq(recency, LAMBDA x : x # k), k)
-            /\ kv' = [n \in DOMAIN kv \ {k} |-> n]
+    IF Len(lru_recency) # N THEN 
+        IF k \in DOMAIN lru_kv THEN 
+            /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
+            /\ lru_kv' = [n \in DOMAIN kv \ {k} |-> n]
         ELSE 
-            /\ recency' = Append(recency, k)
-            /\ kv' = [n \in DOMAIN kv \cup {k} |-> n]
-    ELSE  \* Cardinality(kv) = N 
-        IF k \in DOMAIN kv THEN 
+            /\ lru_recency' = Append(lru_recency, k)
+            /\ lru_kv' = [n \in DOMAIN kv \cup {k} |-> n]
+    ELSE  \* Cardinality(lru_kv) = N 
+        IF k \in DOMAIN lru_kv THEN 
             \* refresh
-            /\ recency' = Append(SelectSeq(recency, LAMBDA x : x # k), k)
-            /\ kv' = [n \in DOMAIN kv \ {k} |-> kv[n]]
+            /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
+            /\ lru_kv' = [n \in DOMAIN kv \ {k} |-> kv[n]]
         ELSE 
             \* remove oldest
-            /\ recency' = Append(SelectSeq(recency, LAMBDA x : x # recency[1]), k)
-            /\ kv' = [n \in (DOMAIN kv \cup {k}) \ {recency[1]} |-> n]
+            /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
+            /\ lru_kv' = [n \in (DOMAIN kv \cup {k}) \ {lru_recency[1]} |-> n]
 
 Init ==
-    /\ kv = [k \in {} |-> 0]
-    /\ recency = <<>>
+    /\ lru_kv = [k \in {} |-> 0]
+    /\ lru_recency = <<>>
 
 Unchanged == 
-    /\ UNCHANGED <<kv, recency>>
+    /\ UNCHANGED <<lru_kv, lru_recency>>
 
 Next ==
-    \E k \in KV: 
+    \E k \in lru_kv: 
         Put(k ,"v")
 
 Spec ==

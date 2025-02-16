@@ -1,11 +1,13 @@
 --------------------------- MODULE kv_store ----------------------------
 EXTENDS Naturals, TLC, Sequences, FiniteSets
 
-VARIABLES kv, latency
+VARIABLES kv, latency, recency
 
 vars == <<kv, latency>>
 
 LATENCY == 100
+
+LRU == INSTANCE lru
 
 N == 4
 
@@ -17,8 +19,10 @@ Read(k) ==
 Put(k, v) == 
     /\ kv' = [n \in DOMAIN kv \cup {k} |-> n]
     /\ latency' = LATENCY
+    /\ LRU!Unchanged
 
 Init ==
+    /\ LRU!Init
     /\ kv = [k \in {} |-> 0]
     /\ latency = 0
 
