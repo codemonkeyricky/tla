@@ -17,21 +17,21 @@ LRU == INSTANCE lru
 \* N == 4
 KV == {"a", "b", "c", "d", "e", "f"}
 
-Read(k) == 
-    IF LRU!Contains(k) THEN 
-        lru_kv[k]
-    ELSE 
-        kv[k]
+\* Read(k) == 
+\*     IF LRU!Contains(k) THEN 
+\*         lru_kv[k]
+\*     ELSE 
+\*         kv[k]
 
-Touch(k) == 
-    IF LRU!Contains(k) THEN 
-        /\ LRU!Touch(k)
-        /\ latency' = CACHE
-    ELSE \* key not in LRU
-        /\ LRU!Put(k, kv[k])
-        /\ latency' = EVICT
+\* Touch(k) == 
+\*     IF LRU!Contains(k) THEN 
+\*         /\ LRU!Touch(k)
+\*         /\ latency' = CACHE
+\*     ELSE \* key not in LRU
+\*         /\ LRU!Put(k, kv[k])
+\*         /\ latency' = EVICT
 
-Put(k, v) == 
+Update(k, v) == 
     IF LRU!Contains(k) THEN 
          /\ LRU!Put(k, v)
          /\ UNCHANGED kv
@@ -57,7 +57,7 @@ Init ==
 
 Next ==
     \E k \in KV: 
-        Put(k ,"v")
+        Update(k ,"v")
 
 Safety ==
     /\ LRU!Consistent
