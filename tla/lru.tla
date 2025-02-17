@@ -1,9 +1,9 @@
 --------------------------- MODULE lru ----------------------------
 EXTENDS Naturals, TLC, Sequences, FiniteSets
 
-VARIABLES lru_kv, lru_recency
+VARIABLES lru_kv, lru_recency, lru_size
 
-vars == <<lru_kv, lru_recency>>
+vars == <<lru_kv, lru_recency, lru_size>>
 
 N == 4
 
@@ -11,7 +11,7 @@ KV == {"a", "b", "c", "d", "e", "f"}
 
 Get(k) == 
     /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
-    /\ UNCHANGED lru_kv
+    /\ UNCHANGED <<lru_kv, lru_size>>
 
 Contains(k) == 
     /\ k \in DOMAIN lru_kv 
@@ -31,22 +31,23 @@ Put(k, v) ==
         \* replace
         /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
         /\ lru_kv' = [n \in DOMAIN lru_kv |-> IF n = k THEN v ELSE lru_kv[n]]
+        /\ UNCHANGED lru_size
     ELSE 
         IF Len(lru_recency) # N THEN 
             \* add 
             /\ lru_recency' = Append(lru_recency, k)
             /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
+            /\ UNCHANGED lru_size
         ELSE 
             \* replace oldest 
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
             /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
+            /\ UNCHANGED lru_size
 
-Init ==
+Init(n) ==
     /\ lru_kv = <<>>
     /\ lru_recency = <<>>
-
-Unchanged == 
-    /\ UNCHANGED <<lru_kv, lru_recency>>
+    /\ lru_size = n
 
 Next ==
     \E k \in KV: 
@@ -57,7 +58,7 @@ Consistent ==
     /\ {lru_recency[k] : k \in DOMAIN lru_recency} = DOMAIN lru_kv
 
 Spec ==
-  /\ Init
+  /\ Init(N)
   /\ [][Next]_vars
   /\ WF_vars(Next)
 =============================================================================

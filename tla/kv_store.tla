@@ -27,14 +27,7 @@ Put(k, v) ==
                     key == CHOOSE only \in DOMAIN add: TRUE
                     value == add[key]
                 IN 
-                    \* /\ PrintT(key) 
-                    \* /\ PrintT(value) 
-                    \* /\ PrintT(kv)
                     /\ kv' = [x \in DOMAIN kv \cup {key} |-> IF x = key THEN value ELSE kv[x]]
-                \* /\ PrintT(kv')
-                \* /\ PrintT(kv)
-                \* /\ PrintT(k)
-                \* /\ Assert(0,"")
             ELSE 
                 UNCHANGED kv 
         /\ LRU!Put(k, v)
