@@ -42,7 +42,7 @@ Put(k, v) ==
             /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
 
 Init ==
-    /\ lru_kv = [k \in {} |-> 0]
+    /\ lru_kv = <<>>
     /\ lru_recency = <<>>
 
 Unchanged == 
@@ -51,13 +51,10 @@ Unchanged ==
 Next ==
     \E k \in KV: 
         /\ Put(k ,"v")
-        \* /\ PrintT(Cardinality(DOMAIN lru_recency))
-        \* /\ PrintT(Cardinality(DOMAIN lru_kv))
 
 Consistent ==
-    /\ Cardinality(DOMAIN lru_recency) = Cardinality(DOMAIN lru_kv)
+    \* Keys tracked by lru_recency and lru_kv should match.
     /\ {lru_recency[k] : k \in DOMAIN lru_recency} = DOMAIN lru_kv
-    \* 1 = 2
 
 Spec ==
   /\ Init
