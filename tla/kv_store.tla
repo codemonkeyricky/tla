@@ -43,6 +43,7 @@ Update(k, v) ==
                     key == CHOOSE only \in DOMAIN pair: TRUE
                     value == pair[key]
                 IN 
+                    \* Evicted from LRU and write to memory
                     /\ kv' = [x \in DOMAIN kv \cup {key} |-> IF x = key THEN value ELSE kv[x]]
             ELSE 
                 UNCHANGED kv 
