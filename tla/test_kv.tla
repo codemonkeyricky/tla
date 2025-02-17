@@ -1,5 +1,5 @@
 --------------------------- MODULE test_kv ----------------------------
-EXTENDS Naturals, TLC, Sequences, FiniteSets
+EXTENDS Naturals, TLC, Sequences, FiniteSets, CSV, TLC
 
 VARIABLES 
     lru_kv, lru_recency, lru_size,  \* LRU import
@@ -29,6 +29,17 @@ Next ==
 Consistent == 
     \A k \in DOMAIN written: 
         KV!Read(k) = written[k]
+
+CSVFile ==                                                                                                                                                            
+    "stat.csv"
+
+Stats ==                                                                                                                                                              
+    /\ CSVWrite("%1$s", <<latency>>, CSVFile)
+    \* /\ Assert(0,"")
+    \* /\ TLCSet(atoi(state), TLCGet(atoi(state)) + 1)                                                                                                               
+    \* \* Update KnuthYao.svg every 100 samples.                                                                                                                     
+    \* /\ TLCGet("stats").traces % 250 = 0 =>                                                                                                                        
+    \*     /\ IOExec(<<"/usr/bin/env", "Rscript", "SimKnuthYao.R", CSVFile>>).exitValue = 0   
 
 Spec ==
   /\ Init
