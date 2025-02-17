@@ -27,23 +27,17 @@ GetLeastRecent ==
         [kk \in {k} |-> v]
 
 Put(k, v) == 
-    IF Len(lru_recency) # N THEN 
         IF k \in DOMAIN lru_kv THEN 
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
             /\ lru_kv' = [n \in DOMAIN lru_kv |-> IF n = k THEN v ELSE lru_kv[n]]
         ELSE 
-            /\ lru_recency' = Append(lru_recency, k)
-            /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
-    ELSE  \* Cardinality(lru_kv) = N 
-        IF k \in DOMAIN lru_kv THEN 
-            \* refresh
-            /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
-            /\ lru_kv' = [n \in DOMAIN lru_kv |-> IF n = k THEN v ELSE lru_kv[n]]
-        ELSE 
-            \* remove oldest
-            /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
-            /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
-            \* /\ PrintT(lru_kv')
+            IF Len(lru_recency) # N THEN 
+                /\ lru_recency' = Append(lru_recency, k)
+                /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
+            ELSE 
+                \* remove oldest
+                /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
+                /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
 
 Init ==
     /\ lru_kv = [k \in {} |-> 0]
