@@ -28,10 +28,12 @@ GetLeastRecent ==
 
 Put(k, v) == 
     IF k \in DOMAIN lru_kv THEN 
+        \* replace
         /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
         /\ lru_kv' = [n \in DOMAIN lru_kv |-> IF n = k THEN v ELSE lru_kv[n]]
     ELSE 
         IF Len(lru_recency) # N THEN 
+            \* add 
             /\ lru_recency' = Append(lru_recency, k)
             /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
         ELSE 
