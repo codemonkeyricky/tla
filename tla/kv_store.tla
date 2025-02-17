@@ -17,6 +17,15 @@ LRU == INSTANCE lru
 \* N == 4
 KV == {"a", "b", "c", "d", "e", "f"}
 
+Read(k) == 
+    IF LRU!Contains(k) THEN 
+        lru_kv[k]
+    ELSE 
+        kv[k]
+
+Touch(k) == 
+    /\ LRU!Touch(k)
+
 Put(k, v) == 
     IF LRU!Contains(k) THEN 
          /\ LRU!Put(k, v)
@@ -30,8 +39,6 @@ Put(k, v) ==
                     value == pair[key]
                 IN 
                     /\ kv' = [x \in DOMAIN kv \cup {key} |-> IF x = key THEN value ELSE kv[x]]
-                    \* /\ PrintT(kv')
-                    \* /\ Assert(0,"")
             ELSE 
                 UNCHANGED kv 
         /\ LRU!Put(k, v)

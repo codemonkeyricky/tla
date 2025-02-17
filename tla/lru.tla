@@ -7,7 +7,7 @@ vars == <<lru_kv, lru_recency, lru_size>>
 
 KV == {"a", "b", "c", "d", "e", "f"}
 
-Get(k) == 
+Touch(k) == 
     /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
     /\ UNCHANGED <<lru_kv, lru_size>>
 
