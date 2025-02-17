@@ -24,7 +24,12 @@ Read(k) ==
         kv[k]
 
 Touch(k) == 
-    /\ LRU!Touch(k)
+    IF LRU!Contains(k) THEN 
+        /\ LRU!Touch(k)
+        /\ latency' = CACHE
+    ELSE \* key not in LRU
+        /\ LRU!Put(k, kv[k])
+        /\ latency' = EVICT
 
 Put(k, v) == 
     IF LRU!Contains(k) THEN 
