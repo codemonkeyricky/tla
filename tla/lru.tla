@@ -56,6 +56,7 @@ Next ==
 
 Consistent ==
     /\ Cardinality(DOMAIN lru_recency) = Cardinality(DOMAIN lru_kv)
+    /\ {lru_recency[k] : k \in DOMAIN lru_recency} = DOMAIN lru_kv
     \* 1 = 2
 
 Spec ==
