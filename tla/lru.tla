@@ -37,7 +37,7 @@ Put(k, v) ==
             /\ lru_recency' = Append(lru_recency, k)
             /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
         ELSE 
-            \* remove oldest
+            \* replace oldest 
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
             /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
 
