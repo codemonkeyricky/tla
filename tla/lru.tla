@@ -30,7 +30,7 @@ Put(k, v) ==
     IF Len(lru_recency) # N THEN 
         IF k \in DOMAIN lru_kv THEN 
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
-            /\ lru_kv' = [n \in DOMAIN lru_kv \ {k} |-> n]
+            /\ lru_kv' = [n \in DOMAIN lru_kv |-> IF n = k THEN v ELSE lru_kv[n]]
         ELSE 
             /\ lru_recency' = Append(lru_recency, k)
             /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
@@ -38,11 +38,12 @@ Put(k, v) ==
         IF k \in DOMAIN lru_kv THEN 
             \* refresh
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # k), k)
-            /\ lru_kv' = [n \in DOMAIN lru_kv \ {k} |-> lru_kv[n]]
+            /\ lru_kv' = [n \in DOMAIN lru_kv |-> IF n = k THEN v ELSE lru_kv[n]]
         ELSE 
             \* remove oldest
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
             /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
+            \* /\ PrintT(lru_kv')
 
 Init ==
     /\ lru_kv = [k \in {} |-> 0]
@@ -53,7 +54,13 @@ Unchanged ==
 
 Next ==
     \E k \in KV: 
-        Put(k ,"v")
+        /\ Put(k ,"v")
+        \* /\ PrintT(Cardinality(DOMAIN lru_recency))
+        \* /\ PrintT(Cardinality(DOMAIN lru_kv))
+
+Consistent ==
+    /\ Cardinality(DOMAIN lru_recency) = Cardinality(DOMAIN lru_kv)
+    \* 1 = 2
 
 Spec ==
   /\ Init
