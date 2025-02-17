@@ -1,5 +1,5 @@
 --------------------------- MODULE test_kv ----------------------------
-EXTENDS Naturals, TLC, Sequences, FiniteSets, CSV, TLC
+EXTENDS Naturals, TLC, Sequences, FiniteSets, CSV, TLC, Integers
 
 VARIABLES 
     lru_kv, lru_recency, lru_size,  \* LRU import
@@ -17,14 +17,18 @@ Init ==
     /\ written = <<>>
 
 Next ==
-    \/ \E k \in DataSet:
-        /\ KV!Update(k, k)
-        /\ written' = [w \in DOMAIN written \cup {k} |-> IF w = k THEN w ELSE written[w]]
-        \* /\ PrintT(written')
-        \* /\ Assert(0, "")
-    \* \/ \E k \in DOMAIN written:
-    \*     /\ Assert(KV!Get(k) = written[k], "")
-    \*     /\ UNCHANGED written
+    \/ \E p \in 1..10:
+        IF p > 2 THEN
+            \* cached
+            /\ \E k \in DOMAIN lru_kv:
+                /\ KV!Update(k, lru_kv[k])
+                /\ written' = [x \in DOMAIN written \ {k} |-> IF x = k THEN k ELSE written[x]]
+        ELSE 
+            \* cache miss
+            \* /\ PrintT(p)
+            /\ \E k \in DataSet \ DOMAIN lru_kv:
+                /\ KV!Update(k, k)
+                /\ written' = [x \in DOMAIN written \ {k} |-> IF x = k THEN k ELSE written[x]]
 
 Consistent == 
     \A k \in DOMAIN written: 
