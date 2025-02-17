@@ -17,11 +17,11 @@ LRU == INSTANCE lru
 \* N == 4
 KV == {"a", "b", "c", "d", "e", "f"}
 
-\* Read(k) == 
-\*     IF LRU!Contains(k) THEN 
-\*         lru_kv[k]
-\*     ELSE 
-\*         kv[k]
+Read(k) == 
+    IF LRU!Contains(k) THEN 
+        lru_kv[k]
+    ELSE 
+        kv[k]
 
 \* Touch(k) == 
 \*     IF LRU!Contains(k) THEN 

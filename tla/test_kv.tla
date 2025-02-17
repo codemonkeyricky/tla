@@ -18,7 +18,7 @@ Init ==
 
 Next ==
     \/ \E k \in DataSet:
-        /\ KV!Put(k, k)
+        /\ KV!Update(k, k)
         /\ written' = [w \in DOMAIN written \cup {k} |-> IF w = k THEN w ELSE written[w]]
         \* /\ PrintT(written')
         \* /\ Assert(0, "")
