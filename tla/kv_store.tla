@@ -30,6 +30,8 @@ Put(k, v) ==
                     value == pair[key]
                 IN 
                     /\ kv' = [x \in DOMAIN kv \cup {key} |-> IF x = key THEN value ELSE kv[x]]
+                    \* /\ PrintT(kv')
+                    \* /\ Assert(0,"")
             ELSE 
                 UNCHANGED kv 
         /\ LRU!Put(k, v)
@@ -44,6 +46,9 @@ Init ==
 Next ==
     \E k \in KV: 
         Put(k ,"v")
+
+Safety ==
+    /\ LRU!Consistent
 
 Spec ==
   /\ Init

@@ -5,8 +5,6 @@ VARIABLES lru_kv, lru_recency, lru_size
 
 vars == <<lru_kv, lru_recency, lru_size>>
 
-N == 4
-
 KV == {"a", "b", "c", "d", "e", "f"}
 
 Get(k) == 
@@ -17,7 +15,7 @@ Contains(k) ==
     /\ k \in DOMAIN lru_kv 
 
 IsFull == 
-    Len(lru_recency) = N
+    Len(lru_recency) = lru_size
 
 GetLeastRecent == 
     LET 
@@ -33,7 +31,7 @@ Put(k, v) ==
         /\ lru_kv' = [n \in DOMAIN lru_kv |-> IF n = k THEN v ELSE lru_kv[n]]
         /\ UNCHANGED lru_size
     ELSE 
-        IF Len(lru_recency) # N THEN 
+        IF Len(lru_recency) # lru_size THEN 
             \* add 
             /\ lru_recency' = Append(lru_recency, k)
             /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
@@ -56,6 +54,9 @@ Next ==
 Consistent ==
     \* Keys tracked by lru_recency and lru_kv should match.
     /\ {lru_recency[k] : k \in DOMAIN lru_recency} = DOMAIN lru_kv
+    /\ Cardinality(DOMAIN lru_kv) <= lru_size
+
+N == 4
 
 Spec ==
   /\ Init(N)
