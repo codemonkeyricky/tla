@@ -4,30 +4,28 @@
 
 \chapter{KV Store with Cache}
 
-LRU cache, or least-recently-used cache, is a finite-sized cache that evicts 
-least-recently-used entry when full. Modern CPU architecture supports
-multi-layer cache. Caches closer to CPU are faster, but also smaller. Cache are
-designed to take advantage of temporal locality, where recently accessed data is
-generally likely to be accessed again in near future.\\
+LRU cache, or least-re cently-used cache, is a finite-sized cache that evicts 
+the least-recently-used entry when full. Modern CPU architecture supports
+multi-layer cache. Caches closer to the CPU are faster, but also smaller. Cache is 
+designed to take advantage of temporal locality, where recently accessed data isgenerally likely to be re-accessed in near future.\\
 
-Caches are also applied in a more generalized sense: CDNs (content delivery
-network) are a group of geographically distributed servers that are close to
-users in different parts of the world. Redis is a high performance in-memory
-key-value store, effectively a cache layer without underlying storage. List of
+Caches are also applied more broadly: CDNs (content delivery
+networks) are a group of geographically distributed servers close to
+users in different parts of the world. Redis is a high-performance in-memory
+key-value store, effectively a cache layer without underlying storage. The list of
 examples goes on and on.
 
 \section{Design}
 
-In this chapter, we will describe a simple key-value store with a fixed sized
-write-back LRU cache. The size of the key-value store is assumed unbounded. LRU
-cache acts a fast access buffer until it's full. When it's full, the
+In this chapter, we will describe a simple key-value store with a fixed-sized 
+write-back LRU cache. The size of the key-value store is assumed unbounded. LRUcache acts as a fast access buffer until it's full. When it's full, the
 least-recently-used entry key-value pair is evicted into the main memory.\\
 
-Similar to a system with cache, a key may exist in both the cache and memory
+Similar to a system with a cache, a key may exist in both the cache and memory
 with different values. The key-value pair in the cache is assumed up-to-date,
 while the key-value pair in memory may be stale. When the key-value pair is
-evicted from cache, the key in memory is synchronized by write-back from
-cache.\\
+evicted from the cache, the key in memory is synchronized by write-back from
+the cache.\\
 
 We will implement three specifications in this chapter: LRU cache, KV store, and
 Test, with one building on another. The KV store is implemented using the LRU
@@ -46,12 +44,12 @@ Recency list is a doubly-linked list where the most recently accessed item is at
 the tail. On read or write of an existing key, the key/iterator lookup table is
 used to identify the key to update. The identified key is then moved to the tail
 of the recency list to indicate recent access. Finally, the key-value table is
-updated if needed. When inserting a new key-value pair, head of the recency list
+updated if needed. When inserting a new key-value pair, the head of the recency list
 is evicted to make space, if required.\\
 
-When specifying LRU cache with TLA+, we can omit the key/iterator table to
+When specifying the LRU cache with TLA+, we can omit the key/iterator table to
 simplify the specification. Recency list can be implemented as a \textit{tuple},
-and key-value table as a \textit{function}.\\
+and a key-value table as a \textit{function}.\\
 
 \subsection{Spec}
 
@@ -87,7 +85,7 @@ Put(k, v) ==
 }%
 \@xx{}%
  \@x{\@s{4.1} \.{\land} lru\_recency \.{'} \.{=} Append ( SelectSeq (
- lru\_recency ,\, {\LAMBDA} x \.{:} x \.{\neq} k ) ,\, k )}%
+ lru\_recency ,\, {\LAMBDA} x \.{:} x \.{\neq} k ) ,\, k )}%
  \@x{\@s{4.1} \.{\land} lru\_kv \.{'} \.{=} [ n \.{\in} {\DOMAIN} lru\_kv
  \.{\mapsto} {\IF} n \.{=} k \.{\THEN} v \.{\ELSE} lru\_kv [ n ] ]}%
 \@x{\@s{4.1} \.{\land} {\UNCHANGED} lru\_size}%
@@ -110,7 +108,7 @@ Put(k, v) ==
 }%
 \@xx{}%
  \@x{\@s{32.8} \.{\land} lru\_recency \.{'} \.{=} Append ( SelectSeq (
- lru\_recency ,\,}%
+ lru\_recency ,\,}%
 \@x{\@s{41.0} {\LAMBDA} x \.{:} x \.{\neq} lru\_recency [ 1 ] ) ,\, k )}%
  \@x{\@s{32.8} \.{\land} lru\_kv \.{'} \.{=} [ n \.{\in} ( {\DOMAIN} lru\_kv
  \.{\cup} \{ k \} ) \.{\,\backslash\,} \{ lru\_recency [ 1 ] \} \.{\mapsto}}%
@@ -127,7 +125,7 @@ recent entry in LRU) is evicted.
 
 \subsection{Safety}
 
-For safety, we want to make sure values in \textit{lru\_recency} match with keys
+For safety, we want to ensure values in \textit{lru\_recency} match with keys
 in \textit{lru\_function}. Similarly, LRU size cannot exceed \textit{lru\_size}.\\
 
 \begin{tla}
@@ -138,7 +136,7 @@ in \textit{lru\_function}. Similarly, LRU size cannot exceed \textit{lru\_size}.
 \begin{tlatex}
 \@x{\@s{16.4} Consistent \.{\defeq}}%
  \@x{\@s{16.4} \.{\land} \{ lru\_recency [ k ] \.{:} k \.{\in} {\DOMAIN}
- lru\_recency \} \.{=} {\DOMAIN} lru\_kv}%
+ lru\_recency \} \.{=} {\DOMAIN} lru\_kv}%
 \@x{\@s{16.4} \.{\land} Cardinality ( {\DOMAIN} lru\_kv ) \.{\leq} lru\_size}%
 \end{tlatex}
 
@@ -148,9 +146,9 @@ There isn't any notable converging property for the LRU cache. Omitted from this
 
 \section{KV Store}
 
-The KV store itself is pretty straightforward in design, naively we just need a single 
+The KV store itself is pretty straightforward in design, naively we need a single 
 \textit{function} to implement a table that holds the key-value pairs. The slight complexity 
-is to integrate LRU into the KV store. This is described in the \textit{Update} function:
+is integrating LRU into the KV store. This is described in the \textit{Update} function:
 
 \begin{tla}
 Update(k, v) == 
@@ -197,7 +195,7 @@ Update(k, v) ==
 }%
 \@xx{}%
  \@x{\@s{57.4} \.{\land} kv \.{'} \.{=} [ x \.{\in} {\DOMAIN} kv \.{\cup} \{
- key \} \.{\mapsto}}%
+ key \} \.{\mapsto}}%
 \@x{\@s{57.4} {\IF} x \.{=} key \.{\THEN} value \.{\ELSE} kv [ x ] ]}%
 \@x{\@s{36.89} \.{\ELSE}}%
 \@x{\@s{53.29} {\UNCHANGED} kv}%
@@ -206,12 +204,11 @@ Update(k, v) ==
 \end{tlatex}
 \\
 
-If LRU contains the key (full or not), we simply update the LRU. The LRU will
+If the LRU contains the key (full or not), we simply update the LRU. The LRU will
 update its internal recency list. If LRU doesn't contain the key, we have two
-possible scenarios. If the LRU is not full, we can simply insert into the LRU.
-If the LRU is full, we need to evict the least recently used key-value pair and
-write-back to KV store and insert the new key-value pair into the LRU.
-
+possible scenarios. If the LRU is not full, we can simply insert it into the LRU.
+If the LRU is full, we need to evict the least recently used key-value pair 
+write back to KV store, and insert the new key-value pair into the LRU.
 \subsection{Safety}
 
 Omitted.
@@ -222,21 +219,19 @@ Omitted.
 
 \section{Test}
 
-\subsection{Design}
-
-Putting everything together, we want to characterize our KV store with cache and
-confirm if we do get the expected latency improvement. 
+Putting everything together, we want to characterize the design and
+confirm wget get the expected latency improvement. 
 
 \subsection{Spec}
 
 The core of the test is pretty straightforward, we assume the usual 80/20 rule
 where 80\% of the traffic are cache hits and 20\% are cache misses. This can be
-simulated using existential qualifier:\\
+simulated using the existential qualifier:\\
 
 \begin{tla}
 Next ==
     \/ \E p \in 1..10:
-        /\  IF p > 2 THEN
+        /\  IF p > 2 THEN
                 \* cached
                 /\ \E k \in DOMAIN lru_kv:
                     /\ KV!Update(k, lru_kv[k])
@@ -276,7 +271,7 @@ Next ==
 }%
 \@xx{}%
  \@x{\@s{41.0} \.{\land} \E\, k \.{\in} DataSet \.{\,\backslash\,} {\DOMAIN}
- lru\_kv \.{:}}%
+ lru\_kv \.{:}}%
 \@x{\@s{45.1} \.{\land} KV {\bang} Update ( k ,\, k )}%
  \@x{\@s{45.1} \.{\land} written \.{'} \.{=} [ x \.{\in} {\DOMAIN} written
  \.{\,\backslash\,} \{ k \} \.{\mapsto}}%
@@ -347,7 +342,8 @@ cat stat.csv  | grep 10 -ws | wc
 \end{verbatim}
 
 With a total of 43913 samples, cache hit happens about 78.9\% of the time. This 
-closely matches the desire 80\% cache hit defined in the test.
+closely matches the desired 80\% cache hit defined in the test.
 
 % \end{document}
+
 
