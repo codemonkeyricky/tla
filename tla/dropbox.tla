@@ -9,7 +9,7 @@ VARIABLES
 vars == <<block_server, client>>
 
 Clients == {"c0", "c1"}
-Files == {"f0", "f1"}
+Files == {"f0"}
 
 MinS(s) ==                                                                                                                                                                               
     CHOOSE x \in s: \A y \in s: x <= y
@@ -24,7 +24,9 @@ Init ==
 
 Update(k, f) ==
     \* base version match
-    /\ MinS(block_server[f]) = MinS(client[k][f])
+    \* /\ Assert(MaxS(block_server[f]) = 1, "")
+    /\ MaxS(block_server[f]) = MinS(client[k][f])
+    \* /\ Assert(0, "")
     \* bump the base version
     /\ client' = [client EXCEPT ![k] 
                     = [client[k] EXCEPT ![f] 
@@ -33,11 +35,19 @@ Update(k, f) ==
     /\ UNCHANGED <<block_server>>
 
 Sync(k, f) == 
-    IF MinS(client[k][f]) = MaxS(block_server[f]) THEN 
+    IF MaxS(block_server[f]) = MinS(client[k][f]) THEN 
         \* base version match
         /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client[k][f])}] \* upload our version
-        /\ UNCHANGED client
+        /\ client' = [client EXCEPT ![k]
+                        = [client[k] EXCEPT ![f]
+                             = {MaxS(client[k][f])}]]
+        \* /\ UNCHANGED client
+        \* /\ Assert(Cardinality(client'[k][f]) = 1, "")
+        \* /\ PrintT(client)
+        \* /\ PrintT(client')
+        \* /\ PrintT(block_server)
         \* /\ PrintT(block_server')
+        \* /\ Assert(Cardinality(client[k][f]) = 1, "")
         \* /\ Assert(MinS(client[k][f]) = MaxS(client[k][f]),"")
     ELSE 
         \* we are stale - force sync to latest
