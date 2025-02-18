@@ -19,14 +19,11 @@ MaxS(s) ==
 
 Init ==
     /\ block_server = [f \in Files |-> {1}]                 \* track all versions of files
-    \* /\ meta_server = [f \in Files |-> 1]                    \* track latest version of files
     /\ client = [k \in Clients |-> [f \in Files |-> {1}]]   \* client local storage
 
 Update(k, f) ==
     \* base version match
-    \* /\ Assert(MaxS(block_server[f]) = 1, "")
     /\ MaxS(block_server[f]) = MinS(client[k][f])
-    \* /\ Assert(0, "")
     \* bump the base version
     /\ client' = [client EXCEPT ![k] 
                     = [client[k] EXCEPT ![f] 
@@ -41,16 +38,8 @@ Sync(k, f) ==
         /\ client' = [client EXCEPT ![k]
                         = [client[k] EXCEPT ![f]
                              = {MaxS(client[k][f])}]]
-        \* /\ UNCHANGED client
-        \* /\ Assert(Cardinality(client'[k][f]) = 1, "")
-        \* /\ PrintT(client)
-        \* /\ PrintT(client')
-        \* /\ PrintT(block_server)
-        \* /\ PrintT(block_server')
-        \* /\ Assert(Cardinality(client[k][f]) = 1, "")
-        \* /\ Assert(MinS(client[k][f]) = MaxS(client[k][f]),"")
     ELSE 
-        \* we are stale - force sync to latest
+        \* k is stale - force sync to latest
         /\ client' = [client EXCEPT ![k]
                         = [client[k] EXCEPT ![f]
                              = {MaxS(block_server[f])}]]
