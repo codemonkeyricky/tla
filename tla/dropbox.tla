@@ -32,12 +32,13 @@ Modify(k, f) ==
             = [client_meta[k] EXCEPT ![f] 
                 = client_meta[k][f] \cup {MaxS(client_meta[k][f]) + 1}]]
     \* bump client block
-    /\ f \in DOMAIN client_block
-    /\ client_block 
+    /\ f \in DOMAIN client_block[k]
+    /\ client_block'
         = [client_block EXCEPT ![k] 
             = [client_block[k] EXCEPT ![f] 
                 = MaxS(client_meta[k][f]) + 1]]
     /\ UNCHANGED <<meta_server, block_server>>
+    \* /\ Assert(0,"")
 
 Upload(k, f) == 
     IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
@@ -58,7 +59,8 @@ MetaUpToDate(k, f) ==
     MinS(client_meta[k][f]) = MaxS(meta_server[f])
 
 Download(k, f) == 
-    /\ MetaUpToDate(k, f)
+    \* only download if there's no local changes
+    /\ MaxS(client_meta[k][f]) = MaxS(meta_server[f])
     \* /\ client_meta[k][f] = meta_server[f]
     \* Download the latest version
     /\ client_block'
