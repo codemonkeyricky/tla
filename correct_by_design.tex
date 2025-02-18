@@ -127,13 +127,16 @@ describe a few PlusCal example.
 \part{System Modeling}
 
 The previous parts covers mostly targeted applications. In this section, we will
-explore using TLA+ to model and characterize larger system behaviors. In some
-cases, the system state graph will be too large traverse exhaustively in
-practical time. Nevertheless, model checker supports generation mode to allow
-broad stroke system characterization. This part will cover a set of system
-design examples using TLA+. 
+explore using TLA+ to model and characterize system behaviors. Examples in this
+part will focus on system modeling, and in some cases state graph will be too
+large traverse exhaustively in practical time. Instead of reducing the model to
+allow the specification run in finite time, we will run the model checker in
+generation mode, so we can observe system behavior and collect statistical
+samples.
 
 \include{lru}
+
+\include{dropbox}
 
 \part{Reference}
 
