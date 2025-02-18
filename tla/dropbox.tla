@@ -71,6 +71,15 @@ Download(k, f) ==
     \* /\ PrintT(client_block')
     \* /\ Assert(0,"")
 
+SyncObject(k, f) == 
+    IF f \in DOMAIN client_block[k] THEN 
+        client_block' 
+            = [client_block EXCEPT ![k] 
+                = [client_block[k] EXCEPT ![f]
+                    = {MaxS(block_server[f])} ]]
+    ELSE 
+        UNCHANGED client_block
+
 SyncMeta(k, f) == 
     /\ ~MetaUpToDate(k, f)
     \* sync client meta
@@ -79,13 +88,7 @@ SyncMeta(k, f) ==
             = [client_meta[k] EXCEPT ![f]
                 = meta_server[f]]]
     \* sync downloaded file
-    /\ IF f \in DOMAIN client_block[k] THEN 
-        client_block' 
-            = [client_block EXCEPT ![k] 
-                = [client_block[k] EXCEPT ![f]
-                    = {MaxS(block_server[f])} ]]
-       ELSE 
-        UNCHANGED client_block
+    /\ SyncObject(k, f)
     /\ UNCHANGED <<meta_server, block_server>>
 
 Next ==
