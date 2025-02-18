@@ -55,7 +55,11 @@ Download(k, f) ==
     /\ MetaUpToDate(k, f)
     \* /\ client_meta[k][f] = meta_server[f]
     \* Download the latest version
-    /\ client_block = [client_block EXCEPT ![k] = {MaxS(meta_server[f])}]
+    /\ client_block'
+        = [client_block EXCEPT ![k] 
+            = [ff \in DOMAIN client_block[k] \cup {f} 
+                |-> IF ff # f THEN client_block[k][ff] ELSE {MaxS(block_server[f])}]]
+    /\ UNCHANGED <<client_meta, meta_server, block_server>>
 
 SyncMeta(k, f) == 
     /\ ~MetaUpToDate(k, f)
@@ -78,7 +82,7 @@ Next ==
     \/ \E k \in Clients: 
         \E f \in Files: 
             \/ SyncMeta(k, f)
-            \* \/ Download(k, f)
+            \/ Download(k, f)
             \* \/ Modify(k, f)
             \* \/ Upload(k, f)
 
