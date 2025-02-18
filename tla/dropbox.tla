@@ -4,9 +4,9 @@ VARIABLES
     meta_server, 
     \* meta_server, 
     \* sync_server,
-    client
+    client_meta
 
-vars == <<meta_server, client>>
+vars == <<meta_server, client_meta>>
 
 Clients == {"c0", "c1"}
 Files == {"f0", "f1"}
@@ -19,29 +19,29 @@ MaxS(s) ==
 
 Init ==
     /\ meta_server = [f \in Files |-> {1}]                 \* track all versions of files
-    /\ client = [k \in Clients |-> [f \in Files |-> {1}]]   \* client local storage
+    /\ client_meta = [k \in Clients |-> [f \in Files |-> {1}]]   \* client local storage
 
 Update(k, f) ==
     \* base version match
-    /\ MaxS(meta_server[f]) = MinS(client[k][f])
+    /\ MaxS(meta_server[f]) = MinS(client_meta[k][f])
     \* bump the base version
-    /\ client' = [client EXCEPT ![k] 
-                    = [client[k] EXCEPT ![f] 
-                        = {MinS(client[k][f]), MinS(client[k][f]) + 1}]]
-    \* /\ PrintT(client')
+    /\ client_meta' = [client_meta EXCEPT ![k] 
+                    = [client_meta[k] EXCEPT ![f] 
+                        = {MinS(client_meta[k][f]), MinS(client_meta[k][f]) + 1}]]
+    \* /\ PrintT(client_meta')
     /\ UNCHANGED <<meta_server>>
 
 Sync(k, f) == 
-    IF MaxS(meta_server[f]) = MinS(client[k][f]) THEN 
+    IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
         \* base version match
-        /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client[k][f])}] \* upload our version
-        /\ client' = [client EXCEPT ![k]
-                        = [client[k] EXCEPT ![f]
-                             = {MaxS(client[k][f])}]]
+        /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
+        /\ client_meta' = [client_meta EXCEPT ![k]
+                        = [client_meta[k] EXCEPT ![f]
+                             = {MaxS(client_meta[k][f])}]]
     ELSE 
         \* k is stale - force sync to latest
-        /\ client' = [client EXCEPT ![k]
-                        = [client[k] EXCEPT ![f]
+        /\ client_meta' = [client_meta EXCEPT ![k]
+                        = [client_meta[k] EXCEPT ![f]
                              = {MaxS(meta_server[f])}]]
         /\ UNCHANGED meta_server
 
