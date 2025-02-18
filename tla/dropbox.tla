@@ -1,5 +1,5 @@
 --------------------------- MODULE dropbox ----------------------------
-EXTENDS Naturals, FiniteSets, Sequences, TLC
+EXTENDS Naturals, FiniteSets, Sequences, TLC, Integers
 VARIABLES 
     block_server, 
     \* meta_server, 
@@ -61,11 +61,15 @@ Next ==
         \E f \in Files: 
             Update(k, f)
     \/ \E k \in Clients: 
-        \A f \in DOMAIN client[k]:
+        \E f \in Files: 
             Sync(k, f)
 
 Spec ==
   /\ Init
   /\ [][Next]_vars
+\*   /\ \A k \in Clients:
+\*         \A f \in Files:
+\*             \A v \in 1..10:
+\*                 SF_vars(MaxS(block_server[f]) = v /\ Update(k, f))
   /\ WF_vars(Next)
 =============================================================================
