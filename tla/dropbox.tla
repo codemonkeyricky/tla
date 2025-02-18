@@ -26,6 +26,8 @@ Init ==
     /\ client_block = [k \in Clients |-> <<>>]
 
 Modify(k, f) ==
+    \* only one version ahead - no point modeling 2 or more versions head
+    /\ MaxS(client_meta[k][f]) = MaxS(meta_server[f])
     \* add new version to client meta
     /\ client_meta' 
         = [client_meta EXCEPT ![k] 
@@ -78,8 +80,10 @@ SyncMeta(k, f) ==
     /\ UNCHANGED <<meta_server, block_server>>
 
 Upload(k, f) == 
+        \* do we have the latest? 
     /\ IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
-        IF MaxS(meta_server[f]) # MaxS(client_meta[k][f]) THEN 
+        \* are we ahead? 
+        IF MaxS(client_meta[k][f]) > MaxS(meta_server[f]) THEN 
             \* something to upload
             /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
             /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client_meta[k][f])}]
