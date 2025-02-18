@@ -26,12 +26,18 @@ Init ==
     /\ client_block = [k \in Clients |-> <<>>]
 
 Modify(k, f) ==
-    \* bump the base version
-    /\ client_meta' = [client_meta EXCEPT ![k] 
-                    = [client_meta[k] EXCEPT ![f] 
-                        = {MinS(client_meta[k][f]), MinS(client_meta[k][f]) + 1}]]
-    \* /\ PrintT(client_meta')
-    /\ UNCHANGED <<meta_server>>
+    \* add new version to client meta
+    /\ client_meta' 
+        = [client_meta EXCEPT ![k] 
+            = [client_meta[k] EXCEPT ![f] 
+                = client_meta[k][f] \cup {MaxS(client_meta[k][f]) + 1}]]
+    \* bump client block
+    /\ f \in DOMAIN client_block
+    /\ client_block 
+        = [client_block EXCEPT ![k] 
+            = [client_block[k] EXCEPT ![f] 
+                = MaxS(client_meta[k][f]) + 1]]
+    /\ UNCHANGED <<meta_server, block_server>>
 
 Upload(k, f) == 
     IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
@@ -58,8 +64,10 @@ Download(k, f) ==
     /\ client_block'
         = [client_block EXCEPT ![k] 
             = [ff \in DOMAIN client_block[k] \cup {f} 
-                |-> IF ff # f THEN client_block[k][ff] ELSE {MaxS(block_server[f])}]]
+                |-> IF ff # f THEN client_block[k][ff] ELSE MaxS(block_server[f])]]
     /\ UNCHANGED <<client_meta, meta_server, block_server>>
+    \* /\ PrintT(client_block')
+    \* /\ Assert(0,"")
 
 SyncMeta(k, f) == 
     /\ ~MetaUpToDate(k, f)
@@ -83,8 +91,14 @@ Next ==
         \E f \in Files: 
             \/ SyncMeta(k, f)
             \/ Download(k, f)
-            \* \/ Modify(k, f)
+            \/ Modify(k, f)
             \* \/ Upload(k, f)
+
+Consistent == 
+    \A k \in Clients:
+        \A f \in Files:
+            f \in DOMAIN client_block[k] 
+                => MaxS(client_meta[k][f]) = client_block[k][f]
 
 Spec ==
   /\ Init
