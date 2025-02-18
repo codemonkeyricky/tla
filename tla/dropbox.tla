@@ -40,20 +40,6 @@ Modify(k, f) ==
     /\ UNCHANGED <<meta_server, block_server>>
     \* /\ Assert(0,"")
 
-Upload(k, f) == 
-    IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
-        \* base version match
-        /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
-        /\ client_meta' = [client_meta EXCEPT ![k]
-                        = [client_meta[k] EXCEPT ![f]
-                             = {MaxS(client_meta[k][f])}]]
-    ELSE 
-        \* k is stale - force sync to latest
-        /\ client_meta' = [client_meta EXCEPT ![k]
-                        = [client_meta[k] EXCEPT ![f]
-                             = {MaxS(meta_server[f])}]]
-        /\ UNCHANGED meta_server
-
 MetaUpToDate(k, f) == 
     \* ensure meta is up-to-date, local changes allowed
     MinS(client_meta[k][f]) = MaxS(meta_server[f])
@@ -76,7 +62,7 @@ SyncObject(k, f) ==
         client_block' 
             = [client_block EXCEPT ![k] 
                 = [client_block[k] EXCEPT ![f]
-                    = {MaxS(block_server[f])} ]]
+                    = MaxS(block_server[f]) ]]
     ELSE 
         UNCHANGED client_block
 
@@ -90,6 +76,18 @@ SyncMeta(k, f) ==
     \* sync downloaded file
     /\ SyncObject(k, f)
     /\ UNCHANGED <<meta_server, block_server>>
+
+Upload(k, f) == 
+    IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
+        \* base version match
+        /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
+        /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client_meta[k][f])}]
+        /\ client_meta' = [client_meta[k] EXCEPT ![f] = meta_server'[f]]
+        /\ UNCHANGED client_block
+    ELSE 
+        \* k is stale - force sync to latest
+        /\ SyncMeta(k, f) 
+        /\ UNCHANGED <<meta_server, block_server>>
 
 Next ==
     \/ \E k \in Clients: 
