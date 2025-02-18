@@ -2,12 +2,13 @@
 EXTENDS Naturals, FiniteSets, Sequences, TLC, Integers
 VARIABLES 
     meta_server, 
+    block_server,
     \* meta_server, 
     \* sync_server,
     client_block,
     client_meta
 
-vars == <<meta_server, client_meta, client__block>>
+vars == <<meta_server, client_meta, client_block>>
 
 Clients == {"c0", "c1"}
 Files == {"f0", "f1"}
@@ -20,7 +21,8 @@ MaxS(s) ==
 
 Init ==
     /\ meta_server = [f \in Files |-> {1}]                 \* track all versions of files
-    /\ client_meta = [k \in Clients |-> [f \in Files |-> {1}]]   \* client local storage
+    /\ block_server = [f \in Files |-> {1}]
+    /\ client_meta = [k \in Clients |-> [f \in Files |-> {0}]]   \* client local storage
     /\ client_block = [k \in Clients |-> <<>>]
 
 Modify(k, f) ==
@@ -45,23 +47,40 @@ Upload(k, f) ==
                              = {MaxS(meta_server[f])}]]
         /\ UNCHANGED meta_server
 
+MetaUpToDate(k, f) == 
+    \* ensure meta is up-to-date, local changes allowed
+    MinS(client_meta[k][f]) = MaxS(meta_server[f])
+
 Download(k, f) == 
-    IF f \notin client_block[k]
-    /\ client_meta[k][f] = meta_server[f]
+    /\ MetaUpToDate(k, f)
+    \* /\ client_meta[k][f] = meta_server[f]
     \* Download the latest version
     /\ client_block = [client_block EXCEPT ![k] = {MaxS(meta_server[f])}]
 
-SyncMeta(k) == 
-    /\ client_meta[k] # meta_server
-    
+SyncMeta(k, f) == 
+    /\ ~MetaUpToDate(k, f)
+    \* sync client meta
+    /\ client_meta' 
+        = [client_meta EXCEPT ![k] 
+            = [client_meta[k] EXCEPT ![f]
+                = meta_server[f]]]
+    \* sync downloaded file
+    /\ IF f \in DOMAIN client_block[k] THEN 
+        client_block' 
+            = [client_block EXCEPT ![k] 
+                = [client_block[k] EXCEPT ![f]
+                    = {MaxS(block_server[f])} ]]
+       ELSE 
+        UNCHANGED client_block
+    /\ UNCHANGED <<meta_server, block_server>>
 
 Next ==
     \/ \E k \in Clients: 
         \E f \in Files: 
-            \/ SyncMeta(k)
-            \/ Download(k, f)
-            \/ Modify(k, f)
-            \/ Upload(k, f)
+            \/ SyncMeta(k, f)
+            \* \/ Download(k, f)
+            \* \/ Modify(k, f)
+            \* \/ Upload(k, f)
 
 Spec ==
   /\ Init
