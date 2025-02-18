@@ -81,7 +81,7 @@ SyncMeta(k, f) ==
 
 Upload(k, f) == 
         \* do we have the latest? 
-    /\ IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
+    /\ IF meta_server[f] \subseteq client_meta[k][f] THEN 
         \* are we ahead? 
         IF MaxS(client_meta[k][f]) > MaxS(meta_server[f]) THEN 
             \* something to upload
