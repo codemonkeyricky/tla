@@ -9,7 +9,7 @@ VARIABLES
 vars == <<block_server, client>>
 
 Clients == {"c0", "c1"}
-Files == {"f0"}
+Files == {"f0", "f1"}
 
 MinS(s) ==                                                                                                                                                                               
     CHOOSE x \in s: \A y \in s: x <= y
