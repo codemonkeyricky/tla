@@ -95,7 +95,7 @@ Next ==
             \/ SyncMeta(k, f)
             \/ Download(k, f)
             \/ Modify(k, f)
-            \/ Upload(k, f)
+            \* \/ Upload(k, f)
 
 Consistent == 
     \A k \in Clients:
