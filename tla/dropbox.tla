@@ -1,12 +1,12 @@
 --------------------------- MODULE dropbox ----------------------------
 EXTENDS Naturals, FiniteSets, Sequences, TLC, Integers
 VARIABLES 
-    block_server, 
+    meta_server, 
     \* meta_server, 
     \* sync_server,
     client
 
-vars == <<block_server, client>>
+vars == <<meta_server, client>>
 
 Clients == {"c0", "c1"}
 Files == {"f0", "f1"}
@@ -18,23 +18,23 @@ MaxS(s) ==
     CHOOSE x \in s: \A y \in s: x >= y
 
 Init ==
-    /\ block_server = [f \in Files |-> {1}]                 \* track all versions of files
+    /\ meta_server = [f \in Files |-> {1}]                 \* track all versions of files
     /\ client = [k \in Clients |-> [f \in Files |-> {1}]]   \* client local storage
 
 Update(k, f) ==
     \* base version match
-    /\ MaxS(block_server[f]) = MinS(client[k][f])
+    /\ MaxS(meta_server[f]) = MinS(client[k][f])
     \* bump the base version
     /\ client' = [client EXCEPT ![k] 
                     = [client[k] EXCEPT ![f] 
                         = {MinS(client[k][f]), MinS(client[k][f]) + 1}]]
     \* /\ PrintT(client')
-    /\ UNCHANGED <<block_server>>
+    /\ UNCHANGED <<meta_server>>
 
 Sync(k, f) == 
-    IF MaxS(block_server[f]) = MinS(client[k][f]) THEN 
+    IF MaxS(meta_server[f]) = MinS(client[k][f]) THEN 
         \* base version match
-        /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client[k][f])}] \* upload our version
+        /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client[k][f])}] \* upload our version
         /\ client' = [client EXCEPT ![k]
                         = [client[k] EXCEPT ![f]
                              = {MaxS(client[k][f])}]]
@@ -42,8 +42,8 @@ Sync(k, f) ==
         \* k is stale - force sync to latest
         /\ client' = [client EXCEPT ![k]
                         = [client[k] EXCEPT ![f]
-                             = {MaxS(block_server[f])}]]
-        /\ UNCHANGED block_server
+                             = {MaxS(meta_server[f])}]]
+        /\ UNCHANGED meta_server
 
 Next ==
     \/ \E k \in Clients: 
@@ -56,9 +56,5 @@ Next ==
 Spec ==
   /\ Init
   /\ [][Next]_vars
-\*   /\ \A k \in Clients:
-\*         \A f \in Files:
-\*             \A v \in 1..10:
-\*                 SF_vars(MaxS(block_server[f]) = v /\ Update(k, f))
   /\ WF_vars(Next)
 =============================================================================
