@@ -8,7 +8,7 @@ VARIABLES
     client_block,
     client_meta
 
-vars == <<meta_server, client_meta, client_block>>
+vars == <<meta_server, block_server, client_meta, client_block>>
 
 Clients == {"c0", "c1"}
 Files == {"f0", "f1"}
@@ -78,13 +78,17 @@ SyncMeta(k, f) ==
     /\ UNCHANGED <<meta_server, block_server>>
 
 Upload(k, f) == 
-    IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
-        \* base version match
-        /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
-        /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client_meta[k][f])}]
-        /\ client_meta' = [client_meta[k] EXCEPT ![f] = meta_server'[f]]
-        /\ UNCHANGED client_block
-    ELSE 
+    /\ IF MaxS(meta_server[f]) = MinS(client_meta[k][f]) THEN 
+        IF MaxS(meta_server[f]) # MaxS(client_meta[k][f]) THEN 
+            \* something to upload
+            /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
+            /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client_meta[k][f])}]
+            \* /\ client_meta' = [client_meta[k] EXCEPT ![f] = meta_server'[f]]
+            /\ UNCHANGED <<client_block, client_meta>>
+        ELSE 
+            \* nothing to upload
+            /\ UNCHANGED vars 
+       ELSE 
         \* k is stale - force sync to latest
         /\ SyncMeta(k, f) 
         /\ UNCHANGED <<meta_server, block_server>>
@@ -95,7 +99,7 @@ Next ==
             \/ SyncMeta(k, f)
             \/ Download(k, f)
             \/ Modify(k, f)
-            \* \/ Upload(k, f)
+            \/ Upload(k, f)
 
 Consistent == 
     \A k \in Clients:
