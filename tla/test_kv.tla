@@ -18,26 +18,26 @@ Init ==
 
 Next ==
     \/ \E p \in 1..10:
-        IF p > 2 THEN
-            \* cached
-            /\ \E k \in DOMAIN lru_kv:
-                /\ KV!Update(k, lru_kv[k])
-                /\ written' = [x \in DOMAIN written \ {k} |-> IF x = k THEN k ELSE written[x]]
-        ELSE 
-            \* cache miss
-            \* /\ PrintT(p)
-            /\ \E k \in DataSet \ DOMAIN lru_kv:
-                /\ KV!Update(k, k)
-                /\ written' = [x \in DOMAIN written \ {k} |-> IF x = k THEN k ELSE written[x]]
+        /\  IF p > 2 THEN
+                \* cached
+                /\ \E k \in DOMAIN lru_kv:
+                    /\ KV!Update(k, lru_kv[k])
+                    /\ written' = [x \in DOMAIN written \ {k} |-> IF x = k THEN k ELSE written[x]]
+            ELSE 
+                \* cache miss
+                \* /\ PrintT(p)
+                /\ \E k \in DataSet \ DOMAIN lru_kv:
+                    /\ KV!Update(k, k)
+                    /\ written' = [x \in DOMAIN written \ {k} |-> IF x = k THEN k ELSE written[x]]
 
 Consistent == 
     \A k \in DOMAIN written: 
         KV!Read(k) = written[k]
 
-CSVFile ==                                                                                                                                                            
+CSVFile ==
     "stat.csv"
 
-Stats ==                                                                                                                                                              
+Stats ==
     /\ CSVWrite("%1$s", <<latency>>, CSVFile)
     \* /\ Assert(0,"")
     \* /\ TLCSet(atoi(state), TLCGet(atoi(state)) + 1)                                                                                                               

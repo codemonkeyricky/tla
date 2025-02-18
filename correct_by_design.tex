@@ -116,7 +116,7 @@ PlusCal is a C-like syntax that allows designer to describe their \textit{Spec}
 in a more programming language like fashion. I'm of the opinion that these are
 suitable to describe concurrent algorithm, where the code execution between
 multiple contexts may interleave in any way imaginable. While it certainly is
-possible to express these in TLA+ directly, I find it to be error prone,
+possible to express these in TLA+ directly, I find it to be error-prone,
 somewhat comparable to writing in Assembly instead of C. In this section we will
 describe a few PlusCal example.
 
@@ -125,6 +125,13 @@ describe a few PlusCal example.
 \include{spmc}
 
 \part{System Modeling}
+
+The previous parts covers mostly targeted applications. In this section, we will
+explore using TLA+ to model and characterize larger system behaviors. In some
+cases, the system state graph will be too large traverse exhaustively in
+practical time. Nevertheless, model checker supports generation mode to allow
+broad stroke system characterization. This part will cover a set of system
+design examples using TLA+. 
 
 \include{lru}
 

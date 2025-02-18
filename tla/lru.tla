@@ -39,7 +39,8 @@ Put(k, v) ==
         ELSE 
             \* replace oldest 
             /\ lru_recency' = Append(SelectSeq(lru_recency, LAMBDA x : x # lru_recency[1]), k)
-            /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> n]
+            /\ lru_kv' = [n \in (DOMAIN lru_kv \cup {k}) \ {lru_recency[1]} |-> 
+                            IF n # k THEN lru_kv[n] ELSE v]
             /\ UNCHANGED lru_size
 
 Init(n) ==
