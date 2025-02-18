@@ -22,7 +22,7 @@ MaxS(s) ==
 Init ==
     /\ meta_server = [f \in Files |-> {1}]                 \* track all versions of files
     /\ block_server = [f \in Files |-> {1}]
-    /\ client_meta = [k \in Clients |-> [f \in Files |-> {0}]]   \* client local storage
+    /\ client_meta = [k \in Clients |-> [f \in Files |-> {1}]]   \* client local storage
     /\ client_block = [k \in Clients |-> <<>>]
 
 Modify(k, f) ==
@@ -105,11 +105,19 @@ Next ==
             \/ Modify(k, f)
             \/ Upload(k, f)
 
+\* if client has downloaded the file, downloaded version must match the meta data
 Consistent == 
     \A k \in Clients:
         \A f \in Files:
             f \in DOMAIN client_block[k] 
                 => MaxS(client_meta[k][f]) = client_block[k][f]
+
+\* client is at most one change ahead of server
+Consistent2 == 
+    \A k \in Clients:
+        \A f \in Files:
+            f \in DOMAIN client_meta[k] 
+                => Cardinality(client_meta[k][f] \ meta_server[f]) <= 1
 
 Spec ==
   /\ Init
