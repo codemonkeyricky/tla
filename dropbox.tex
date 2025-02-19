@@ -32,6 +32,38 @@ The system design is visualized below:\\
 
 \section{Spec}
 
+The following describes the variables used track system state:\\
+\begin{tla}
+Init ==
+    /\ meta_server = [f \in Files |-> {1}]                 
+    /\ block_server = [f \in Files |-> <<5>>]
+    /\ client_meta = [k \in Clients |-> meta_server]
+    /\ client_change = [k \in Clients |-> [f \in Files |-> FALSE]]
+    /\ client_block = [k \in Clients |-> <<>>]
+\end{tla}
+\begin{tlatex}
+\@x{ Init \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} meta\_server \.{=} [ f \.{\in} Files \.{\mapsto} \{ 1
+ \} ]}%
+ \@x{\@s{16.4} \.{\land} block\_server \.{=} [ f \.{\in} Files \.{\mapsto}
+ {\langle} 5 {\rangle} ]}%
+ \@x{\@s{16.4} \.{\land} client\_meta \.{=} [ k \.{\in} Clients \.{\mapsto}
+ meta\_server ]}%
+ \@x{\@s{16.4} \.{\land} client\_change \.{=} [ k \.{\in} Clients \.{\mapsto}
+ [ f \.{\in} Files \.{\mapsto} {\FALSE} ] ]}%
+ \@x{\@s{16.4} \.{\land} client\_block \.{=} [ k \.{\in} Clients \.{\mapsto}
+ {\langle} {\rangle} ]}%
+\end{tlatex}
+
+\begin{itemize}
+    \item \textit{meta\_server} is a lookup table of filename to a set of revisions.
+    \item \textit{block\_server} is a lookup table from filename to a set of revisions to size.
+    \item \textit{client\_meta} represents client's local copy of the file meta.
+    \item \textit{client\_block} is client's block storage, only holding version of the file specified by client meta.
+\end{itemize}
+
+
+
 The core set of actions is defined below:\\
 \begin{tla}
 Next ==
@@ -56,33 +88,6 @@ Next ==
 In every state, the system can choose to synchronize file meta, download a file,
 modify a file, or upload a file. Some of these operations depend on each other.
 For example, a file can only be modified if it has been downloaded.\\ 
-
-The following describes the variables used track system state:\\
-\begin{tla}
-Init ==
-    /\ meta_server = [f \in Files |-> {1}]
-    /\ block_server = [f \in Files |-> {1}]
-    /\ client_meta = [k \in Clients |-> [f \in Files |-> {1}]]
-    /\ client_block = [k \in Clients |-> <<>>]
-\end{tla}
-\begin{tlatex}
-\@x{ Init \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} meta\_server \.{=} [ f \.{\in} Files \.{\mapsto} \{ 1
- \} ]}%
- \@x{\@s{16.4} \.{\land} block\_server \.{=} [ f \.{\in} Files \.{\mapsto} \{
- 1 \} ]}%
- \@x{\@s{16.4} \.{\land} client\_meta \.{=} [ k \.{\in} Clients \.{\mapsto} [
- f \.{\in} Files \.{\mapsto} \{ 1 \} ] ]}%
- \@x{\@s{16.4} \.{\land} client\_block \.{=} [ k \.{\in} Clients \.{\mapsto}
- {\langle} {\rangle} ]}%
-\end{tlatex}\\
-
-\begin{itemize}
-    \item \textit{meta\_server} is a lookup table from filename to a set of revisions.
-    \item \textit{block\_server} is a lookup table from filename to a set of revisions.
-    \item \textit{client\_meta} represents client's meta.
-    \item \textit{client\_block} is client's block storage, only holding one version of the file. 
-\end{itemize}
 
 \section{Safety}
 
