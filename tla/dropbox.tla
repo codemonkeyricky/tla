@@ -11,7 +11,7 @@ VARIABLES
 
 vars == <<meta_server, block_server, client_meta, client_block, client_change>>
 
-Clients == {"c0", "c1"}
+Clients == {"c0"}
 Files == {"f0", "f1"}
 Sizes == {5, 7, 9}
 
@@ -45,8 +45,7 @@ Modify(k, f) ==
     /\ \E s \in Sizes: 
        client_block'
         = [client_block EXCEPT ![k] 
-            = [ff \in DOMAIN client_block[k] \cup {f} |->
-                IF ff = f THEN s ELSE client_block[k][f]]]
+            = [client_block[k] EXCEPT ![f] = s]]
     /\ client_change' 
         = [client_change EXCEPT ![k] 
             = [client_change[k] EXCEPT ![f] = TRUE]]
