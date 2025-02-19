@@ -18,7 +18,8 @@ examples goes on and on.
 \section{Design}
 
 In this chapter, we will describe a simple key-value store with a fixed-sized 
-write-back LRU cache. The size of the key-value store is assumed unbounded. LRUcache acts as a fast access buffer until it's full. When it's full, the
+write-back LRU cache. The size of the key-value store is assumed unbounded. LRU
+cache acts as a fast access buffer until it's full. When it's full, the
 least-recently-used entry key-value pair is evicted into the main memory.\\
 
 Similar to a system with a cache, a key may exist in both the cache and memory
@@ -33,6 +34,7 @@ cache, and Test verifies the KV stores.
 
 \section{LRU Cache}
 
+
 LRU cache can be implemented using three data structures: 
 \begin{itemize}
     \item Linked list to track key access recency 
@@ -40,16 +42,21 @@ LRU cache can be implemented using three data structures:
     \item Lookup table to track the key-value pair
 \end{itemize}
 
-Recency list is a doubly-linked list where the most recently accessed item is at
-the tail. On read or write of an existing key, the key/iterator lookup table is
-used to identify the key to update. The identified key is then moved to the tail
-of the recency list to indicate recent access. Finally, the key-value table is
-updated if needed. When inserting a new key-value pair, the head of the recency list
-is evicted to make space, if required.\\
+% The following represents a visual layout of the three data structure:
+\begin{center}
+\includegraphics[width=300pt]{lru}
+\end{center}
 
-When specifying the LRU cache with TLA+, we can omit the key/iterator table to
-simplify the specification. Recency list can be implemented as a \textit{tuple},
-and a key-value table as a \textit{function}.\\
+Recency list is a doubly-linked list where the most recently accessed item is at
+the tail. On read or write of an existing key, the key to iterator lookup table
+is used to identify the key to update. The identified key is then moved to the
+tail of the recency list to indicate recent access. Finally, the key-value table
+is updated if needed. When inserting a new key-value pair, the head of the
+recency list is evicted to make space, if required.\\
+
+When specifying the LRU cache with TLA+, we can omit the key to iterator table
+to simplify the specification. Recency list can be implemented as a
+\textit{tuple}, and a key-value table as a \textit{function}.\\
 
 \subsection{Spec}
 
