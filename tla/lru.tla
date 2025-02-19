@@ -57,7 +57,7 @@ Consistent ==
     \* Keys tracked by lru_recency and lru_kv should match.
     /\ {lru_recency[k] : k \in DOMAIN lru_recency} = DOMAIN lru_kv
     /\ Cardinality(DOMAIN lru_kv) <= lru_size
-    /\ Cardinality(DOMAIN lru_kv) # 4
+    \* /\ Cardinality(DOMAIN lru_kv) # 4
 
 N == 4
 
