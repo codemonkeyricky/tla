@@ -24,7 +24,7 @@ TailIndex(s) ==
 Init ==
     \* track all versions of files 
     \* even version means uploaded and odd means local changes
-    /\ meta_server = [f \in Files |-> {1}]                 
+    /\ meta_server = [f \in Files |-> 1]
     \* track size of all versions, ordered tuple starts from version 1
     /\ block_server = [f \in Files |-> <<5>>]
     \* client local storage
@@ -39,7 +39,7 @@ Modify(k, f) ==
     /\ client_meta' 
         = [client_meta EXCEPT ![k] 
             = [client_meta[k] EXCEPT ![f] 
-                = client_meta[k][f] \cup {MaxS(client_meta[k][f]) + 1}]]
+                = client_meta[k][f] + 1]]
     \* bump client block
     /\ f \in DOMAIN client_block[k]
     /\ \E s \in Sizes: 
@@ -56,7 +56,6 @@ Download(k, f) ==
     \* only download if meta is up-to-date with no local changes
     /\ client_change[k][f] = FALSE
     /\ client_meta[k][f] = meta_server[f]
-    \* /\ client_meta[k][f] = meta_server[f]
     \* Download the latest version
     /\ client_block'
         = [client_block EXCEPT ![k] 
@@ -78,8 +77,8 @@ SyncObject(k, f) ==
         UNCHANGED client_block
 
 SyncMeta(k, f) == 
-    IF MaxS(client_meta[k][f]) < MaxS(meta_server[f]) 
-    \/ (MaxS(client_meta[k][f]) = MaxS(meta_server[f]) /\ client_change[k][f]) THEN 
+    IF client_meta[k][f] < meta_server[f]
+    \/ (client_meta[k][f] = meta_server[f] /\ client_change[k][f]) THEN 
         \* sync client meta
         /\ client_meta' 
             = [client_meta EXCEPT ![k] 
@@ -96,13 +95,13 @@ SyncMeta(k, f) ==
 
 Upload(k, f) == 
     \* client is ahead of the remote
-    /\ IF MaxS(meta_server[f]) < MaxS(client_meta[k][f]) THEN 
+    /\ IF meta_server[f] < client_meta[k][f] THEN 
         \* are we ahead? 
         IF client_change[k][f] THEN 
             \* something to upload
             /\ meta_server' 
                 = [meta_server EXCEPT ![f] 
-                    = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
+                    = client_meta[k][f]] \* upload our version
             /\ block_server' = [block_server EXCEPT ![f] 
                                 = Append(block_server[f], client_block[k][f])]
             /\ client_change' 
@@ -130,14 +129,14 @@ Consistent ==
     \A k \in Clients:
         \A f \in Files:
             (client_change[k][f] = FALSE /\ f \in DOMAIN client_block[k])
-                => client_block[k][f] = block_server[f][MaxS(client_meta[k][f])]
+                => client_block[k][f] = block_server[f][client_meta[k][f]]
 
 \* client is at most one change ahead of server
 Consistent2 == 
     \A k \in Clients:
         \A f \in Files:
             f \in DOMAIN client_meta[k] 
-                => Cardinality(client_meta[k][f] \ meta_server[f]) <= 1
+                => (client_meta[k][f] - meta_server[f]) <= 1
 
 Spec ==
   /\ Init
