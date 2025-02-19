@@ -6,23 +6,28 @@ VARIABLES
     \* meta_server, 
     \* sync_server,
     client_block,
+    client_change,
     client_meta
 
-vars == <<meta_server, block_server, client_meta, client_block>>
+vars == <<meta_server, block_server, client_meta, client_block, client_change>>
 
 Clients == {"c0", "c1"}
 Files == {"f0", "f1"}
-
-MinS(s) ==                                                                                                                                                                               
-    CHOOSE x \in s: \A y \in s: x <= y
+Sizes == {5, 7, 9}
 
 MaxS(s) ==                                                                                                                                                                               
     CHOOSE x \in s: \A y \in s: x >= y
 
 Init ==
-    /\ meta_server = [f \in Files |-> {1}]                 \* track all versions of files
-    /\ block_server = [f \in Files |-> {1}]
-    /\ client_meta = [k \in Clients |-> [f \in Files |-> {1}]]   \* client local storage
+    \* track all versions of files 
+    \* even version means uploaded and odd means local changes
+    /\ meta_server = [f \in Files |-> {1}]                 
+    \* track size of all versions, ordered tuple starts from version 1
+    /\ block_server = [f \in Files |-> <<5>>]
+    \* client local storage
+    /\ client_meta = [k \in Clients |-> meta_server]
+    /\ client_change = [k \in Clients |-> FALSE]
+    \* Client may copy a subset of the files, each file is represented using size
     /\ client_block = [k \in Clients |-> <<>>]
 
 Modify(k, f) ==
@@ -42,20 +47,19 @@ Modify(k, f) ==
     /\ UNCHANGED <<meta_server, block_server>>
     \* /\ Assert(0,"")
 
-MetaUpToDate(k, f) == 
-    \* ensure meta is up-to-date, local changes allowed
-    MinS(client_meta[k][f]) = MaxS(meta_server[f])
-
 Download(k, f) == 
-    \* only download if there's no local changes
-    /\ MaxS(client_meta[k][f]) = MaxS(meta_server[f])
+    \* only download if meta is up-to-date with no local changes
+    /\ client_change[k] = FALSE
+    /\ client_meta[k][f] = meta_server[f]
     \* /\ client_meta[k][f] = meta_server[f]
     \* Download the latest version
     /\ client_block'
         = [client_block EXCEPT ![k] 
             = [ff \in DOMAIN client_block[k] \cup {f} 
-                |-> IF ff # f THEN client_block[k][ff] ELSE MaxS(block_server[f])]]
-    /\ UNCHANGED <<client_meta, meta_server, block_server>>
+                |-> IF ff # f 
+                    THEN client_block[k][ff] 
+                    ELSE block_server[f][MaxS(DOMAIN block_server[f])]]]
+    /\ UNCHANGED <<client_change, client_meta, meta_server, block_server>>
     \* /\ PrintT(client_block')
     \* /\ Assert(0,"")
 
@@ -69,15 +73,18 @@ SyncObject(k, f) ==
         UNCHANGED client_block
 
 SyncMeta(k, f) == 
-    /\ MinS(client_meta[k][f]) # MaxS(meta_server[f])
-    \* sync client meta
-    /\ client_meta' 
-        = [client_meta EXCEPT ![k] 
-            = [client_meta[k] EXCEPT ![f]
-                = meta_server[f]]]
-    \* sync downloaded file
-    /\ SyncObject(k, f)
-    /\ UNCHANGED <<meta_server, block_server>>
+    IF MaxS(client_meta[k][f]) < MaxS(meta_server[f]) 
+    \/ (MaxS(client_meta[k][f]) = MaxS(meta_server[f]) /\ client_change[k]) THEN 
+        \* sync client meta
+        /\ client_meta' 
+            = [client_meta EXCEPT ![k] 
+                = [client_meta[k] EXCEPT ![f]
+                    = meta_server[f]]]
+        \* sync downloaded file
+        /\ SyncObject(k, f)
+        /\ UNCHANGED <<meta_server, block_server>>
+    ELSE 
+        /\ UNCHANGED vars
 
 Upload(k, f) == 
         \* do we have the latest? 
@@ -85,7 +92,9 @@ Upload(k, f) ==
         \* are we ahead? 
         IF MaxS(client_meta[k][f]) > MaxS(meta_server[f]) THEN 
             \* something to upload
-            /\ meta_server' = [meta_server EXCEPT ![f] = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
+            /\ meta_server' 
+                = [meta_server EXCEPT ![f] 
+                    = meta_server[f] \cup {MaxS(client_meta[k][f] + 1)}] \* upload our version
             /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client_meta[k][f])}]
             \* /\ client_meta' = [client_meta[k] EXCEPT ![f] = meta_server'[f]]
             /\ UNCHANGED <<client_block, client_meta>>
@@ -102,8 +111,8 @@ Next ==
         \E f \in Files: 
             \/ SyncMeta(k, f)
             \/ Download(k, f)
-            \/ Modify(k, f)
-            \/ Upload(k, f)
+            \* \/ Modify(k, f)
+            \* \/ Upload(k, f)
 
 \* if client has downloaded the file, downloaded version must match the meta data
 Consistent == 
