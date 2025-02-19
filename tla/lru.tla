@@ -34,7 +34,8 @@ Put(k, v) ==
         IF Len(lru_recency) # lru_size THEN 
             \* add 
             /\ lru_recency' = Append(lru_recency, k)
-            /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> n]
+            /\ lru_kv' = [n \in DOMAIN lru_kv \cup {k} |-> 
+                            IF n = k THEN v ELSE lru_kv[n]]
             /\ UNCHANGED lru_size
         ELSE 
             \* replace oldest 
@@ -56,6 +57,7 @@ Consistent ==
     \* Keys tracked by lru_recency and lru_kv should match.
     /\ {lru_recency[k] : k \in DOMAIN lru_recency} = DOMAIN lru_kv
     /\ Cardinality(DOMAIN lru_kv) <= lru_size
+    /\ Cardinality(DOMAIN lru_kv) # 4
 
 N == 4
 
