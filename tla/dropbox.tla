@@ -96,16 +96,19 @@ SyncMeta(k, f) ==
         /\ UNCHANGED vars
 
 Upload(k, f) == 
-        \* do we have the latest? 
-    /\ IF meta_server[f] \subseteq client_meta[k][f] THEN 
+    \* client is ahead of the remote
+    /\ IF MaxS(meta_server[f]) < MaxS(client_meta[k][f]) THEN 
         \* are we ahead? 
-        IF MaxS(client_meta[k][f]) > MaxS(meta_server[f]) THEN 
+        IF client_change[k][f] THEN 
             \* something to upload
             /\ meta_server' 
                 = [meta_server EXCEPT ![f] 
-                    = meta_server[f] \cup {MaxS(client_meta[k][f] + 1)}] \* upload our version
-            /\ block_server' = [block_server EXCEPT ![f] = block_server[f] \cup {MaxS(client_meta[k][f])}]
-            \* /\ client_meta' = [client_meta[k] EXCEPT ![f] = meta_server'[f]]
+                    = meta_server[f] \cup {MaxS(client_meta[k][f])}] \* upload our version
+            /\ block_server' = [block_server EXCEPT ![f] 
+                                = Append(block_server[f], client_block[k][f])]
+            /\ client_change' 
+                = [client_change EXCEPT ![k] 
+                    = [client_change[k] EXCEPT ![f] = FALSE]]
             /\ UNCHANGED <<client_block, client_meta>>
         ELSE 
             \* nothing to upload
@@ -121,7 +124,7 @@ Next ==
             \/ SyncMeta(k, f)
             \/ Download(k, f)
             \/ Modify(k, f)
-            \* \/ Upload(k, f)
+            \/ Upload(k, f)
 
 \* if client has downloaded the file, downloaded version must match the meta data
 Consistent == 
