@@ -130,8 +130,8 @@ Next ==
 Consistent == 
     \A k \in Clients:
         \A f \in Files:
-            f \in DOMAIN client_block[k] 
-                => MaxS(client_meta[k][f]) = client_block[k][f]
+            (client_change[k][f] = FALSE /\ f \in DOMAIN client_block[k])
+                => client_block[k][f] = block_server[f][MaxS(client_meta[k][f])]
 
 \* client is at most one change ahead of server
 Consistent2 == 
