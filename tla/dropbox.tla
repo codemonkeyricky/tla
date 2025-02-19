@@ -69,7 +69,7 @@ SyncObject(k, f) ==
         UNCHANGED client_block
 
 SyncMeta(k, f) == 
-    /\ ~MetaUpToDate(k, f)
+    /\ MinS(client_meta[k][f]) # MaxS(meta_server[f])
     \* sync client meta
     /\ client_meta' 
         = [client_meta EXCEPT ![k] 
