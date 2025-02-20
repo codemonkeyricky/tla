@@ -11,18 +11,22 @@ service with TLA+ and use the model checker to flesh out the design.\\
 
 \section{Design}
 
-The simplified Dropbox-like service includes a block server that holds physical 
-copies of all versions of user files, and a meta server that holds meta data on
-all the files and path to the block server. A client contacts both meta and
-block server as needed to keep up-to-date. In this design, client attempts to
-stay up-to-date on all the file meta, but selectively download the physical
-files as needed to save bandwidth.\\
+The simplified Dropbox-like service includes a block server that contain all
+versions of files, and a meta server that contain file meta for all version of
+files. A client maintains its own copy of all the file meta (possibly stale), 
+and selectively download the physical files as needed to save bandwidth.\\
 
-A client can make local changes to a file. The updated file is committed when
-the client syncs with meta and block server. The change is then propagated to
-the other clients. If multiple clients made changes to the same file, the first
-one to upload wins and the other clients need to rebase their changes on top of
-latest and attempt to upload again.\\
+Once a client downloads a file, it can make local changes to it. The modified
+file can be uploaded if no other clients have uploaded a more recent version
+yet.  Uploading the file also updates the file meta, which is propagated to all
+the other clients eventually.  If multiple clients made changes to the same
+file, the first one to upload wins and the other clients need to rebase their
+changes on top of latest and before uploading again.\\
+
+A nuanced part of the design is client synchronization with remote is not
+deterministic. The client can work offline for extended period of time and make
+changes to a file when other clients uploads new versions of the same or other
+files. The system design need to account for conflict resolution.\\
 
 The system design is visualized below:\\
 
@@ -353,6 +357,69 @@ is not ahead of remote, remote may have newer version of the file. In such case
 client will call \textit{SyncMeta} to synchronize the remote.
 
 \section{Safety}
+
+Unmodified files on the client must match its remote counterpart. This can be
+verified by comparing the sizes. Note that the client may have partial set of 
+files locally, so the property is only verified if file exists on client:\\
+
+\begin{tla}
+Consistent == 
+    \A k \in Clients:
+        \A f \in Files:
+            (client_change[k][f] = FALSE /\ f \in DOMAIN client_block[k])
+                => client_block[k][f] = block_server[f][client_meta[k][f]]
+\end{tla}
+\begin{tlatex}
+\@x{ Consistent \.{\defeq}}%
+\@x{\@s{16.4} \A\, k \.{\in} Clients \.{:}}%
+\@x{\@s{20.5} \A\, f \.{\in} Files \.{:}}%
+ \@x{\@s{24.6} ( client\_change [ k ] [ f ] \.{=} {\FALSE} \.{\land} f \.{\in}
+ {\DOMAIN} client\_block [ k ] )}%
+ \@x{\@s{36.9} \.{\implies} client\_block [ k ] [ f ] \.{=} block\_server [ f
+ ] [ client\_meta [ k ] [ f ] ]}%
+\end{tlatex}
+\\
+
+Client can make local changes to the file, but all changes are contained in a
+single revision until the file is uploaded. Client can be offline for an
+extended period of time while remote revision increases. In any case, client's
+file revision number can be far behind, but at most one ahead:\\
+
+\begin{tla}
+Consistent2 == 
+    \A k \in Clients:
+        \A f \in Files:
+            f \in DOMAIN client_meta[k] 
+                => (client_meta[k][f] - meta_server[f]) <= 1
+\end{tla}
+\begin{tlatex}
+\@x{ Consistent2 \.{\defeq}}%
+\@x{\@s{16.4} \A\, k \.{\in} Clients \.{:}}%
+\@x{\@s{20.5} \A\, f \.{\in} Files \.{:}}%
+\@x{\@s{24.6} f \.{\in} {\DOMAIN} client\_meta [ k ]}%
+ \@x{\@s{32.8} \.{\implies} ( client\_meta [ k ] [ f ] \.{-} meta\_server [ f
+ ] ) \.{\leq} 1}%
+\end{tlatex}
+\\
+
+When the client modifies a file, the file revision is bumped. In the case the 
+client has been offline for an extended amount of time, the remote fille revision 
+may be far ahead. If the client's file revision is ahead of remote, the file 
+\textit{must} have been modified:\\
+
+\begin{tla}
+Consistent3 == 
+    \A k \in Clients:
+        \A f \in Files:
+            client_meta[k][f] > meta_server[f] => client_change[k][f]
+\end{tla}
+\begin{tlatex}
+\@x{ Consistent3 \.{\defeq}}%
+\@x{\@s{16.4} \A\, k \.{\in} Clients \.{:}}%
+\@x{\@s{20.5} \A\, f \.{\in} Files \.{:}}%
+ \@x{\@s{24.6} client\_meta [ k ] [ f ] \.{>} meta\_server [ f ] \.{\implies}
+ client\_change [ k ] [ f ]}%
+\end{tlatex}
 
 \section{Liveness}
 
