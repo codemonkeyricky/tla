@@ -59,12 +59,12 @@ procedure reader()
 begin
 r_chk_empty:        
     if rptr = wptr then 
-    r_early_ret:            
+    r_early_ret:
         return;
     end if;
 r_read_buf:         
     assert buffer[rptr] # 0;
-r_cs:               
+r_cs:
     buffer[rptr] := 0;
 r_upd_rtpr:         
     rptr := (rptr + 1) % N;
@@ -104,8 +104,8 @@ begin
 end process; 
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "823a2b23" /\ chksum(tla) = "c3d2922")
-VARIABLES rptr, wptr, buffer, pc, stack
+\* BEGIN TRANSLATION (chksum(pcal) = "e260b42d" /\ chksum(tla) = "8aef320c")
+VARIABLES pc, rptr, wptr, buffer, stack
 
 (* define statement *)
 written ==
@@ -150,7 +150,7 @@ READER == 0
 WRITER == 1
 
 
-vars == << rptr, wptr, buffer, pc, stack >>
+vars == << pc, rptr, wptr, buffer, stack >>
 
 ProcSet == {WRITER} \cup {READER}
 
