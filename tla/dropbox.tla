@@ -11,7 +11,7 @@ VARIABLES
 
 vars == <<meta_server, block_server, client_meta, client_block, client_change>>
 
-Clients == {"c0"}
+Clients == {"c0", "c1"}
 Files == {"f0", "f1"}
 Sizes == {5, 7, 9}
 
