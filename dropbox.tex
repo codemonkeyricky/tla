@@ -4,29 +4,30 @@
 
 \chapter{Dropbox}
 
-TLA+ is a \textit{thinking tool}. Writing a specification with TLA+ and verify
-it against the model checker encourages the designer to exhaustively consider
-all corner cases in the design. In this chapter, we will specify a Dropbox-like
-service with TLA+ and use the model checker to flesh out the design.\\
+TLA+ is a \textit{thinking tool}. Writing a specification with TLA+ and
+verifying it against the model checker encourages the designer to consider all
+corner cases in the design exhaustively. In this chapter, we will specify a
+Dropbox-like service with TLA+ and use the model checker to flesh out the
+design.\\
 
 \section{Design}
 
-The simplified Dropbox-like service includes a block server that contain all
-versions of files, and a meta server that contain file meta for all version of
-files. A client maintains its own copy of all the file meta (possibly stale), 
-and selectively download the physical files as needed to save bandwidth.\\
+The simplified Dropbox-like service includes a block server containing all
+versions of files and a meta server containing metadata for all versions of
+files. A client maintains its copy of all the file metadata (possibly stale) and
+selectively downloads the physical files as needed to save bandwidth.\\
 
-Once a client downloads a file, it can make local changes to it. The modified
-file can be uploaded if no other clients have uploaded a more recent version
-yet.  Uploading the file also updates the file meta, which is propagated to all
-the other clients eventually.  If multiple clients made changes to the same
-file, the first one to upload wins and the other clients need to rebase their
-changes on top of latest and before uploading again.\\
+Once a client downloads a file, it can make local changes. The modified file can
+be uploaded if no other clients have uploaded a more recent version. Uploading
+the file also updates its metadata, which is propagated to all other clients. If
+multiple clients make changes to the same file, the first one to upload wins and
+the other clients need to rebase their changes on top of the latest before
+uploading again.\\
 
-A nuanced part of the design is client synchronization with remote is not
-deterministic. The client can work offline for extended period of time and make
-changes to a file when other clients uploads new versions of the same or other
-files. The system design need to account for conflict resolution.\\
+A nuanced part of the design is client synchronization with the remote is not
+deterministic. The client can work offline for an extended period and make
+changes to a file when other clients upload new versions of the same or other
+files. The system design needs to account for conflict resolution.\\
 
 The system design is visualized below:\\
 
@@ -52,7 +53,7 @@ Init ==
  \@x{\@s{16.4} \.{\land} block\_server \.{=} [ f \.{\in} Files \.{\mapsto}
  {\langle} 5 {\rangle} ]}%
  \@x{\@s{16.4} \.{\land} client\_meta \.{=} [ k \.{\in} Clients \.{\mapsto}
- meta\_server ]}%
+ meta\_server ]}%
  \@x{\@s{16.4} \.{\land} client\_change \.{=} [ k \.{\in} Clients \.{\mapsto}
  [ f \.{\in} Files \.{\mapsto} {\FALSE} ] ]}%
  \@x{\@s{16.4} \.{\land} client\_block \.{=} [ k \.{\in} Clients \.{\mapsto}
@@ -62,8 +63,8 @@ Init ==
 \begin{itemize}
     \item \textit{meta\_server} is a lookup table of filename to a set of revisions.
     \item \textit{block\_server} is a lookup table of filename to a list of sizes, ordered by revision.
-    \item \textit{client\_meta} represents client's local copy of the file meta.
-    \item \textit{client\_block} is client's block storage, only holding version of the file specified by client meta.
+    \item \textit{client\_meta} represents the client's local copy of the file meta.
+    \item \textit{client\_block} is the client's block storage, only holding a version of the file specified by the client meta.
     \item \textit{client\_change} is a per client per file lookup tracking if the file has been changed locally.
 \end{itemize}
 
@@ -71,7 +72,7 @@ To paint a more concrete picture, this is a snapshot of a state:
 \begin{verbatim}
 State 94375:
 /\ client_block = [c0 |-> [f0 |-> 9, f1 |-> 5], 
-                   c1 |-> [f0 |-> 9]]
+                   c1 |-> [f0 |-> 9]]
 /\ client_meta = [c0 |-> [f0 |-> 4, f1 |-> 2], 
                   c1 |-> [f0 |-> 2, f1 |-> 1]]
 /\ block_server = [f0 |-> <<5, 5, 7>>, f1 |-> <<5, 5>>]
@@ -82,11 +83,11 @@ State 94375:
 
 In this state:
 \begin{itemize}
-    \item The meta and block server have 2 files: File 0 has 3 revisions and file 1 has 2.
-    \item Client 0 downloaded both file 0 and 1.
+    \item The meta and block server have 2 files: File 0 has 3 revisions and File 1 has 2.
+    \item Client 0 downloaded both files 0 and 1.
     \item Client 0 modified file 0 (bumped the revision to 4) but did not modify file 1.
-    \item Client 1 meta is out-of-date on both file 0 and 1, but modified file 0.
-    \item Client 1 has only downloaded the older revision of file 1, but also modified it.
+    \item Client 1 metadata is stale for both Files 0 and 1, but modified file 0.
+    \item Client 1 has downloaded the older revision of file 1 and modified it.
 \end{itemize}
 
 The set of actions allowed is defined below:\\
@@ -110,10 +111,9 @@ Next ==
 \end{tlatex}
 \\
 
-In every state, the system can choose to synchronize meta of a file, download a
+In every state, the system can choose to synchronize the metadata of a file, download a
 file, modify a file, or upload a changed file. Some of these operations depend
-on each other. For example, a file can only be modified if it has been
-downloaded.\\ 
+on each other. For example, a file can only be modified if it is downloaded.\\ 
 
 Let us first take a look at \textit{SyncMeta}:\\
 
@@ -191,10 +191,10 @@ SyncMeta(k, f) ==
 \end{tlatex}
 \\
 
-The client syncs with remote when it is out-of-date. This happens when: remote
-has higher revision of the file, or if the client has the same revision of the
+The client syncs with the remote when it is out-of-date. This happens when: the remote
+has a higher revision of the file, or if the client has the same revision of the
 file but \textit{local\_change} is set. The current implementation discards and
-force update to remote. Practically, the client should rebase and resolve the
+forces updates to remote. Practically, the client should rebase and resolve the
 conflict.\\
 
 \textit{SyncObject} resets the file to match the remote. This is done by getting
@@ -240,11 +240,11 @@ Download(k, f) ==
  \@x{\@s{28.7} \.{\ELSE} block\_server [ f ] [ MaxS ( {\DOMAIN} block\_server
  [ f ] ) ] ] ]}%
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} client\_change ,\,
- client\_meta ,\, meta\_server ,\, block\_server {\rangle}}%
+ client\_meta ,\, meta\_server ,\, block\_server {\rangle}}%
 \end{tlatex}
 \\
 
-The client only downloads if file meta is up-to-date and has not been modified
+The client only downloads if the file meta is up-to-date and has not been modified
 locally.\\
 
 The \textit{Modify} function is defined below:\\
@@ -260,7 +260,7 @@ Modify(k, f) ==
     \* bump client block
     /\ f \in DOMAIN client_block[k]
     /\ \E s \in Sizes: 
-       client_block'
+       client_block'
         = [client_block EXCEPT ![k] 
             = [client_block[k] EXCEPT ![f] = s]]
     /\ client_change' 
@@ -302,9 +302,7 @@ Modify(k, f) ==
 
 A file can only be modified if it hasn't been. While the client can modify a 
 file multiple times, this is modeled as a single revision until the file is
-uploaded to remote. A new version of the file is created by bumping the client
-local file meta, mark file as changed and assign the file a random size using
-existential qualifier.\\
+uploaded to remote. A new version of the file is created by bumping the client's local file meta, marking the file as changed, and assigning the file a random size usingan existential qualifier.\\
 
 Finally, let's take a look at \textit{Upload}:\\
 
@@ -353,14 +351,14 @@ Upload(k, f) ==
 \\
 
 Client uploads when it is ahead of remote and has local changes. If the client
-is not ahead of remote, remote may have newer version of the file. In such case 
-client will call \textit{SyncMeta} to synchronize the remote.
+is not ahead of the remote, the remote may have a newer version of the file. In such a case,
+the client will call \textit{SyncMeta} to synchronize the remote.
 
 \section{Safety}
 
-Unmodified files on the client must match its remote counterpart. This can be
-verified by comparing the sizes. Note that the client may have partial set of 
-files locally, so the property is only verified if file exists on client:\\
+Unmodified files on the client must match their remote counterpart. This can be
+verified by comparing the sizes. Note that the client may have a partial set of 
+files locally, so the property is only verified if the file exists on the client:\\
 
 \begin{tla}
 Consistent == 
@@ -380,9 +378,9 @@ Consistent ==
 \end{tlatex}
 \\
 
-Client can make local changes to the file, but all changes are contained in a
-single revision until the file is uploaded. Client can be offline for an
-extended period of time while remote revision increases. In any case, client's
+The client can make local changes to the file, but all changes are contained in a
+single revision until the file is uploaded. The client can be offline for an
+extended period while remote revision increases. In any case, the client's
 file revision number can be far behind, but at most one ahead:\\
 
 \begin{tla}
@@ -402,8 +400,8 @@ Consistent2 ==
 \end{tlatex}
 \\
 
-When the client modifies a file, the file revision is bumped. In the case the 
-client has been offline for an extended amount of time, the remote fille revision 
+When the client modifies a file, the file revision is bumped. In such a case the 
+client has been offline for an extended amount of time, and the remote file revision 
 may be far ahead. If the client's file revision is ahead of remote, the file 
 \textit{must} have been modified:\\
 
@@ -418,10 +416,11 @@ Consistent3 ==
 \@x{\@s{16.4} \A\, k \.{\in} Clients \.{:}}%
 \@x{\@s{20.5} \A\, f \.{\in} Files \.{:}}%
  \@x{\@s{24.6} client\_meta [ k ] [ f ] \.{>} meta\_server [ f ] \.{\implies}
- client\_change [ k ] [ f ]}%
+ client\_change [ k ] [ f ]}%
 \end{tlatex}
 
 \section{Liveness}
 
-% \end{document}
+Omitted for this chapter.
 
+% \end{document}
