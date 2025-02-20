@@ -126,13 +126,20 @@ describe a few PlusCal example.
 
 \part{System Modeling}
 
-The previous parts covers mostly targeted applications. In this section, we will
-explore using TLA+ to model and characterize system behaviors. Examples in this
-part will focus on system modeling, and in some cases state graph will be too
-large traverse exhaustively in practical time. Instead of reducing the model to
-allow the specification run in finite time, we will run the model checker in
-generation mode, so we can observe system behavior and collect statistical
-samples.
+Specifications described so far have been designed to with finite state space to
+allow model checker to explore all states and prove correctness. In this
+section, we will relax this and allow infinite state space.\\
+
+This uses TLA+ as a \textit{prototyping} tool. By definition, the model checker
+cannot verify infinite sate space. However, for all states it does explore, it
+will verify safety properties and highlight all the violations. This enables
+designer to quickly iterate on design to flesh out what may or may not work. Per
+80/20 rule, the model checker will very quickly identify obvious violations in
+the design.\\
+
+Once settled on a design and model checker no longer reports violation in any 
+practical amount of time, one can always reduce the specification into finite
+space to exhaustively prove correctness. 
 
 \include{lru}
 

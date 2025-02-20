@@ -34,7 +34,6 @@ cache, and Test verifies the KV stores.
 
 \section{LRU Cache}
 
-
 LRU cache can be implemented using three data structures: 
 \begin{itemize}
     \item Linked list to track key access recency 
@@ -153,9 +152,10 @@ There isn't any notable converging property for the LRU cache. Omitted from this
 
 \section{KV Store}
 
-The KV store itself is pretty straightforward in design, naively we need a single 
-\textit{function} to implement a table that holds the key-value pairs. The slight complexity 
-is integrating LRU into the KV store. This is described in the \textit{Update} function:
+The KV store itself is pretty straightforward in design, naively we need a
+single \textit{function} to implement a table that holds the key-value pairs.
+The slight complexity is integrating LRU into the KV store. This is described in
+the \textit{Update} function:\\
 
 \begin{tla}
 Update(k, v) == 

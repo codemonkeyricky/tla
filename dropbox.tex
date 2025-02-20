@@ -76,7 +76,7 @@ State 94375:
                     c1 |-> [f0 |-> TRUE, f1 |-> FALSE]]
 \end{verbatim}
 
-In this system state:
+In this state:
 \begin{itemize}
     \item The meta and block server have 2 files: File 0 has 3 revisions and file 1 has 2.
     \item Client 0 downloaded both file 0 and 1.
@@ -306,86 +306,51 @@ Finally, let's take a look at \textit{Upload}:\\
 
 \begin{tla}
 Upload(k, f) == 
-    \* client is ahead of the remote
-    /\ IF meta_server[f] < client_meta[k][f] THEN 
-        \* are we ahead? 
-        IF client_change[k][f] THEN 
-            \* something to upload
-            /\ meta_server' 
-                = [meta_server EXCEPT ![f] 
-                    = client_meta[k][f]] \* upload our version
-            /\ block_server' = [block_server EXCEPT ![f] 
-                                = Append(block_server[f], client_block[k][f])]
-            /\ client_change' 
-                = [client_change EXCEPT ![k] 
-                    = [client_change[k] EXCEPT ![f] = FALSE]]
-            /\ UNCHANGED <<client_block, client_meta>>
-        ELSE 
-            \* nothing to upload
-            /\ UNCHANGED vars 
-       ELSE 
-        \* k is stale - force sync to latest
-        /\ SyncMeta(k, f) 
-        /\ UNCHANGED <<meta_server, block_server>>
+    \* client is ahead of the remote with local change
+    /\ meta_server[f] < client_meta[k][f]
+    /\ client_change[k][f]
+    /\ meta_server' 
+        = [meta_server EXCEPT ![f] 
+            = client_meta[k][f]] \* upload our version
+    /\ block_server' = [block_server EXCEPT ![f] 
+                        = Append(block_server[f], client_block[k][f])]
+    /\ client_change' 
+        = [client_change EXCEPT ![k] 
+            = [client_change[k] EXCEPT ![f] = FALSE]]
+    /\ UNCHANGED <<client_block, client_meta>>
 \end{tla}
 \begin{tlatex}
 \@x{ Upload ( k ,\, f ) \.{\defeq}}%
 \@x{\@s{16.4}}%
 \@y{%
-  client is ahead of the remote
+  client is ahead of the remote with local change
 }%
 \@xx{}%
- \@x{\@s{16.4} \.{\land} {\IF} meta\_server [ f ] \.{<} client\_meta [ k ] [ f
- ] \.{\THEN}}%
-\@x{\@s{20.5}}%
-\@y{%
-  are we ahead? 
-}%
-\@xx{}%
-\@x{\@s{20.5} {\IF} client\_change [ k ] [ f ] \.{\THEN}}%
-\@x{\@s{24.6}}%
-\@y{%
-  something to upload
-}%
-\@xx{}%
-\@x{\@s{24.6} \.{\land} meta\_server \.{'}}%
-\@x{\@s{28.7} \.{=} [ meta\_server {\EXCEPT} {\bang} [ f ]}%
-\@x{\@s{32.8} \.{=} client\_meta [ k ] [ f ] ]}%
+\@x{\@s{16.4} \.{\land} meta\_server [ f ] \.{<} client\_meta [ k ] [ f ]}%
+\@x{\@s{16.4} \.{\land} client\_change [ k ] [ f ]}%
+\@x{\@s{16.4} \.{\land} meta\_server \.{'}}%
+\@x{\@s{20.5} \.{=} [ meta\_server {\EXCEPT} {\bang} [ f ]}%
+\@x{\@s{24.6} \.{=} client\_meta [ k ] [ f ] ]}%
 \@y{%
   upload our version
 }%
 \@xx{}%
- \@x{\@s{24.6} \.{\land} block\_server \.{'} \.{=} [ block\_server {\EXCEPT}
+ \@x{\@s{16.4} \.{\land} block\_server \.{'} \.{=} [ block\_server {\EXCEPT}
  {\bang} [ f ]}%
- \@x{\@s{24.6} \.{=} Append ( block\_server [ f ] ,\, client\_block [ k ] [ f
+ \@x{\@s{16.4} \.{=} Append ( block\_server [ f ] ,\, client\_block [ k ] [ f
  ] ) ]}%
-\@x{\@s{24.6} \.{\land} client\_change \.{'}}%
-\@x{\@s{28.7} \.{=} [ client\_change {\EXCEPT} {\bang} [ k ]}%
- \@x{\@s{32.8} \.{=} [ client\_change [ k ] {\EXCEPT} {\bang} [ f ] \.{=}
+\@x{\@s{16.4} \.{\land} client\_change \.{'}}%
+\@x{\@s{20.5} \.{=} [ client\_change {\EXCEPT} {\bang} [ k ]}%
+ \@x{\@s{24.6} \.{=} [ client\_change [ k ] {\EXCEPT} {\bang} [ f ] \.{=}
  {\FALSE} ] ]}%
- \@x{\@s{24.6} \.{\land} {\UNCHANGED} {\langle} client\_block ,\, client\_meta
- {\rangle}}%
-\@x{\@s{20.5} \.{\ELSE}}%
-\@x{\@s{36.9}}%
-\@y{%
-  nothing to upload
-}%
-\@xx{}%
-\@x{\@s{36.9} \.{\land} {\UNCHANGED} vars}%
-\@x{\@s{16.4} \.{\ELSE}}%
-\@x{\@s{20.5}}%
-\@y{%
-  k is stale - force sync to latest
-}%
-\@xx{}%
-\@x{\@s{20.5} \.{\land} SyncMeta ( k ,\, f )}%
- \@x{\@s{20.5} \.{\land} {\UNCHANGED} {\langle} meta\_server ,\, block\_server
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} client\_block ,\, client\_meta
  {\rangle}}%
 \end{tlatex}
 \\
 
-Client can only upload when it is ahead of the 
-
+Client uploads when it is ahead of remote and has local changes. If the client
+is not ahead of remote, remote may have newer version of the file. In such case 
+client will call \textit{SyncMeta} to synchronize the remote.
 
 \section{Safety}
 

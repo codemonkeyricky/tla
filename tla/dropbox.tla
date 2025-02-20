@@ -34,6 +34,7 @@ Init ==
     /\ client_block = [k \in Clients |-> <<>>]
 
 Modify(k, f) ==
+    \* /\ client_meta[k][f] < 3
     /\ client_change[k][f] = FALSE
     \* add new version to client meta
     /\ client_meta' 
@@ -94,27 +95,18 @@ SyncMeta(k, f) ==
         /\ UNCHANGED vars
 
 Upload(k, f) == 
-    \* client is ahead of the remote
-    /\ IF meta_server[f] < client_meta[k][f] THEN 
-        \* are we ahead? 
-        IF client_change[k][f] THEN 
-            \* something to upload
-            /\ meta_server' 
-                = [meta_server EXCEPT ![f] 
-                    = client_meta[k][f]] \* upload our version
-            /\ block_server' = [block_server EXCEPT ![f] 
-                                = Append(block_server[f], client_block[k][f])]
-            /\ client_change' 
-                = [client_change EXCEPT ![k] 
-                    = [client_change[k] EXCEPT ![f] = FALSE]]
-            /\ UNCHANGED <<client_block, client_meta>>
-        ELSE 
-            \* nothing to upload
-            /\ UNCHANGED vars 
-       ELSE 
-        \* k is stale - force sync to latest
-        /\ SyncMeta(k, f) 
-        /\ UNCHANGED <<meta_server, block_server>>
+    \* client is ahead of the remote with local change
+    /\ meta_server[f] < client_meta[k][f]
+    /\ client_change[k][f]
+    /\ meta_server' 
+        = [meta_server EXCEPT ![f] 
+            = client_meta[k][f]] \* upload our version
+    /\ block_server' = [block_server EXCEPT ![f] 
+                        = Append(block_server[f], client_block[k][f])]
+    /\ client_change' 
+        = [client_change EXCEPT ![k] 
+            = [client_change[k] EXCEPT ![f] = FALSE]]
+    /\ UNCHANGED <<client_block, client_meta>>
 
 Next ==
     \/ \E k \in Clients: 
@@ -137,6 +129,12 @@ Consistent2 ==
         \A f \in Files:
             f \in DOMAIN client_meta[k] 
                 => (client_meta[k][f] - meta_server[f]) <= 1
+
+\* If client is ahead of remote, client must have local change
+Consistent3 == 
+    \A k \in Clients:
+        \A f \in Files:
+            client_meta[k][f] > meta_server[f] => client_change[k][f]
 
 Spec ==
   /\ Init
