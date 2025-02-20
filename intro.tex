@@ -34,10 +34,10 @@ invariants include:
 The verification algorithm was implemented using a \textit{depth-first-search},
 providing 100\% microcode coverage before deployment on target.\\
 
-To generalize, we can model an arbitrary system as a set of states and a set
-of invariants that must be upheld at all times. The complexity of such an
+In reality, any system can be modeled as an arbitrary set of states with a
+collection of invariants that be true at all times. The complexity of such an
 arbitrary system generally grows quadratically as the number of states grows
-linearly (eg.  In an N-state system, adding state N+1 may introduce N
+linearly (eg. in an N-state system, adding state N+1 may introduce N
 transitions into the new state). There are many engineering problems with a
 large number of states, such as lockless or wait-free data structures,
 distributed algorithms, OS schedulers, consensus protocols, and more. As the
@@ -51,13 +51,13 @@ So, how do we produce a system that is \textit{correct by design?}
 Fast forward to now: I stumbled across TLA+, a formalized solution of what I
 was looking for.\\
 
-We are at a point in the technology curve where vertical scaling is no
-longer practical, with CPU speed plateaued in the past decade or so. The industry
-is exploring horizontal scaling solutions, such as hardware vendors focusing on
-adding more CPU cores, or software vendors buying more low-end hardware instead
-of a less high-end hardware. This shifts the technology complexity from vertical
-to horizontal, demanding solutions to maximize concurrent resource
-utilization. There is one slight problem though:\\
+In the age of big data, vertical scaling is no longer practical. The industry
+has been exploring and implementing horizontal scaling solutions for past two
+decades. Instead of focusing on increasing clock speed, hardwares vendor has
+been focusing on adding more instances of hardware in their design. On the
+other hand, software vendors has been designing horizontal scaling solution that
+takes advantage of large volume of commodity hardware. There is one slight
+problem: Horizontal scaling requires concurrent reasoning, and:\\
 
 \textit{Humans are not good at concurrent reasoning}.\\
 
@@ -65,10 +65,10 @@ Our cognitive system is optimized for sequential reasoning. Enumerating
 all scenarios in one's mind to ensure an arbitrary design accommodates all
 the corner cases is challenging.\\
 
-Consider a distributed system. The system is a cluster of independently operating
-entities, which need to somehow collectively offer the correct system behavior,
-while any one of the machines may receive instructions out of order, crash,
-recover, etc.\\
+Consider a distributed system. The system is a cluster of independently
+operating entities, which collectively needs to offer the correct system
+behavior. At any given time, nodes in the cluster may receive instructions
+out-of-order, crash, recover, etc.\\
 
 Consider a single producer multiple consumer lockless queue. The consumers may
 reserve an index in the queue in a certain order but may release it in a
@@ -98,40 +98,36 @@ as a finite set of states, the states can be \textit{exhaustively} explored
 state space (either per state or a sequence of states).
 
 \section{About This Book}
-To my surprise, there is not as much material on TLA+ as I assumed for
-such a critical tool in a designer's toolbox. This book was initially a set of
-notes I took while learning TLA+. I decided to formalize these notes into this
-short book, which I hope the readers will find helpful in their TLA+
-journey.\newline
+This book was initially a set of notes I took while learning TLA+. I decided to
+formalize these notes into this short book, which I hope the readers will find
+helpful in their TLA+ journey.\newline
 
-The book intends to teach the reader how to write TLA+ spec for their design to
-provide confidence in \textit{design correctness}. This book is targeted at
-software designers, hardware designers, system architects, and in general anyone
-interested in designing correct systems.\newline 
+The book intends to teach the reader how to write TLA+ specification for their
+design to provide confidence in its \textit{correctness}. This book is targeted
+to software designers, hardware designers, system architects, and in general
+anyone interested in designing correct systems.\newline 
 
-To get the most out of the book, the reader should have general computer
-science knowledge. The reader doesn't need to be an expert in a particular
-language to understand this book; TLA+ is effectively its language. This book is
-example-driven and will go through designs such as lockless queues, simple
-task schedulers, consensus algorithms, etc. Readers will likely enjoy a deeper
+To get the most out of the book, the reader should have general computer science
+knowledge. The reader doesn't need to be an expert in a particular language to
+understand this book; TLA+ is effectively its own language. This book is
+example-driven and will go through designs such as lockless queues, simple task
+schedulers, consensus algorithms, etc. Readers will likely enjoy a deeper
 insight if there is familiarity with these topics.
 
 \section{How to Use This Book}
 
 This book was designed to be used as a reference, providing examples
-and references using TLA+.\newline
+and references using TLA+.\\
 
-Examples are split into two categories: Examples written using TLA+ and
-examples written using PlusCal (the C-like syntax that transpiles down to TLA+).
-I believe they are useful for different use cases. The differences will
-be highlighted in their respective sections. All examples will follow a
-similar layout, covering the problem statement, design, spec, and safety
-properties.\newline
+This book is split into multiple parts, covering TLA+ native notation, PlusCal
+(C-like syntax that transpiles down to TLA+ native notation), and rapid
+prototyping with TLA+. All examples will follow a similar layout, covering the
+problem statement, design, spec, and safety properties.\\
 
 All examples in this book will be presented using TLA+ \textit{mathematical
-notation}. Converting between Mathematical and ASCII notation is trivial due to
-the one-to-one mapping. Readers are encouraged to consult Table 8 in \cite{ss}
-as needed.\\
+notation}. Converting between Mathematical and ASCII notation is assumed trivial
+due to the one-to-one mapping. Readers are encouraged to consult Table 8 in
+\cite{ss} as needed.\\
 
 The last part of the book provides language references and some focused topics.
-Readers can use the last part of the book as a general reference. 
+Readers can use it as general reference. 
