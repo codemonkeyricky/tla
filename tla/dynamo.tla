@@ -127,7 +127,7 @@ FindNextToken2(key, ring) ==
         FindNextToken2((key + 1) % N, ring)
 
     \* find tokens owned by someone else and sync
-Update(u) == 
+DataMigrate(u) == 
     /\ u \in cluster
     /\ \A k \in DOMAIN local_kv[u]:
         IF FindNextToken2(local_ring[u], k) = u THEN
@@ -136,6 +136,23 @@ Update(u) ==
             FALSE
     /\ UNCHANGED vars
 \* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
+
+BecomeReady(u) ==
+    LET 
+        no_one_ready ==
+            \A k \in cluster: local_ring[k][k]["status"] # StatusOnline
+    IN 
+        /\ u \in cluster 
+        /\ local_ring[u][u]["status"] = StatusPrepare
+        /\ IF no_one_ready THEN 
+                local_ring' = [local_ring EXCEPT ![u] 
+                                = [local_ring[u] EXCEPT ![u]
+                                    = [k \in NodeState |-> 
+                                        IF k = "status" THEN StatusOnline
+                                        ELSE local_ring[u][u][k]]]]
+           ELSE 
+                UNCHANGED local_ring
+        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, debug>>
 
 Write(u, k) == 
     LET 
@@ -152,7 +169,8 @@ Next ==
     \/ \E u, v \in Nodes:
         /\ Gossip(u, v)
     \/ \E u \in Nodes:
-        /\ Update(u)
+        \/ BecomeReady(u)
+        \/ DataMigrate(u)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
