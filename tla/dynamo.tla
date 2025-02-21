@@ -47,16 +47,19 @@ FindPrevToken(ring, k) ==
     ELSE 
         FindPrevToken(ring, (k - 1 + N) % N) 
 
-Gossip(u, v, w) == 
+Gossip(u, v) == 
     LET 
-        updated ==  IF local_ring[u][w]["version"] < local_ring[v][w]["version"] THEN 
-                        local_ring[v][w]
-                    ELSE 
-                        local_ring[u][w]
-        local_ring_u == [local_ring EXCEPT ![u] = updated]
-        local_ring_uv == [local_ring_u EXCEPT ![v] = updated]
+        updated(w) ==   IF local_ring[u][w]["version"] < local_ring[v][w]["version"] THEN 
+                            local_ring[v][w]
+                        ELSE 
+                            local_ring[u][w]
     IN 
-        local_ring' = local_ring_uv
+        local_ring' = [k \in Nodes |-> 
+            IF k = u \/ k = v THEN 
+                [w \in Nodes |-> updated(w)]
+            ELSE 
+                local_ring[k]
+        ]
 
 DataSet(ring, my_key) == 
     LET 
@@ -130,9 +133,8 @@ NotInCluster ==
     Nodes \ {cluster}
 
 Next ==
-    \/ \E u, v, w \in Nodes:
-        /\ u # v
-        /\ Gossip(u, v, w)
+    \/ \E u, v \in Nodes:
+        /\ Gossip(u, v)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
