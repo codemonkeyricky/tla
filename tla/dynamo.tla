@@ -138,10 +138,11 @@ DataMigrate(u) ==
     IN 
         /\ u \in cluster
         /\ \A k \in DOMAIN local_kv[u]:
-            IF FindNextToken2(k, local_ring[u]) = u THEN
-                TRUE 
+            IF FindNextToken2(k, local_ring[u]) # u THEN
+                \* migrate 
+                Assert(0,"")
             ELSE 
-                FALSE
+                UNCHANGED local_ring
         /\ UNCHANGED vars
 
 BecomeReady(u) ==
