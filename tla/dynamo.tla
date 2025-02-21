@@ -79,7 +79,7 @@ Init ==
         ELSE IF k = "token" THEN -1
         ELSE IF k = "status" THEN "offline"
         ELSE "unused"]]] 
-    /\ local_kv = [i \in Nodes |-> <<>>]
+    /\ local_kv = [i \in Nodes |-> {}]
     /\ debug_kv = {}
     /\ debug_ring = <<>>
     /\ debug = {}
@@ -137,6 +137,8 @@ DataMigrate(u) ==
         owner(k) == FindNextToken2(k, local_ring[u])
     IN 
         /\ u \in cluster
+        /\ local_ring[u][u]["status"] = StatusOnline
+        \* /\ Assert(0,"")
         /\ \A k \in DOMAIN local_kv[u]:
             IF FindNextToken2(k, local_ring[u]) # u THEN
                 \* migrate 
@@ -170,9 +172,7 @@ Write(u, k) ==
         /\ local_ring[u][u]["status"] = StatusOnline
         /\ u = owner
         /\ local_kv' = [local_kv EXCEPT ![u] 
-                        = [kk \in DOMAIN local_kv[u] \cup {k} |-> 
-                            IF kk = k THEN k 
-                            ELSE local_kv[u][kk]]]
+                        = local_kv[u] \cup {k}]
         /\ debug_kv' = debug_kv \cup {k}
         /\ UNCHANGED <<cluster, local_ring, debug_ring, debug>>
 
@@ -181,7 +181,7 @@ Next ==
         /\ Gossip(u, v)
     \/ \E u \in Nodes:
         \/ BecomeReady(u)
-        \/ DataMigrate(u)
+        \* \/ DataMigrate(u)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
