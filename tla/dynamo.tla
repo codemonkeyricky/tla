@@ -154,10 +154,10 @@ Next ==
         /\ Join(u) 
     \* \/ \E u \in cluster:
     \*     /\ Leave(u) 
-    \* \/ \E u \in cluster:
-    \*     /\ \E k \in KeySpace:
-    \*         /\ k \notin debug_kv
-    \*         /\ Write(u, k)
+    \/ \E u \in cluster:
+        /\ \E k \in KeySpace:
+            /\ k \notin debug_kv
+            /\ Write(u, k)
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
