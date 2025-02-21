@@ -143,6 +143,7 @@ Write(u, k) ==
         owner == debug_ring[key]
         up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
     IN 
+        /\ local_ring[u][u]["status"] = StatusOnline
         /\ local_kv' = up
         /\ debug_kv' = debug_kv \cup {k}
         /\ UNCHANGED <<cluster, debug_ring, debug>>
@@ -159,7 +160,6 @@ Next ==
     \*     /\ Leave(u) 
     \/ \E u \in cluster:
         /\ \E k \in KeySpace:
-            /\ local_ring[u][u]["status"] = StatusOnline
             /\ k \notin debug_kv
             /\ Write(u, k)
 
