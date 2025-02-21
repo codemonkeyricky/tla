@@ -131,15 +131,41 @@ FindNextToken2(key, ring) ==
         ELSE 
             FindNextToken2((key + 1) % N, ring)
 
+AllTokens(u) == 
+    LET 
+        not_offline == {v \in Nodes: local_ring[u][v]["status"] # StatusOffline}
+    IN 
+        {local_ring[u][v]["token"]: v \in not_offline} 
+
+MyToken(u) == 
+    local_ring[u][u]["token"]
+
+RECURSIVE DataSet2(_, _)
+DataSet2(u, k) == 
+    LET 
+        k_prev ==  (k + N - 1) % N
+        include == IF k \in local_kv[u] THEN {k} ELSE {}
+    IN 
+        include \cup IF k_prev \in AllTokens(u) THEN {} 
+                     ELSE DataSet2(u, k_prev) 
+
 \* find tokens owned by someone else and sync
 DataMigrate(u) == 
     LET 
-        owner(k) == FindNextToken2(k, local_ring[u])
+        \* my_data == 
+        my_data == DataSet2(u, MyToken(u))
+        all_data == local_kv[u]
     IN 
         /\ u \in cluster
         /\ local_ring[u][u]["status"] = StatusOnline
-        \* /\ Assert(0,"")
-        /\ \A k \in DOMAIN local_kv[u]:
+        /\ Cardinality(cluster) >= 2
+        \* /\ PrintT(AllTokens(u))
+        \* /\ PrintT(MyToken(u)) 
+        \* /\ PrintT(DataSet2(u, MyToken(u)))
+        \* /\ PrintT(DataSet2(u, MyToken(u)))
+        \* /\ Assert(my_data = {},"")
+        /\ Assert(my_data = all_data,"")
+        /\ \A k \in local_kv[u]:
             IF FindNextToken2(k, local_ring[u]) # u THEN
                 \* migrate 
                 Assert(0,"")
