@@ -96,8 +96,7 @@ Join(u) ==
                                     ELSE IF k = "status" THEN StatusPrepare
                                     ELSE "unused"]]]
     /\ cluster' = cluster \cup {u}
-    /\ local_kv' = <<>>
-    /\ UNCHANGED <<debug_ring, debug_kv, debug>>
+    /\ UNCHANGED <<local_kv, debug_ring, debug_kv, debug>>
        
 Leave(u) == 
     LET 
@@ -137,17 +136,19 @@ FindNextToken2(key, ring) ==
     \* find tokens owned by someone else and sync
 Update(u) == 
     /\ u \in cluster
-    /\ \A k \in local_kv[u]:
+    /\ \A k \in DOMAIN local_kv[u]:
         IF FindNextToken2(local_ring[u], k) = u THEN
             TRUE 
         ELSE 
             FALSE
+    /\ UNCHANGED vars
+\* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
 Next ==
     \/ \E u, v \in Nodes:
         /\ Gossip(u, v)
-    \* \/ \E u \in Nodes:
-    \*     /\ Update(u)
+    \/ \E u \in Nodes:
+        /\ Update(u)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
