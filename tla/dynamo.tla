@@ -181,7 +181,7 @@ Next ==
         /\ Gossip(u, v)
     \/ \E u \in Nodes:
         \/ BecomeReady(u)
-        \* \/ DataMigrate(u)
+        \/ DataMigrate(u)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
