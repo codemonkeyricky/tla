@@ -85,6 +85,7 @@ Init ==
     /\ debug = {}
 
 Join(u) == 
+    \* Only ever one node joining at a time
     /\ \E key \in KeySpace:
         /\ key \notin DOMAIN debug_ring \* TODO: hack
         \* update local_ring[u][u]
@@ -119,17 +120,17 @@ Leave(u) ==
 NotInCluster ==
     Nodes \ {cluster}
 
-RECURSIVE FindNextToken2(_, _)
-FindNextToken2(key, ring) ==
+RECURSIVE FindNextToken2(_, _, _)
+FindNextToken2(key, ring, status) ==
     LET 
-        condition(v) == ring[v]["status"] = StatusOnline /\ ring[v]["token"] = key
+        condition(v) == ring[v]["status"] = status /\ ring[v]["token"] = key
         exists == \E v \in DOMAIN ring: condition(v)
         owner == CHOOSE only \in DOMAIN ring: condition(only)
     IN 
         IF exists THEN
             owner
         ELSE 
-            FindNextToken2((key + 1) % N, ring)
+            FindNextToken2((key + 1) % N, ring, status)
 
 AllTokens(u) == 
     LET 
@@ -155,6 +156,19 @@ DataMigrate(u) ==
         \* my_data == 
         my_data == DataSet2(u, MyToken(u))
         all_data == local_kv[u]
+        migrate == all_data \ my_data
+
+        \* new owner
+        v == FindNextToken2(CHOOSE any \in migrate: TRUE, local_ring[u], StatusPrepare)
+        updated == [k \in NodeState |-> 
+                            IF k = "version" THEN local_ring[u][v]["version"] + 1
+                            ELSE IF k = "token" THEN local_ring[u][v]["token"]
+                            ELSE IF k = "status" THEN StatusOnline
+                            ELSE "unused"]
+        local_ring_u == [local_ring EXCEPT ![u] 
+                            = [local_ring[u] EXCEPT ![v] = updated]]
+        local_ring_uv == [local_ring_u EXCEPT ![v] 
+                            = [local_ring_u[v] EXCEPT ![v] = updated]]
     IN 
         /\ u \in cluster
         /\ local_ring[u][u]["status"] = StatusOnline
@@ -164,14 +178,18 @@ DataMigrate(u) ==
         \* /\ PrintT(DataSet2(u, MyToken(u)))
         \* /\ PrintT(DataSet2(u, MyToken(u)))
         \* /\ Assert(my_data = {},"")
-        /\ Assert(my_data = all_data,"")
-        /\ \A k \in local_kv[u]:
-            IF FindNextToken2(k, local_ring[u]) # u THEN
-                \* migrate 
-                Assert(0,"")
+        /\  IF migrate # {} THEN 
+                \* migrate data to v and mark v as ready 
+                \* /\ PrintT(migrate)
+                \* /\ PrintT(v)
+                /\ local_ring' = local_ring_uv
+                /\ local_kv' = [k \in Nodes |-> 
+                                IF k = u THEN local_kv[k] \ {migrate} 
+                                ELSE IF k = v THEN local_kv[k] \cup {migrate}
+                                ELSE local_kv[k]]
             ELSE 
-                UNCHANGED local_ring
-        /\ UNCHANGED vars
+                UNCHANGED <<local_ring, local_kv>>
+        /\ UNCHANGED <<cluster, debug_ring, debug_kv, debug>>
 
 BecomeReady(u) ==
     LET 
@@ -192,7 +210,7 @@ BecomeReady(u) ==
 
 Write(u, k) == 
     LET 
-        owner == FindNextToken2(k, local_ring[u])
+        owner == FindNextToken2(k, local_ring[u], StatusOnline)
     IN 
         \* only accept if u is owner
         /\ local_ring[u][u]["status"] = StatusOnline
