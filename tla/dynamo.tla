@@ -116,16 +116,6 @@ Leave(u) ==
         /\ cluster' = cluster \ {u}
         /\ UNCHANGED <<debug_kv, debug>>
 
-Write(u, k) == 
-    LET 
-        key == FindNextToken(debug_ring, k)
-        owner == debug_ring[key]
-        up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
-    IN 
-        /\ local_kv' = up
-        /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, debug_ring, debug>>
-
 NotInCluster ==
     Nodes \ {cluster}
 
@@ -147,6 +137,16 @@ Update(u) ==
     /\ UNCHANGED vars
 \* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
+Write(u, k) == 
+    LET 
+        key == FindNextToken(debug_ring, k)
+        owner == debug_ring[key]
+        up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
+    IN 
+        /\ local_kv' = up
+        /\ debug_kv' = debug_kv \cup {k}
+        /\ UNCHANGED <<cluster, debug_ring, debug>>
+
 Next ==
     \/ \E u, v \in Nodes:
         /\ Gossip(u, v)
@@ -157,10 +157,11 @@ Next ==
         /\ Join(u) 
     \* \/ \E u \in cluster:
     \*     /\ Leave(u) 
-    \* \/ \E u \in cluster:
-    \*     /\ \E k \in KeySpace:
-    \*         /\ k \notin debug_kv
-    \*         /\ Write(u, k)
+    \/ \E u \in cluster:
+        /\ \E k \in KeySpace:
+            /\ local_ring[u][u]["status"] = StatusOnline
+            /\ k \notin debug_kv
+            /\ Write(u, k)
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
