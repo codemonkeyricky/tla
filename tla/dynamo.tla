@@ -95,8 +95,11 @@ Join(u) ==
                                     ELSE IF k = "token" THEN key
                                     ELSE IF k = "status" THEN StatusPrepare
                                     ELSE "unused"]]]
+        /\ debug_ring' = [kk \in DOMAIN debug_ring \cup {key} |-> 
+                            IF kk = key THEN u 
+                            ELSE debug_ring[kk]]
     /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<local_kv, debug_ring, debug_kv, debug>>
+    /\ UNCHANGED <<local_kv, debug_kv, debug>>
        
 Leave(u) == 
     LET 
@@ -154,10 +157,10 @@ Next ==
         /\ Join(u) 
     \* \/ \E u \in cluster:
     \*     /\ Leave(u) 
-    \/ \E u \in cluster:
-        /\ \E k \in KeySpace:
-            /\ k \notin debug_kv
-            /\ Write(u, k)
+    \* \/ \E u \in cluster:
+    \*     /\ \E k \in KeySpace:
+    \*         /\ k \notin debug_kv
+    \*         /\ Write(u, k)
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
