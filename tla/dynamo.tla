@@ -237,12 +237,10 @@ Next ==
             /\ k \notin debug_kv
             /\ Write(u, k)
 
-KeyPlacement == 
-    LET 
-        owner(k) == FindNextToken(k)
-    IN 
-        \A k \in debug_kv: 
-            /\ k \in local_kv[owner(k)] 
+\* data in kv store are unique per node
+DataUnique == 
+    \A u, v \in Nodes:
+        /\ u # v => local_kv[u] \intersect local_kv[v] = {}
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
