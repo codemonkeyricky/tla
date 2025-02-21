@@ -2,13 +2,13 @@
 EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt, Integers
 VARIABLES 
     cluster, 
-    debug_ring, 
     local_ring,
     local_kv, 
+    debug_ring, 
     debug_kv, 
     debug
 
-vars == <<cluster, debug_ring, local_kv, debug_kv, debug>>
+vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
 Nodes == {"n0", "n1", "n2"}
 
@@ -23,9 +23,6 @@ N == Cardinality(KeySpace)
     
 ValueToKey(f, v) == 
     CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
-
-TokensClaimed == 
-    DOMAIN debug_ring
 
 \* old and new may co-exist at the same time
 \* old may not be aware it is old, will stll persist traffic 
@@ -54,12 +51,15 @@ Gossip(u, v) ==
                         ELSE 
                             local_ring[u][w]
     IN 
-        local_ring' = [k \in Nodes |-> 
+        /\ Cardinality(cluster) >= 2
+        /\ local_ring' = [k \in Nodes |-> 
             IF k = u \/ k = v THEN 
                 [w \in Nodes |-> updated(w)]
             ELSE 
-                local_ring[k]
-        ]
+                local_ring[k]]
+        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, debug>>
+
+\* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
 DataSet(ring, my_key) == 
     LET 
@@ -86,23 +86,18 @@ Init ==
 
 Join(u) == 
     /\ \E key \in KeySpace:
-        /\ key \notin TokensClaimed
-        /\ debug_ring' = [x \in (DOMAIN debug_ring) \cup {key} |->
-                        IF x = key THEN u ELSE debug_ring[x]]
-        /\  IF Cardinality(cluster) # 0 THEN
-                LET 
-                    data == DataSet(debug_ring', key)
-                    updated == [n \in DOMAIN local_kv \cup {u} |-> 
-                                IF n # u THEN 
-                                    local_kv[n] \ data 
-                                ELSE 
-                                    data]
-                IN 
-                    /\ local_kv' = updated
-            ELSE 
-                UNCHANGED local_kv
+        /\ key \notin DOMAIN debug_ring \* TODO: hack
+        \* update local_ring[u][u]
+        /\ local_ring' = [local_ring EXCEPT ![u] 
+                            = [local_ring[u] EXCEPT ![u]
+                                = [k \in NodeState |-> 
+                                    IF k = "version" THEN local_ring[u][u][k] + 1
+                                    ELSE IF k = "token" THEN key
+                                    ELSE IF k = "status" THEN StatusPrepare
+                                    ELSE "unused"]]]
     /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<debug_kv, debug>>
+    /\ local_kv' = <<>>
+    /\ UNCHANGED <<debug_ring, debug_kv, debug>>
        
 Leave(u) == 
     LET 
@@ -132,18 +127,36 @@ Write(u, k) ==
 NotInCluster ==
     Nodes \ {cluster}
 
+RECURSIVE FindNextToken2(_, _)
+FindNextToken2(key, ring) ==
+    IF \E v \in ring: ring[v]["token"] = key THEN
+        CHOOSE only \in ring: ring[only]["token"] = key
+    ELSE 
+        FindNextToken2((key + 1) % N, ring)
+
+    \* find tokens owned by someone else and sync
+Update(u) == 
+    /\ u \in cluster
+    /\ \A k \in local_kv[u]:
+        IF FindNextToken2(local_ring[u], k) = u THEN
+            TRUE 
+        ELSE 
+            FALSE
+
 Next ==
     \/ \E u, v \in Nodes:
         /\ Gossip(u, v)
+    \* \/ \E u \in Nodes:
+    \*     /\ Update(u)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
-    \/ \E u \in cluster:
-        /\ Leave(u) 
-    \/ \E u \in cluster:
-        /\ \E k \in KeySpace:
-            /\ k \notin debug_kv
-            /\ Write(u, k)
+    \* \/ \E u \in cluster:
+    \*     /\ Leave(u) 
+    \* \/ \E u \in cluster:
+    \*     /\ \E k \in KeySpace:
+    \*         /\ k \notin debug_kv
+    \*         /\ Write(u, k)
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
