@@ -76,7 +76,7 @@ Init ==
     /\ cluster = {}
     /\ local_ring = [i \in Nodes |-> [j \in Nodes |-> [k \in NodeState |-> 
         IF k = "version" THEN 0 
-        ELSE IF k = "token" THEN 0
+        ELSE IF k = "token" THEN -1
         ELSE IF k = "status" THEN "offline"
         ELSE "unused"]]] 
     /\ local_kv = [i \in Nodes |-> <<>>]
@@ -121,21 +121,28 @@ NotInCluster ==
 
 RECURSIVE FindNextToken2(_, _)
 FindNextToken2(key, ring) ==
-    IF \E v \in ring: ring[v]["token"] = key THEN
-        CHOOSE only \in ring: ring[only]["token"] = key
-    ELSE 
-        FindNextToken2((key + 1) % N, ring)
-
-    \* find tokens owned by someone else and sync
-DataMigrate(u) == 
-    /\ u \in cluster
-    /\ \A k \in DOMAIN local_kv[u]:
-        IF FindNextToken2(local_ring[u], k) = u THEN
-            TRUE 
+    LET 
+        condition(v) == ring[v]["status"] = StatusOnline /\ ring[v]["token"] = key
+        exists == \E v \in DOMAIN ring: condition(v)
+        owner == CHOOSE only \in DOMAIN ring: condition(only)
+    IN 
+        IF exists THEN
+            owner
         ELSE 
-            FALSE
-    /\ UNCHANGED vars
-\* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
+            FindNextToken2((key + 1) % N, ring)
+
+\* find tokens owned by someone else and sync
+DataMigrate(u) == 
+    LET 
+        owner(k) == FindNextToken2(k, local_ring[u])
+    IN 
+        /\ u \in cluster
+        /\ \A k \in DOMAIN local_kv[u]:
+            IF FindNextToken2(k, local_ring[u]) = u THEN
+                TRUE 
+            ELSE 
+                FALSE
+        /\ UNCHANGED vars
 
 BecomeReady(u) ==
     LET 
@@ -156,16 +163,17 @@ BecomeReady(u) ==
 
 Write(u, k) == 
     LET 
-        key == FindNextToken(debug_ring, k)
-        owner == debug_ring[key]
-        up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
+        owner == FindNextToken2(k, local_ring[u])
     IN 
         \* only accept if u is owner
-        /\ 
         /\ local_ring[u][u]["status"] = StatusOnline
-        \* /\ local_kv' = up
-        \* /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, local_ring, local_kv, debug_kv, debug_ring, debug>>
+        /\ u = owner
+        /\ local_kv' = [local_kv EXCEPT ![u] 
+                        = [kk \in DOMAIN local_kv[u] \cup {k} |-> 
+                            IF kk = k THEN k 
+                            ELSE local_kv[u][kk]]]
+        /\ debug_kv' = debug_kv \cup {k}
+        /\ UNCHANGED <<cluster, local_ring, debug_ring, debug>>
 
 Next ==
     \/ \E u, v \in Nodes:
@@ -178,7 +186,7 @@ Next ==
         /\ Join(u) 
     \* \/ \E u \in cluster:
     \*     /\ Leave(u) 
-    \/ \E u \in cluster:
+    \/ \E u \in Nodes:
         /\ \E k \in KeySpace:
             /\ k \notin debug_kv
             /\ Write(u, k)
