@@ -11,7 +11,13 @@ VARIABLES
 vars == <<cluster, debug_ring, local_kv, debug_kv, debug>>
 
 Nodes == {"n0", "n1", "n2"}
+
 NodeState == {"version", "token", "status"}
+
+StatusOffline == "offline"
+StatusOnline == "online"
+StatusPrepare == "prepare"
+
 KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
     
@@ -20,6 +26,12 @@ ValueToKey(f, v) ==
 
 TokensClaimed == 
     DOMAIN debug_ring
+
+\* old and new may co-exist at the same time
+\* old may not be aware it is old, will stll persist traffic 
+\* new may not have all the data
+\* new must notify old 
+\* old always forward traffic to new 
 
 RECURSIVE FindNextToken(_, _)
 FindNextToken(ring, k) ==
@@ -34,6 +46,17 @@ FindPrevToken(ring, k) ==
         k
     ELSE 
         FindPrevToken(ring, (k - 1 + N) % N) 
+
+Gossip(u, v, w) == 
+    LET 
+        updated ==  IF local_ring[u][w]["version"] < local_ring[v][w]["version"] THEN 
+                        local_ring[v][w]
+                    ELSE 
+                        local_ring[u][w]
+        local_ring_u == [local_ring EXCEPT ![u] = updated]
+        local_ring_uv == [local_ring_u EXCEPT ![v] = updated]
+    IN 
+        local_ring' = local_ring_uv
 
 DataSet(ring, my_key) == 
     LET 
@@ -107,9 +130,9 @@ NotInCluster ==
     Nodes \ {cluster}
 
 Next ==
-    \* \/ \E u, v Nodes:
-    \*     /\ u # v
-    \*     /\ Gossip(u, v)
+    \/ \E u, v, w \in Nodes:
+        /\ u # v
+        /\ Gossip(u, v, w)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
