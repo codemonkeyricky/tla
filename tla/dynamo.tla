@@ -1,10 +1,17 @@
---------------------------- MODULE consistent ----------------------------
+--------------------------- MODULE dynamo ----------------------------
 EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt, Integers
-VARIABLES cluster, global_ring, local_kv, global_kv, debug
+VARIABLES 
+    cluster, 
+    global_ring, 
+    local_ring,
+    local_kv, 
+    debug_kv, 
+    debug
 
-vars == <<cluster, global_ring, local_kv, global_kv, debug>>
+vars == <<cluster, global_ring, local_kv, debug_kv, debug>>
 
 Nodes == {"n0", "n1", "n2"}
+NodeState == {"version", "token", "status"}
 KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
     
@@ -34,16 +41,20 @@ DataSet(ring, my_key) ==
         pkey_next == (prev_key + 1) % N
     IN 
         IF pkey_next <= my_key THEN
-            {k \in pkey_next..my_key:   k \in global_kv}
+            {k \in pkey_next..my_key:   k \in debug_kv}
         ELSE 
-            {k \in pkey_next..N-1:      k \in global_kv} \cup
-            {k \in 0..my_key:           k \in global_kv}
+            {k \in pkey_next..N-1:      k \in debug_kv} \cup
+            {k \in 0..my_key:           k \in debug_kv}
 
 Init ==
     /\ cluster = {}
-    /\ global_ring = [kk \in {} |-> ""]
-    /\ local_kv = [k \in Nodes |-> {}]
-    /\ global_kv = {}
+    /\ global_ring = <<>>
+    /\ local_ring = [i \in Nodes |-> [j \in Nodes |-> [k \in NodeState |-> 
+        IF k = "version" THEN 0 
+        ELSE IF k = "token" THEN 0
+        ELSE IF k = "status" THEN "offline"
+        ELSE "unused"]]] 
+    /\ debug_kv = {}
     /\ debug = {}
 
 Join(u) == 
@@ -64,7 +75,7 @@ Join(u) ==
             ELSE 
                 UNCHANGED local_kv
     /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<global_kv, debug>>
+    /\ UNCHANGED <<debug_kv, debug>>
        
 Leave(u) == 
     LET 
@@ -79,17 +90,7 @@ Leave(u) ==
         /\ global_ring' = [x \in DOMAIN global_ring \ {k} |-> global_ring[x]]
         /\ local_kv' = kv2
         /\ cluster' = cluster \ {u}
-        /\ UNCHANGED <<global_kv, debug>>
-
-\* Read(u, k) == 
-\*     LET 
-\*         kk == FindNextToken(global_ring, k)
-\*         owner == global_ring[kk]
-\*     IN 
-\*         \* key exists
-\*         /\ Assert(\E key \in DOMAIN global_ring: key = k,"")
-\*         /\ k \in local_kv[owner]
-\*         /\ UNCHANGED <<cluster, global_ring, local_kv, global_kv, debug>>
+        /\ UNCHANGED <<debug_kv, debug>>
 
 Write(u, k) == 
     LET 
@@ -98,13 +99,16 @@ Write(u, k) ==
         up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
     IN 
         /\ local_kv' = up
-        /\ global_kv' = global_kv \cup {k}
+        /\ debug_kv' = debug_kv \cup {k}
         /\ UNCHANGED <<cluster, global_ring, debug>>
 
 NotInCluster ==
     Nodes \ {cluster}
 
 Next ==
+    \* \/ \E u, v Nodes:
+    \*     /\ u # v
+    \*     /\ Gossip(u, v)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
@@ -112,11 +116,11 @@ Next ==
         /\ Leave(u) 
     \/ \E u \in cluster:
         /\ \E k \in KeySpace:
-            /\ k \notin global_kv
+            /\ k \notin debug_kv
             /\ Write(u, k)
 
 KVConsistent == 
-    /\ UNION {local_kv[n] : n \in Nodes} = global_kv
+    /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
 
 KVXOR == 
     Cardinality(cluster) > 1 => 
