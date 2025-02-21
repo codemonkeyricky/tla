@@ -163,7 +163,7 @@ Write(u, k) ==
         /\ local_ring[u][u]["status"] = StatusOnline
         /\ local_kv' = up
         /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, debug_ring, debug>>
+        /\ UNCHANGED <<cluster, local_ring, debug_ring, debug>>
 
 Next ==
     \/ \E u, v \in Nodes:
