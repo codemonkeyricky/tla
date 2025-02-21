@@ -160,10 +160,12 @@ Write(u, k) ==
         owner == debug_ring[key]
         up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
     IN 
+        \* only accept if u is owner
+        /\ 
         /\ local_ring[u][u]["status"] = StatusOnline
-        /\ local_kv' = up
-        /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, local_ring, debug_ring, debug>>
+        \* /\ local_kv' = up
+        \* /\ debug_kv' = debug_kv \cup {k}
+        /\ UNCHANGED <<cluster, local_ring, local_kv, debug_kv, debug_ring, debug>>
 
 Next ==
     \/ \E u, v \in Nodes:
