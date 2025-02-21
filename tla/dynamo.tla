@@ -184,9 +184,10 @@ DataMigrate(u) ==
                 \* /\ PrintT(v)
                 /\ local_ring' = local_ring_uv
                 /\ local_kv' = [k \in Nodes |-> 
-                                IF k = u THEN local_kv[k] \ {migrate} 
-                                ELSE IF k = v THEN local_kv[k] \cup {migrate}
+                                IF k = u THEN local_kv[k] \ migrate
+                                ELSE IF k = v THEN local_kv[k] \cup migrate
                                 ELSE local_kv[k]]
+                \* /\ Assert(0,"")
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
         /\ UNCHANGED <<cluster, debug_ring, debug_kv, debug>>
@@ -235,6 +236,13 @@ Next ==
         /\ \E k \in KeySpace:
             /\ k \notin debug_kv
             /\ Write(u, k)
+
+KeyPlacement == 
+    LET 
+        owner(k) == FindNextToken(k)
+    IN 
+        \A k \in debug_kv: 
+            /\ k \in local_kv[owner(k)] 
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
