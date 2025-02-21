@@ -44,20 +44,21 @@ FindPrevToken(ring, k) ==
     ELSE 
         FindPrevToken(ring, (k - 1 + N) % N) 
 
-Gossip(u, v) == 
+Merge(u, v) == 
     LET 
         updated(w) ==   IF local_ring[u][w]["version"] < local_ring[v][w]["version"] THEN 
                             local_ring[v][w]
                         ELSE 
                             local_ring[u][w]
     IN 
-        /\ Cardinality(cluster) >= 2
-        /\ local_ring' = [k \in Nodes |-> 
-            IF k = u \/ k = v THEN 
-                [w \in Nodes |-> updated(w)]
-            ELSE 
-                local_ring[k]]
-        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, debug>>
+        [k \in Nodes |-> IF k = u \/ k = v 
+                         THEN [w \in Nodes |-> updated(w)]
+                         ELSE local_ring[k]]
+
+Gossip(u, v) == 
+    /\ Cardinality(cluster) >= 2
+    /\ local_ring' = Merge(u, v)
+    /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, debug>>
 
 \* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
@@ -165,8 +166,9 @@ DataMigrate(u) ==
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
                             ELSE IF k = "status" THEN StatusOnline
                             ELSE "unused"]
-        local_ring_u == [local_ring EXCEPT ![u] 
-                            = [local_ring[u] EXCEPT ![v] = updated]]
+        merged == Merge(u, v)
+        local_ring_u == [merged EXCEPT ![u] 
+                            = [merged[u] EXCEPT ![v] = updated]]
         local_ring_uv == [local_ring_u EXCEPT ![v] 
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
     IN 
@@ -204,6 +206,7 @@ BecomeReady(u) ==
                                 = [local_ring[u] EXCEPT ![u]
                                     = [k \in NodeState |-> 
                                         IF k = "status" THEN StatusOnline
+                                        ELSE IF k = "version" THEN local_ring[u][u][k] + 1
                                         ELSE local_ring[u][u][k]]]]
            ELSE 
                 UNCHANGED local_ring
