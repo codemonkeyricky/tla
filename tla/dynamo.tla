@@ -2,13 +2,13 @@
 EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt, Integers
 VARIABLES 
     cluster, 
-    global_ring, 
+    debug_ring, 
     local_ring,
     local_kv, 
     debug_kv, 
     debug
 
-vars == <<cluster, global_ring, local_kv, debug_kv, debug>>
+vars == <<cluster, debug_ring, local_kv, debug_kv, debug>>
 
 Nodes == {"n0", "n1", "n2"}
 NodeState == {"version", "token", "status"}
@@ -19,7 +19,7 @@ ValueToKey(f, v) ==
     CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
 
 TokensClaimed == 
-    DOMAIN global_ring
+    DOMAIN debug_ring
 
 RECURSIVE FindNextToken(_, _)
 FindNextToken(ring, k) ==
@@ -48,23 +48,24 @@ DataSet(ring, my_key) ==
 
 Init ==
     /\ cluster = {}
-    /\ global_ring = <<>>
     /\ local_ring = [i \in Nodes |-> [j \in Nodes |-> [k \in NodeState |-> 
         IF k = "version" THEN 0 
         ELSE IF k = "token" THEN 0
         ELSE IF k = "status" THEN "offline"
         ELSE "unused"]]] 
+    /\ local_kv = [i \in Nodes |-> <<>>]
     /\ debug_kv = {}
+    /\ debug_ring = <<>>
     /\ debug = {}
 
 Join(u) == 
     /\ \E key \in KeySpace:
         /\ key \notin TokensClaimed
-        /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
-                        IF x = key THEN u ELSE global_ring[x]]
+        /\ debug_ring' = [x \in (DOMAIN debug_ring) \cup {key} |->
+                        IF x = key THEN u ELSE debug_ring[x]]
         /\  IF Cardinality(cluster) # 0 THEN
                 LET 
-                    data == DataSet(global_ring', key)
+                    data == DataSet(debug_ring', key)
                     updated == [n \in DOMAIN local_kv \cup {u} |-> 
                                 IF n # u THEN 
                                     local_kv[n] \ data 
@@ -79,28 +80,28 @@ Join(u) ==
        
 Leave(u) == 
     LET 
-        k == ValueToKey(global_ring, u)
-        key_next == FindNextToken(global_ring, (k + 1) % N)
-        owner_next == global_ring[key_next]
+        k == ValueToKey(debug_ring, u)
+        key_next == FindNextToken(debug_ring, (k + 1) % N)
+        owner_next == debug_ring[key_next]
         kv1 == [local_kv EXCEPT ![u] = {}]
-        kv2 == [kv1 EXCEPT ![owner_next] = kv1[owner_next] \cup DataSet(global_ring, k)]
-        updated_set == DOMAIN global_ring \ {k}
+        kv2 == [kv1 EXCEPT ![owner_next] = kv1[owner_next] \cup DataSet(debug_ring, k)]
+        updated_set == DOMAIN debug_ring \ {k}
     IN 
         /\ Cardinality(cluster) > 1
-        /\ global_ring' = [x \in DOMAIN global_ring \ {k} |-> global_ring[x]]
+        /\ debug_ring' = [x \in DOMAIN debug_ring \ {k} |-> debug_ring[x]]
         /\ local_kv' = kv2
         /\ cluster' = cluster \ {u}
         /\ UNCHANGED <<debug_kv, debug>>
 
 Write(u, k) == 
     LET 
-        key == FindNextToken(global_ring, k)
-        owner == global_ring[key]
+        key == FindNextToken(debug_ring, k)
+        owner == debug_ring[key]
         up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
     IN 
         /\ local_kv' = up
         /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, global_ring, debug>>
+        /\ UNCHANGED <<cluster, debug_ring, debug>>
 
 NotInCluster ==
     Nodes \ {cluster}
