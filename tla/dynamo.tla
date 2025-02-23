@@ -178,7 +178,7 @@ DataSet3(k, all_tokens, all_keys) ==
                      ELSE DataSet3(k_prev, all_tokens, all_keys)
 
 \* find tokens owned by someone else and sync
-DataMigrate(u) == 
+JoinMigrate(u) == 
     LET 
         \* previous token
         v == FindPrevToken2((local_ring[u][u]["token"] + N - 1) % N, local_ring[u])
@@ -197,6 +197,8 @@ DataMigrate(u) ==
         local_ring_uv == [local_ring_u EXCEPT ![v] 
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
     IN 
+        \* TODO: limit
+        \* /\ local_ring[u][u]["version"] # 2
         /\ u \in cluster
         /\ Cardinality(cluster) >= 2
         /\ local_ring[u][u]["status"] = StatusOnline
@@ -278,7 +280,7 @@ Next ==
         /\ Gossip(u, v)
     \/ \E u \in Nodes:
         \/ BecomeReady(u)
-        \/ DataMigrate(u)
+        \/ JoinMigrate(u)
     \/ \E u \in Nodes:
         /\ u \notin cluster
         /\ Join(u) 
