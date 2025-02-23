@@ -10,7 +10,7 @@ VARIABLES
 
 vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
-Nodes == {"n0", "n1", "n2", "n3", "n4"}
+Nodes == {"n0", "n1", "n2"}
 
 NodeState == {"version", "token", "status"}
 
@@ -18,7 +18,7 @@ StatusOffline == "offline"
 StatusOnline == "online"
 StatusPrepare == "prepare"
 
-KeySpace == {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
     
 ValueToKey(f, v) == 
@@ -136,6 +136,18 @@ FindNextToken2(key, ring, status) ==
         ELSE 
             FindNextToken2((key + 1) % N, ring, status)
 
+RECURSIVE FindPrevToken2(_, _)
+FindPrevToken2(key, ring) ==
+    LET 
+        condition(v) == ring[v]["status"] # StatusOffline /\ ring[v]["token"] = key
+        exists == \E v \in DOMAIN ring: condition(v)
+        owner == CHOOSE only \in DOMAIN ring: condition(only)
+    IN 
+        IF exists THEN
+            owner
+        ELSE 
+            FindPrevToken2((key + N - 1) % N, ring)
+
 AllTokens(u) == 
     LET 
         not_offline == {v \in Nodes: local_ring[u][v]["status"] # StatusOffline}
@@ -158,12 +170,12 @@ DataSet2(u, k) ==
 DataMigrate(u) == 
     LET 
         \* my_data == 
-        my_data == DataSet2(u, MyToken(u))
-        all_data == local_kv[u]
-        migrate == all_data \ my_data
+        \* all_data == local_kv[u]
+        \* migrate == all_data \ u_data
 
         \* new owner
-        v == FindNextToken2(CHOOSE any \in migrate: TRUE, local_ring[u], StatusPrepare)
+        v == FindPrevToken2((local_ring[u][u]["token"] + N - 1) % N, local_ring[u])
+        v_data == DataSet2(v, MyToken(v))
         updated == [k \in NodeState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
@@ -176,21 +188,26 @@ DataMigrate(u) ==
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
     IN 
         /\ u \in cluster
-        /\ local_ring[u][u]["status"] = StatusOnline
         /\ Cardinality(cluster) >= 2
-        /\  IF migrate # {} THEN 
+        /\ local_ring[u][u]["status"] = StatusOnline
+        /\ local_ring[v][v]["status"] = StatusPrepare
+        /\  IF v_data # {} THEN 
                 \* migrate data to v and mark v as ready 
                 \* /\ PrintT(migrate)
                 \* /\ PrintT(v)
                 /\ local_ring' = local_ring_uv
                 /\ local_kv' = [k \in Nodes |-> 
-                                IF k = u THEN local_kv[k] \ migrate
-                                ELSE IF k = v THEN local_kv[k] \cup migrate
+                                IF k = u THEN local_kv[k] \ v_data
+                                ELSE IF k = v THEN local_kv[k] \cup v_data
                                 ELSE local_kv[k]]
                 \* /\ Assert(0,"")
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
-        /\ UNCHANGED <<cluster, debug_ring, debug_kv, debug>>
+        /\ IF v_data # {} THEN 
+            debug' = v_data
+            ELSE 
+            debug' = {}
+        /\ UNCHANGED <<cluster, debug_ring, debug_kv>>
 
 BecomeReady(u) ==
     LET 
