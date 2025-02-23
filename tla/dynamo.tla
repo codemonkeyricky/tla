@@ -10,7 +10,7 @@ VARIABLES
 
 vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
-Nodes == {"n0", "n1", "n2"}
+Nodes == {"n0", "n1", "n2", "n3", "n4"}
 
 NodeState == {"version", "token", "status"}
 
@@ -18,7 +18,7 @@ StatusOffline == "offline"
 StatusOnline == "online"
 StatusPrepare == "prepare"
 
-KeySpace == {0, 1, 2, 3, 4, 5}
+KeySpace == {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 N == Cardinality(KeySpace)
     
 ValueToKey(f, v) == 
@@ -124,10 +124,13 @@ NotInCluster ==
 RECURSIVE FindNextToken2(_, _, _)
 FindNextToken2(key, ring, status) ==
     LET 
+        no_online == \A k \in ring: ring[k]["status"] # StatusOnline
         condition(v) == ring[v]["status"] = status /\ ring[v]["token"] = key
         exists == \E v \in DOMAIN ring: condition(v)
         owner == CHOOSE only \in DOMAIN ring: condition(only)
     IN 
+        \* IF no_online THEN 
+        \*     {}
         IF exists THEN
             owner
         ELSE 
@@ -175,11 +178,6 @@ DataMigrate(u) ==
         /\ u \in cluster
         /\ local_ring[u][u]["status"] = StatusOnline
         /\ Cardinality(cluster) >= 2
-        \* /\ PrintT(AllTokens(u))
-        \* /\ PrintT(MyToken(u)) 
-        \* /\ PrintT(DataSet2(u, MyToken(u)))
-        \* /\ PrintT(DataSet2(u, MyToken(u)))
-        \* /\ Assert(my_data = {},"")
         /\  IF migrate # {} THEN 
                 \* migrate data to v and mark v as ready 
                 \* /\ PrintT(migrate)
@@ -244,6 +242,18 @@ Next ==
 DataUnique == 
     \A u, v \in Nodes:
         /\ u # v => local_kv[u] \intersect local_kv[v] = {}
+
+TokenLocation == 
+    \A u \in Nodes:
+        \A k \in local_kv[u]: 
+            u = FindNextToken2(k, local_ring[u], StatusOnline)
+
+KeyLocation == 
+    IF debug_kv # {} THEN 
+        \A k \in debug_kv:
+            /\ k \in local_kv[FindNextToken2(k, local_ring["n0"], StatusOnline)]
+    ELSE  
+        TRUE
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
