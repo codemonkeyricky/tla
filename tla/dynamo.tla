@@ -75,19 +75,6 @@ DataSet(ring, my_key) ==
             {k \in pkey_next..N-1:      k \in debug_kv} \cup
             {k \in 0..my_key:           k \in debug_kv}
 
-Init ==
-    /\ cluster = {}
-    /\ local_ring = [i \in Nodes |-> [j \in Nodes |-> [k \in NodeState |-> 
-        IF k = "version" THEN 0 
-        ELSE IF k = "token" THEN -1
-        ELSE IF k = "status" THEN "offline"
-        ELSE "unused"]]] 
-    /\ local_kv = [i \in Nodes |-> {}]
-    /\ debug_kv = {}
-    /\ debug_ring = <<>>
-    /\ d1 = {}
-    /\ d2 = {}
-    /\ d3 = {}
 
 Join(u) == 
     \* Only ever one node joining at a time
@@ -174,8 +161,12 @@ RECURSIVE DataSet3(_, _, _)
 DataSet3(k, all_tokens, all_keys) == 
     LET 
         k_prev == (k + N - 1) % N
-        include == IF k \in all_keys THEN {k} ELSE {}
+        include == {k} \intersect all_keys
     IN 
+        \* /\ PrintT(k)
+        \* /\ PrintT(include)
+        \* /\ PrintT(all_tokens)
+        \* /\ PrintT(k_prev)
         include \cup IF k_prev \in all_tokens THEN {} 
                      ELSE DataSet3(k_prev, all_tokens, all_keys)
 
@@ -257,6 +248,25 @@ Write(u, k) ==
                         = local_kv[u] \cup {k}]
         /\ debug_kv' = debug_kv \cup {k}
         /\ UNCHANGED <<cluster, local_ring, debug_ring, d1, d2, d3>>
+
+tokens == {0,1,2}
+keys == {0,2}
+
+Init ==
+    /\ cluster = {}
+    /\ local_ring = [i \in Nodes |-> [j \in Nodes |-> [k \in NodeState |-> 
+        IF k = "version" THEN 0 
+        ELSE IF k = "token" THEN -1
+        ELSE IF k = "status" THEN "offline"
+        ELSE "unused"]]] 
+    /\ local_kv = [i \in Nodes |-> {}]
+    /\ debug_kv = {}
+    /\ debug_ring = <<>>
+    /\ d1 = {}
+    /\ d2 = {}
+    /\ d3 = {}
+    \* /\ PrintT(DataSet3(0, {0,1,2}, {0,2}))
+    \* /\ Assert(0,"")
 
 Next ==
     \/ \E u, v \in Nodes:
