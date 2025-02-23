@@ -218,7 +218,7 @@ LeaveMigrate(u) ==
 
     IN 
         /\ u \in cluster
-        /\ Cardinality(cluster) >= 2
+        \* /\ Cardinality(cluster) >= 2
         \* copying from v to u
         /\ local_ring[u][u]["status"] = StatusOnline
         /\ local_ring[u][v]["status"] = StatusExit
@@ -226,12 +226,12 @@ LeaveMigrate(u) ==
         /\ local_ring' = local_ring_uv
         \* migrate data
         /\ local_kv' = [k \in Nodes |-> 
-                        IF k = u THEN {} 
-                        ELSE IF k = v THEN local_kv[v] \cup local_kv[u] 
+                        IF k = v THEN {} 
+                        ELSE IF k = u THEN local_kv[v] \cup local_kv[u] 
                         ELSE local_kv[k]]
-        /\ d1' = local_kv'
-        /\ d2' = local_ring'
-        /\ d3' = "marker"
+        \* /\ d1' = local_kv'
+        \* /\ d2' = local_ring'
+        \* /\ d3' = "marker"
         \* /\ Assert(0,"")
         /\ UNCHANGED <<cluster, debug_ring, debug_kv, d1, d2, d3>>
 
@@ -304,7 +304,7 @@ Next ==
         \/ JoinMigrate(u)
         \/ Join(u) 
         \/ Leave(u)
-        \* \/ LeaveMigrate(u)
+        \/ LeaveMigrate(u)
     \/ \E u \in Nodes:
         /\ \E k \in KeySpace:
             /\ k \notin debug_kv
