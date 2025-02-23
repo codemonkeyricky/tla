@@ -6,9 +6,11 @@ VARIABLES
     local_kv, 
     debug_ring, 
     debug_kv, 
-    debug
+    d1,
+    d2,
+    d3
 
-vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
+vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, d1, d2, d3>>
 
 Nodes == {"n0", "n1", "n2"}
 
@@ -58,7 +60,7 @@ Merge(u, v) ==
 Gossip(u, v) == 
     /\ Cardinality(cluster) >= 2
     /\ local_ring' = Merge(u, v)
-    /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, debug>>
+    /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, d1, d2, d3>>
 
 \* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
@@ -83,7 +85,9 @@ Init ==
     /\ local_kv = [i \in Nodes |-> {}]
     /\ debug_kv = {}
     /\ debug_ring = <<>>
-    /\ debug = {}
+    /\ d1 = {}
+    /\ d2 = {}
+    /\ d3 = {}
 
 Join(u) == 
     \* Only ever one node joining at a time
@@ -101,7 +105,7 @@ Join(u) ==
                             IF kk = key THEN u 
                             ELSE debug_ring[kk]]
     /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<local_kv, debug_kv, debug>>
+    /\ UNCHANGED <<local_kv, debug_kv, d1, d2, d3>>
        
 Leave(u) == 
     LET 
@@ -116,7 +120,7 @@ Leave(u) ==
         /\ debug_ring' = [x \in DOMAIN debug_ring \ {k} |-> debug_ring[x]]
         /\ local_kv' = kv2
         /\ cluster' = cluster \ {u}
-        /\ UNCHANGED <<debug_kv, debug>>
+        /\ UNCHANGED <<debug_kv, d1, d2, d3>>
 
 NotInCluster ==
     Nodes \ {cluster}
@@ -166,16 +170,25 @@ DataSet2(u, k) ==
         include \cup IF k_prev \in AllTokens(u) THEN {} 
                      ELSE DataSet2(u, k_prev) 
 
+RECURSIVE DataSet3(_, _, _)
+DataSet3(k, all_tokens, all_keys) == 
+    LET 
+        k_prev == (k + N - 1) % N
+        include == IF k \in all_keys THEN {k} ELSE {}
+    IN 
+        include \cup IF k_prev \in all_tokens THEN {} 
+                     ELSE DataSet3(k_prev, all_tokens, all_keys)
+
 \* find tokens owned by someone else and sync
 DataMigrate(u) == 
     LET 
-        \* my_data == 
-        \* all_data == local_kv[u]
-        \* migrate == all_data \ u_data
-
-        \* new owner
+        \* previous token
         v == FindPrevToken2((local_ring[u][u]["token"] + N - 1) % N, local_ring[u])
-        v_data == DataSet2(v, MyToken(v))
+        all_keys == local_kv[u]
+        all_tokens == AllTokens(u)
+        u_data == DataSet2(u, MyToken(u))
+        v_token == local_ring[u][v]["token"]
+        v_data == DataSet3(v_token, all_tokens, all_keys)
         updated == [k \in NodeState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
@@ -191,10 +204,12 @@ DataMigrate(u) ==
         /\ Cardinality(cluster) >= 2
         /\ local_ring[u][u]["status"] = StatusOnline
         /\ local_ring[v][v]["status"] = StatusPrepare
-        /\  IF v_data # {} THEN 
+        /\ Cardinality(all_keys) # 0
+        \* /\ PrintT(all_keys)
+        \* /\ PrintT(all_tokens)
+        \* /\ Assert(u_data 0,"")
+        /\ IF v_data # {} THEN 
                 \* migrate data to v and mark v as ready 
-                \* /\ PrintT(migrate)
-                \* /\ PrintT(v)
                 /\ local_ring' = local_ring_uv
                 /\ local_kv' = [k \in Nodes |-> 
                                 IF k = u THEN local_kv[k] \ v_data
@@ -204,9 +219,13 @@ DataMigrate(u) ==
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
         /\ IF v_data # {} THEN 
-            debug' = v_data
+            /\ d1' = v
+            /\ d2' = v_token
+            /\ d3' = v_data
             ELSE 
-            debug' = {}
+            /\ d1' = {}
+            /\ d2' = {}
+            /\ d3' = {}
         /\ UNCHANGED <<cluster, debug_ring, debug_kv>>
 
 BecomeReady(u) ==
@@ -225,7 +244,7 @@ BecomeReady(u) ==
                                         ELSE local_ring[u][u][k]]]]
            ELSE 
                 UNCHANGED local_ring
-        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, debug>>
+        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, d1, d2, d3>>
 
 Write(u, k) == 
     LET 
@@ -237,7 +256,7 @@ Write(u, k) ==
         /\ local_kv' = [local_kv EXCEPT ![u] 
                         = local_kv[u] \cup {k}]
         /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, local_ring, debug_ring, debug>>
+        /\ UNCHANGED <<cluster, local_ring, debug_ring, d1, d2, d3>>
 
 Next ==
     \/ \E u, v \in Nodes:
