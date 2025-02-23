@@ -19,6 +19,7 @@ NodeState == {"version", "token", "status"}
 StatusOffline == "offline"
 StatusOnline == "online"
 StatusPrepare == "prepare"
+StatusExit == "exit"
 
 KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
@@ -94,21 +95,36 @@ Join(u) ==
                             ELSE debug_ring[kk]]
     /\ cluster' = cluster \cup {u}
     /\ UNCHANGED <<local_kv, debug_kv, d1, d2, d3>>
-       
+
 Leave(u) == 
     LET 
-        k == ValueToKey(debug_ring, u)
-        key_next == FindNextToken(debug_ring, (k + 1) % N)
-        owner_next == debug_ring[key_next]
-        kv1 == [local_kv EXCEPT ![u] = {}]
-        kv2 == [kv1 EXCEPT ![owner_next] = kv1[owner_next] \cup DataSet(debug_ring, k)]
-        updated_set == DOMAIN debug_ring \ {k}
+        updated == [k \in NodeState |-> 
+                     IF k = "version" THEN local_ring[u][u][k] + 1
+                     ELSE IF k = "token" THEN local_ring[u][u][k]
+                     ELSE IF k = "status" THEN StatusExit
+                     ELSE "unused"]
     IN 
-        /\ Cardinality(cluster) > 1
-        /\ debug_ring' = [x \in DOMAIN debug_ring \ {k} |-> debug_ring[x]]
-        /\ local_kv' = kv2
-        /\ cluster' = cluster \ {u}
-        /\ UNCHANGED <<debug_kv, d1, d2, d3>>
+        \* Only ever one node joining at a time
+        /\ u \in cluster
+        /\ local_ring' = [local_ring EXCEPT ![u] 
+                            = [local_ring[u] EXCEPT ![u]
+                                = updated]] 
+        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, d1, d2, d3>>
+       
+\* Leave(u) == 
+\*     LET 
+\*         k == ValueToKey(debug_ring, u)
+\*         key_next == FindNextToken(debug_ring, (k + 1) % N)
+\*         owner_next == debug_ring[key_next]
+\*         kv1 == [local_kv EXCEPT ![u] = {}]
+\*         kv2 == [kv1 EXCEPT ![owner_next] = kv1[owner_next] \cup DataSet(debug_ring, k)]
+\*         updated_set == DOMAIN debug_ring \ {k}
+\*     IN 
+\*         /\ Cardinality(cluster) > 1
+\*         /\ debug_ring' = [x \in DOMAIN debug_ring \ {k} |-> debug_ring[x]]
+\*         /\ local_kv' = kv2
+\*         /\ cluster' = cluster \ {u}
+\*         /\ UNCHANGED <<debug_kv, d1, d2, d3>>
 
 NotInCluster ==
     Nodes \ {cluster}
