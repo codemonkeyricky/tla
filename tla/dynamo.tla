@@ -78,6 +78,7 @@ DataSet(ring, my_key) ==
 
 Join(u) == 
     \* Only ever one node joining at a time
+    /\ u \notin cluster
     /\ \E key \in KeySpace:
         /\ key \notin DOMAIN debug_ring \* TODO: hack
         \* update local_ring[u][u]
@@ -281,11 +282,7 @@ Next ==
     \/ \E u \in Nodes:
         \/ BecomeReady(u)
         \/ JoinMigrate(u)
-    \/ \E u \in Nodes:
-        /\ u \notin cluster
-        /\ Join(u) 
-    \* \/ \E u \in cluster:
-    \*     /\ Leave(u) 
+        \/ Join(u) 
     \/ \E u \in Nodes:
         /\ \E k \in KeySpace:
             /\ k \notin debug_kv
