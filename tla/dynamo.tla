@@ -145,6 +145,12 @@ AllTokens(u) ==
     IN 
         {local_ring[u][v]["token"]: v \in not_offline} 
 
+AllOnlineTokens(u) == 
+    LET 
+        online == {v \in Nodes: local_ring[u][v]["status"] = StatusOnline}
+    IN 
+        {local_ring[u][v]["token"]: v \in online} 
+
 MyToken(u) == 
     local_ring[u][u]["token"]
 
@@ -157,8 +163,9 @@ DataSet2(u, k) ==
         include \cup IF k_prev \in AllTokens(u) THEN {} 
                      ELSE DataSet2(u, k_prev) 
 
+\* TODO: when collecting all keys to migrate, stop at the frist *online* token
 RECURSIVE DataSet3(_, _, _)
-DataSet3(k, all_tokens, all_keys) == 
+DataSet3(k, all_tokens, all_keys) ==
     LET 
         k_prev == (k + N - 1) % N
         include == {k} \intersect all_keys
@@ -176,10 +183,9 @@ DataMigrate(u) ==
         \* previous token
         v == FindPrevToken2((local_ring[u][u]["token"] + N - 1) % N, local_ring[u])
         all_keys == local_kv[u]
-        all_tokens == AllTokens(u)
-        u_data == DataSet2(u, MyToken(u))
+        all_online_tokens == AllOnlineTokens(u)
         v_token == local_ring[u][v]["token"]
-        v_data == DataSet3(v_token, all_tokens, all_keys)
+        v_data == DataSet3(v_token, all_online_tokens, all_keys)
         updated == [k \in NodeState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
@@ -194,11 +200,10 @@ DataMigrate(u) ==
         /\ u \in cluster
         /\ Cardinality(cluster) >= 2
         /\ local_ring[u][u]["status"] = StatusOnline
-        /\ local_ring[v][v]["status"] = StatusPrepare
+        /\ local_ring[u][v]["status"] = StatusPrepare
         /\ Cardinality(all_keys) # 0
         \* /\ PrintT(all_keys)
         \* /\ PrintT(all_tokens)
-        \* /\ Assert(u_data 0,"")
         /\ IF v_data # {} THEN 
                 \* migrate data to v and mark v as ready 
                 /\ local_ring' = local_ring_uv
@@ -210,9 +215,9 @@ DataMigrate(u) ==
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
         /\ IF v_data # {} THEN 
-            /\ d1' = v
-            /\ d2' = v_token
-            /\ d3' = v_data
+            /\ d1' = v_token
+            /\ d2' = all_online_tokens 
+            /\ d3' = all_keys
             ELSE 
             /\ d1' = {}
             /\ d2' = {}
@@ -265,7 +270,7 @@ Init ==
     /\ d1 = {}
     /\ d2 = {}
     /\ d3 = {}
-    \* /\ PrintT(DataSet3(0, {0,1,2}, {0,2}))
+    \* /\ PrintT(DataSet3(1, {0}, {0}))
     \* /\ Assert(0,"")
 
 Next ==
