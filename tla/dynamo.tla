@@ -4,13 +4,13 @@ VARIABLES
     cluster, 
     local_ring,
     local_kv, 
-    debug_ring, 
-    debug_kv, 
-    d1,
-    d2,
-    d3
+    \* debug_ring, 
+    debug_kv,
+    d1
+    \* d2,
+    \* d3
 
-vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, d1, d2, d3>>
+vars == <<cluster, local_ring, local_kv, debug_kv, d1>>
 
 Nodes == {"n0", "n1", "n2"}
 
@@ -48,7 +48,7 @@ Gossip(u, v) ==
     /\ local_ring[u][u]["status"] # StatusOffline
     /\ local_ring[v][v]["status"] # StatusOffline
     /\ local_ring' = Merge(u, v)
-    /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, d1, d2, d3>>
+    /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
 
 \* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
@@ -77,11 +77,11 @@ Join(u) ==
                                     ELSE IF k = "token" THEN key
                                     ELSE IF k = "status" THEN StatusPrepare
                                     ELSE "unused"]]]
-        /\ debug_ring' = [kk \in DOMAIN debug_ring \cup {key} |-> 
-                            IF kk = key THEN u 
-                            ELSE debug_ring[kk]]
+        \* /\ debug_ring' = [kk \in DOMAIN debug_ring \cup {key} |-> 
+        \*                     IF kk = key THEN u 
+        \*                     ELSE debug_ring[kk]]
     /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<local_kv, debug_kv, d1, d2, d3>>
+    /\ UNCHANGED <<local_kv, debug_kv, d1>>
 
 Leave(u) == 
     LET 
@@ -100,7 +100,7 @@ Leave(u) ==
         /\ local_ring' = [local_ring EXCEPT ![u] 
                             = [local_ring[u] EXCEPT ![u]
                                 = updated]] 
-        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, d1, d2, d3>>
+        /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
         \* /\ Assert(0,"")
        
 NotInCluster ==
@@ -170,7 +170,7 @@ JoinMigrate(u) ==
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
     IN 
         \* TODO: limit
-        \* /\ local_ring[u][u]["version"] # 2
+        /\ local_ring[u][u]["version"] # 2
         /\ u \in cluster
         /\ Cardinality(AllTokens(u)) >= 2
         /\ local_ring[u][u]["status"] = StatusOnline
@@ -188,15 +188,15 @@ JoinMigrate(u) ==
                 \* /\ Assert(0,"")
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
-        /\ IF v_data # {} THEN 
-            /\ d1' = v_token
-            /\ d2' = all_online_tokens 
-            /\ d3' = all_keys
-            ELSE 
-            /\ d1' = {}
-            /\ d2' = {}
-            /\ d3' = {}
-        /\ UNCHANGED <<cluster, debug_ring, debug_kv>>
+        \* /\ IF v_data # {} THEN 
+        \*     /\ d1' = v_token
+        \*     /\ d2' = all_online_tokens 
+        \*     /\ d3' = all_keys
+        \*     ELSE 
+        \*     /\ d1' = {}
+        \*     /\ d2' = {}
+        \*     /\ d3' = {}
+        /\ UNCHANGED <<cluster, debug_kv, d1>>
 
 \* surviving node copying from leaving node
 LeaveMigrate(u) == 
@@ -229,11 +229,7 @@ LeaveMigrate(u) ==
                         IF k = v THEN {} 
                         ELSE IF k = u THEN local_kv[v] \cup local_kv[u] 
                         ELSE local_kv[k]]
-        \* /\ d1' = local_kv'
-        \* /\ d2' = local_ring'
-        \* /\ d3' = "marker"
-        \* /\ Assert(0,"")
-        /\ UNCHANGED <<cluster, debug_ring, debug_kv, d1, d2, d3>>
+        /\ UNCHANGED <<cluster, debug_kv, d1>>
 
 BecomeReady(u) ==
     LET 
@@ -251,7 +247,7 @@ BecomeReady(u) ==
                                         ELSE local_ring[u][u][k]]]]
            ELSE 
                 UNCHANGED local_ring
-        /\ UNCHANGED <<cluster, local_kv, debug_ring, debug_kv, d1, d2, d3>>
+        /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
 
 Write(u, k) == 
     LET 
@@ -265,7 +261,7 @@ Write(u, k) ==
         /\ local_kv' = [local_kv EXCEPT ![u] 
                         = local_kv[u] \cup {k}]
         /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, local_ring, debug_ring, d1, d2, d3>>
+        /\ UNCHANGED <<cluster, local_ring, d1>>
 
 tokens == {0,1,2}
 keys == {0,2}
@@ -289,10 +285,10 @@ Init ==
             ELSE offline ]] 
         /\ local_kv = [i \in Nodes |-> {}]
         /\ debug_kv = {}
-        /\ debug_ring = <<>>
+        \* /\ debug_ring = <<>>
         /\ d1 = {}
-        /\ d2 = {}
-        /\ d3 = {}
+        \* /\ d2 = {}
+        \* /\ d3 = {}
         \* /\ PrintT(DataSet3(1, {0}, {0}))
         \* /\ Assert(0,"")
 
