@@ -214,28 +214,27 @@ Write(u, k) ==
         /\ debug_kv' = debug_kv \cup {k}
         /\ UNCHANGED <<cluster, local_ring, d1>>
 
-Init ==
-    LET 
-        offline == [k \in NodeState |-> 
+offline == [k \in NodeState |-> 
             IF k = "version" THEN 0 
             ELSE IF k = "token" THEN -1
             ELSE IF k = "status" THEN "offline"
             ELSE "unused"]
-        seed == [k \in NodeState |-> 
+seed == [k \in NodeState |-> 
             IF k = "version" THEN 1 
             ELSE IF k = "token" THEN 0
             ELSE IF k = "status" THEN "online"
             ELSE "unused"]
-    IN 
-        /\ cluster = {"n0"}
-        /\ local_ring = [i \in Nodes |-> 
-                            [j \in Nodes |-> 
-                                IF i = "n0" /\ j = "n0" 
-                                THEN seed
-                                ELSE offline ]] 
-        /\ local_kv = [i \in Nodes |-> {}]
-        /\ debug_kv = {}
-        /\ d1 = {}
+
+Init ==
+    /\ cluster = {"n0"}
+    /\ local_ring = [i \in Nodes |-> 
+                        [j \in Nodes |-> 
+                            IF i = "n0" /\ j = "n0" 
+                            THEN seed
+                            ELSE offline ]] 
+    /\ local_kv = [i \in Nodes |-> {}]
+    /\ debug_kv = {}
+    /\ d1 = {}
 
 Next ==
     \/ \E u, v \in Nodes:
