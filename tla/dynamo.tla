@@ -64,12 +64,23 @@ AllOnlineTokens(u) ==
     IN 
         {local_ring[u][v]["token"]: v \in online} 
 
+ClaimedToken == 
+    LET 
+        not_offline == {v \in Nodes: local_ring[v][v]["status"] # StatusOffline}
+    IN 
+        {local_ring[k][k]["token"]: k \in not_offline}
+
+\* AnyUnclaimedToken == 
+\*     CHOOSE any \in ClaimedToken: TRUE
+
 Join(u) == 
-    \* Only ever one node joining at a time
-    /\ u \notin cluster
-    /\ \E key \in KeySpace:
-        /\ key \notin DOMAIN debug_ring \* TODO: hack
-        \* update local_ring[u][u]
+    LET 
+        key == CHOOSE any \in KeySpace \ ClaimedToken: TRUE
+    IN 
+        \* /\ PrintT(key)
+        \* /\ Assert(0, "")
+        \* Only ever one node joining at a time
+        /\ u \notin cluster
         /\ local_ring' = [local_ring EXCEPT ![u] 
                             = [local_ring[u] EXCEPT ![u]
                                 = [k \in NodeState |-> 
@@ -80,8 +91,8 @@ Join(u) ==
         \* /\ debug_ring' = [kk \in DOMAIN debug_ring \cup {key} |-> 
         \*                     IF kk = key THEN u 
         \*                     ELSE debug_ring[kk]]
-    /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<local_kv, debug_kv, d1>>
+        /\ cluster' = cluster \cup {u}
+        /\ UNCHANGED <<local_kv, debug_kv, d1>>
 
 Leave(u) == 
     LET 
@@ -170,7 +181,7 @@ JoinMigrate(u) ==
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
     IN 
         \* TODO: limit
-        /\ local_ring[u][u]["version"] # 2
+        /\ local_ring[u][u]["version"] # 3
         /\ u \in cluster
         /\ Cardinality(AllTokens(u)) >= 2
         /\ local_ring[u][u]["status"] = StatusOnline
