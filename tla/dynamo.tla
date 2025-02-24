@@ -1,7 +1,6 @@
 --------------------------- MODULE dynamo ----------------------------
 EXTENDS Naturals, TLC, FiniteSets, Sequences, SequencesExt, Integers
 VARIABLES 
-    cluster, 
     local_ring,
     local_kv, 
     \* debug_ring, 
@@ -10,7 +9,7 @@ VARIABLES
     \* d2,
     \* d3
 
-vars == <<cluster, local_ring, local_kv, debug_kv, d1>>
+vars == <<local_ring, local_kv, debug_kv, d1>>
 
 Nodes == {"n0", "n1", "n2"}
 
@@ -75,7 +74,7 @@ Gossip(u, v) ==
     /\ local_ring[u][u]["status"] # StatusOffline
     /\ local_ring[v][v]["status"] # StatusOffline
     /\ local_ring' = Merge(u, v)
-    /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
+    /\ UNCHANGED <<local_kv, debug_kv, d1>>
 
 AllTokens(u) == 
     LET 
@@ -99,8 +98,9 @@ Join(u) ==
     LET 
         key == CHOOSE any \in KeySpace \ ClaimedToken: TRUE
     IN 
+        /\ local_ring[u][u]["version"] < 3
         \* Only ever one node joining at a time
-        /\ u \notin cluster
+        /\ local_ring[u][u]["status"] = StatusOffline
         /\ local_ring' = [local_ring EXCEPT ![u] 
                             = [local_ring[u] EXCEPT ![u]
                                 = [k \in NodeState |-> 
@@ -108,7 +108,6 @@ Join(u) ==
                                     ELSE IF k = "token" THEN key
                                     ELSE IF k = "status" THEN StatusPrepare
                                     ELSE "unused"]]]
-        /\ cluster' = cluster \cup {u}
         /\ UNCHANGED <<local_kv, debug_kv, d1>>
 
 Leave(u) == 
@@ -119,8 +118,6 @@ Leave(u) ==
                      ELSE IF k = "status" THEN StatusExit
                      ELSE "unused"]
     IN 
-        \* Only ever one node joining at a time
-        /\ u \in cluster
         \* can only leave if we are already online 
         /\ local_ring[u][u]["status"] = StatusOnline
         \* can only leave if there's at least another server to migrate data to
@@ -128,7 +125,7 @@ Leave(u) ==
         /\ local_ring' = [local_ring EXCEPT ![u] 
                             = [local_ring[u] EXCEPT ![u]
                                 = updated]] 
-        /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
+        /\ UNCHANGED <<local_kv, debug_kv, d1>>
        
 \* find tokens owned by someone else and sync
 JoinMigrate(u) == 
@@ -151,8 +148,7 @@ JoinMigrate(u) ==
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
     IN 
         \* TODO: limit
-        /\ local_ring[u][u]["version"] # 3
-        /\ u \in cluster
+        \* /\ local_ring[u][u]["version"] < 3
         /\ Cardinality(AllTokens(u)) >= 2
         /\ local_ring[u][u]["status"] = StatusOnline
         /\ local_ring[u][v]["status"] = StatusPrepare
@@ -166,7 +162,7 @@ JoinMigrate(u) ==
                                 ELSE local_kv[k]]
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
-        /\ UNCHANGED <<cluster, debug_kv, d1>>
+        /\ UNCHANGED <<debug_kv, d1>>
 
 \* surviving node copying from leaving node
 LeaveMigrate(u) == 
@@ -187,7 +183,6 @@ LeaveMigrate(u) ==
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
 
     IN 
-        /\ u \in cluster
         \* /\ Cardinality(cluster) >= 2
         \* copying from v to u
         /\ local_ring[u][u]["status"] = StatusOnline
@@ -199,7 +194,7 @@ LeaveMigrate(u) ==
                         IF k = v THEN {} 
                         ELSE IF k = u THEN local_kv[v] \cup local_kv[u] 
                         ELSE local_kv[k]]
-        /\ UNCHANGED <<cluster, debug_kv, d1>>
+        /\ UNCHANGED <<debug_kv, d1>>
 
 Write(u, k) == 
     LET 
@@ -212,7 +207,7 @@ Write(u, k) ==
         /\ local_kv' = [local_kv EXCEPT ![u] 
                         = local_kv[u] \cup {k}]
         /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<cluster, local_ring, d1>>
+        /\ UNCHANGED <<local_ring, d1>>
 
 offline == [k \in NodeState |-> 
             IF k = "version" THEN 0 
@@ -226,7 +221,6 @@ seed == [k \in NodeState |->
             ELSE "unused"]
 
 Init ==
-    /\ cluster = {"n0"}
     /\ local_ring = [i \in Nodes |-> 
                         [j \in Nodes |-> 
                             IF i = "n0" /\ j = "n0" 
@@ -259,15 +253,15 @@ TokenLocation ==
         \A k \in local_kv[u]: 
             u = FindNextToken(k, local_ring[u])
 
-SomeoneAlwaysOnline == 
-    Cardinality(cluster) >= 2 => \E u \in Nodes: local_ring[u][u]["status"] = StatusOnline
+\* SomeoneAlwaysOnline == 
+\*     Cardinality(cluster) >= 2 => \E u \in Nodes: local_ring[u][u]["status"] = StatusOnline
 
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
 
-KVXOR == 
-    Cardinality(cluster) > 1 => 
-        \A u, v \in cluster: u # v => (local_kv[u] \intersect local_kv[v]) = {}
+\* KVXOR == 
+\*     Cardinality(cluster) > 1 => 
+\*         \A u, v \in cluster: u # v => (local_kv[u] \intersect local_kv[v]) = {}
 
 Spec ==
     /\ Init
