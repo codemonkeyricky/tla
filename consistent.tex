@@ -479,6 +479,7 @@ JoinMigrate(u) ==
 \@x{\@s{53.29} {\UNCHANGED} {\langle} local\_ring ,\, local\_kv {\rangle}}%
 \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} debug\_kv ,\, debug {\rangle}}%
 \end{tlatex}
+\\
 
 A RG U walks its local ring counter-clockwise to find the first neighboring RG
 V. If RG V is in \textit{Joining} state, this allows RG U to offload part of
@@ -544,9 +545,192 @@ Leave(u) ==
  \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} local\_kv ,\, debug\_kv ,\,
  debug {\rangle}}%
 \end{tlatex}
+\\
 
 Similar to \textit{Join}, a RG can leave if it is \textit{Online}, and not the
-only RG in the cluster.
+only RG in the cluster.\\
+
+Correspondingly, the following defines \textit{LeaveMigrate}:\\
+\begin{tla}
+LeaveMigrate(u) == 
+    LET 
+        token == (local_ring[u][u]["token"] + N - 1) % N
+        v == FindPrevToken(token, local_ring[u])
+        data == local_kv[u] 
+
+        updated == [k \in RGState |-> 
+                            IF k = "version" THEN local_ring[u][v]["version"] + 1
+                            ELSE IF k = "token" THEN local_ring[u][v]["token"]
+                            ELSE IF k = "state" THEN StateOffline
+                            ELSE "unused"]
+        merged == Merge(u, v)
+        local_ring_u == [merged EXCEPT ![u] 
+                            = [merged[u] EXCEPT ![v] = updated]]
+        local_ring_uv == [local_ring_u EXCEPT ![v] 
+                            = [local_ring_u[v] EXCEPT ![v] = updated]]
+    IN 
+        \* copying from v to u
+        /\ local_ring[u][u]["state"] = StateOnline
+        /\ local_ring[u][v]["state"] = StateExit
+        \* update version 
+        /\ local_ring' = local_ring_uv
+        \* migrate data
+        /\ local_kv' = [k \in RGs |-> 
+                        IF k = v THEN {} 
+                        ELSE IF k = u THEN local_kv[v] \cup local_kv[u] 
+                        ELSE local_kv[k]]
+        /\ UNCHANGED <<debug_kv, debug>>
+\end{tla}
+\begin{tlatex}
+\@x{ LeaveMigrate ( u ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} token \.{\defeq} ( local\_ring [ u ] [ u ] [\@w{token} ] \.{+}
+ N \.{-} 1 ) \.{\%} N}%
+\@x{\@s{32.8} v \.{\defeq} FindPrevToken ( token ,\, local\_ring [ u ] )}%
+\@x{\@s{32.8} data \.{\defeq} local\_kv [ u ]}%
+\@pvspace{8.0pt}%
+\@x{\@s{32.8} updated \.{\defeq} [ k \.{\in} RGState \.{\mapsto}}%
+ \@x{\@s{41.0} {\IF} k \.{=}\@w{version} \.{\THEN} local\_ring [ u ] [ v ]
+ [\@w{version} ] \.{+} 1}%
+ \@x{\@s{41.0} \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} local\_ring [ u ] [
+ v ] [\@w{token} ]}%
+\@x{\@s{41.0} \.{\ELSE} {\IF} k \.{=}\@w{state} \.{\THEN} StateOffline}%
+\@x{\@s{41.0} \.{\ELSE}\@w{unused} ]}%
+\@x{\@s{32.8} merged \.{\defeq} Merge ( u ,\, v )}%
+\@x{\@s{32.8} local\_ring\_u \.{\defeq} [ merged {\EXCEPT} {\bang} [ u ]}%
+\@x{\@s{45.1} \.{=} [ merged [ u ] {\EXCEPT} {\bang} [ v ] \.{=} updated ] ]}%
+ \@x{\@s{32.8} local\_ring\_uv \.{\defeq} [ local\_ring\_u {\EXCEPT} {\bang} [
+ v ]}%
+ \@x{\@s{41.0} \.{=} [ local\_ring\_u [ v ] {\EXCEPT} {\bang} [ v ] \.{=}
+ updated ] ]}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8}}%
+\@y{%
+  copying from v to u
+}%
+\@xx{}%
+ \@x{\@s{32.8} \.{\land} local\_ring [ u ] [ u ] [\@w{state} ] \.{=}
+ StateOnline}%
+ \@x{\@s{32.8} \.{\land} local\_ring [ u ] [ v ] [\@w{state} ] \.{=}
+ StateExit}%
+\@x{\@s{32.8}}%
+\@y{%
+  update version 
+}%
+\@xx{}%
+\@x{\@s{32.8} \.{\land} local\_ring \.{'} \.{=} local\_ring\_uv}%
+\@x{\@s{32.8}}%
+\@y{%
+  migrate data
+}%
+\@xx{}%
+\@x{\@s{32.8} \.{\land} local\_kv \.{'} \.{=} [ k \.{\in} RGs \.{\mapsto}}%
+\@x{\@s{32.8} {\IF} k \.{=} v \.{\THEN} \{ \}}%
+ \@x{\@s{32.8} \.{\ELSE} {\IF} k \.{=} u \.{\THEN} local\_kv [ v ] \.{\cup}
+ local\_kv [ u ]}%
+\@x{\@s{32.8} \.{\ELSE} local\_kv [ k ] ]}%
+\@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} debug\_kv ,\, debug {\rangle}}%
+\end{tlatex}
+\\
+
+Similar to \textit{JoinMigrate}: when RG U finds out its neighbour RV V intends
+on leaving the cluster, it coordinates with RG V to migrate its data and range.\\
+
+\textit{Gossip} is defined below:\\
+\begin{tla}
+Merge(u, v) == 
+    LET 
+        updated(w) ==   IF local_ring[u][w]["version"] 
+                            < local_ring[v][w]["version"] THEN 
+                            local_ring[v][w]
+                        ELSE 
+                            local_ring[u][w]
+    IN 
+        [k \in RGs |-> IF k = u \/ k = v 
+                         THEN [w \in RGs |-> updated(w)]
+                         ELSE local_ring[k]]
+
+Gossip(u, v) == 
+    /\ local_ring[u][u]["state"] # StateOffline
+    /\ local_ring[v][v]["state"] # StateOffline
+    /\ local_ring' = Merge(u, v)
+    /\ UNCHANGED <<local_kv, debug_kv, debug>>
+\end{tla}
+\begin{tlatex}
+\@x{ Merge ( u ,\, v ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} updated ( w ) \.{\defeq}\@s{8.2} {\IF} local\_ring [ u ] [ w ]
+ [\@w{version} ]}%
+\@x{\@s{45.1} \.{<} local\_ring [ v ] [ w ] [\@w{version} ] \.{\THEN}}%
+\@x{\@s{45.1} local\_ring [ v ] [ w ]}%
+\@x{\@s{41.0} \.{\ELSE}}%
+\@x{\@s{57.4} local\_ring [ u ] [ w ]}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} [ k \.{\in} RGs \.{\mapsto} {\IF} k \.{=} u \.{\lor} k \.{=} v}%
+\@x{\@s{41.0} \.{\THEN} [ w \.{\in} RGs \.{\mapsto} updated ( w ) ]}%
+\@x{\@s{41.0} \.{\ELSE} local\_ring [ k ] ]}%
+\@pvspace{8.0pt}%
+\@x{ Gossip ( u ,\, v ) \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} local\_ring [ u ] [ u ] [\@w{state} ] \.{\neq}
+ StateOffline}%
+ \@x{\@s{16.4} \.{\land} local\_ring [ v ] [ v ] [\@w{state} ] \.{\neq}
+ StateOffline}%
+\@x{\@s{16.4} \.{\land} local\_ring \.{'} \.{=} Merge ( u ,\, v )}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} local\_kv ,\, debug\_kv ,\,
+ debug {\rangle}}%
+\end{tlatex}
+\\
+
+\textit{Gossip} can happen between any pair of nodes as long as they are both 
+\textit{not Offline}.\\
+
+Finally, let us take a look at \textit{Write}:\\
+\begin{tla}
+Write(u, k) == 
+    LET 
+        owner == FindNextToken(k, local_ring[u])
+    IN 
+        \* only accept if u is owner
+        /\ \/ local_ring[u][u]["state"] = StateOnline
+           \/ local_ring[u][u]["state"] = StateExit
+        /\ u = owner
+        /\ local_kv' = [local_kv EXCEPT ![u] 
+                        = local_kv[u] \cup {k}]
+        /\ debug_kv' = debug_kv \cup {k}
+        /\ UNCHANGED <<local_ring, debug>>
+\end{tla}
+\begin{tlatex}
+\@x{ Write ( u ,\, k ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} owner \.{\defeq} FindNextToken ( k ,\, local\_ring [ u ] )}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8}}%
+\@y{%
+  only accept if u is owner
+}%
+\@xx{}%
+ \@x{\@s{32.8} \.{\land} \.{\lor} local\_ring [ u ] [ u ] [\@w{state} ] \.{=}
+ StateOnline}%
+\@x{\@s{32.8} \.{\lor} local\_ring [ u ] [ u ] [\@w{state} ] \.{=} StateExit}%
+\@x{\@s{32.8} \.{\land} u \.{=} owner}%
+ \@x{\@s{32.8} \.{\land} local\_kv \.{'} \.{=} [ local\_kv {\EXCEPT} {\bang} [
+ u ]}%
+\@x{\@s{32.8} \.{=} local\_kv [ u ] \.{\cup} \{ k \} ]}%
+\@x{\@s{32.8} \.{\land} debug\_kv \.{'} \.{=} debug\_kv \.{\cup} \{ k \}}%
+ \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} local\_ring ,\, debug
+ {\rangle}}%
+\end{tlatex}
+\\
+
+A RG in \textit{Joining} state cannot accept requests because it has not been
+admitted into the cluster. A RG in \textit{Leaving} state must still
+accept requests because the hand-off hasn't been completed. The specification 
+enforces a RG to only accept requests in its data range. A practical
+implementation will include some sort of explicit or implicit redirect.
+
+\section{Safety}
+
+\section{Liveness}
 
 
 % \end{document}

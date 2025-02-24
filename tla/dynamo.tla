@@ -19,8 +19,8 @@ RGState == {"version", "token", "state"}
 
 StateOffline == "offline"
 StateOnline == "online"
-StatePrepare == "prepare"
-StateExit == "exit"
+StateJoining == "joining"
+StateLeaving == "leaving"
 
 KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
@@ -29,7 +29,7 @@ RECURSIVE FindNextToken(_, _)
 FindNextToken(key, ring) ==
     LET 
         condition(v) == 
-            (ring[v]["state"] = StateOnline \/ ring[v]["state"] = StateExit)
+            (ring[v]["state"] = StateOnline \/ ring[v]["state"] = StateLeaving)
                 /\ ring[v]["token"] = key
         exists == \E v \in DOMAIN ring: condition(v)
         owner == CHOOSE only \in DOMAIN ring: condition(only)
@@ -108,7 +108,7 @@ Join(u) ==
                                 = [k \in RGState |-> 
                                     IF k = "version" THEN local_ring[u][u][k] + 1
                                     ELSE IF k = "token" THEN key
-                                    ELSE IF k = "state" THEN StatePrepare
+                                    ELSE IF k = "state" THEN StateJoining
                                     ELSE "unused"]]]
         /\ UNCHANGED <<local_kv, debug_kv, debug>>
 
@@ -117,7 +117,7 @@ Leave(u) ==
         updated == [k \in RGState |-> 
                      IF k = "version" THEN local_ring[u][u][k] + 1
                      ELSE IF k = "token" THEN local_ring[u][u][k]
-                     ELSE IF k = "state" THEN StateExit
+                     ELSE IF k = "state" THEN StateLeaving
                      ELSE "unused"]
     IN 
         \* can only leave if we are already online 
@@ -153,7 +153,7 @@ JoinMigrate(u) ==
         \* /\ local_ring[u][u]["version"] < 3
         /\ Cardinality(AllTokens(u)) >= 2
         /\ local_ring[u][u]["state"] = StateOnline
-        /\ local_ring[u][v]["state"] = StatePrepare
+        /\ local_ring[u][v]["state"] = StateJoining
         /\ Cardinality(all_keys) # 0
         /\ IF v_data # {} THEN 
                 /\ local_ring' = local_ring_uv
@@ -186,7 +186,7 @@ LeaveMigrate(u) ==
     IN 
         \* copying from v to u
         /\ local_ring[u][u]["state"] = StateOnline
-        /\ local_ring[u][v]["state"] = StateExit
+        /\ local_ring[u][v]["state"] = StateLeaving
         \* update version 
         /\ local_ring' = local_ring_uv
         \* migrate data
@@ -202,7 +202,7 @@ Write(u, k) ==
     IN 
         \* only accept if u is owner
         /\ \/ local_ring[u][u]["state"] = StateOnline
-           \/ local_ring[u][u]["state"] = StateExit
+           \/ local_ring[u][u]["state"] = StateLeaving
         /\ u = owner
         /\ local_kv' = [local_kv EXCEPT ![u] 
                         = local_kv[u] \cup {k}]
