@@ -202,20 +202,51 @@ Note when RG U is still waiting or in the middle of hand-off, it is still
 The distributed key-value \textit{Init} is defined below:\\
 
 \begin{tla}
+offline == [k \in NodeState |-> 
+            IF k = "version" THEN 0 
+            ELSE IF k = "token" THEN -1
+            ELSE IF k = "status" THEN "offline"
+            ELSE "unused"]
+seed == [k \in NodeState |-> 
+            IF k = "version" THEN 1 
+            ELSE IF k = "token" THEN 0
+            ELSE IF k = "status" THEN "online"
+            ELSE "unused"]
+
 Init ==
-    /\ cluster = {}
-    /\ global_ring = [kk \in {} |-> ""]
-    /\ local_kv = [k \in Nodes |-> {}]
-    /\ global_kv = {}
+    /\ cluster = {"n0"}
+    /\ local_ring = [i \in Nodes |-> 
+                        [j \in Nodes |-> 
+                            IF i = "n0" /\ j = "n0" 
+                            THEN seed
+                            ELSE offline ]] 
+    /\ local_kv = [i \in Nodes |-> {}]
+    /\ debug_kv = {}
+    /\ d1 = {}
 \end{tla}
 \begin{tlatex}
+\@x{ offline \.{\defeq} [ k \.{\in} NodeState \.{\mapsto}}%
+\@x{ {\IF} k \.{=}\@w{version} \.{\THEN} 0}%
+\@x{ \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} \.{-} 1}%
+\@x{ \.{\ELSE} {\IF} k \.{=}\@w{status} \.{\THEN}\@w{offline}}%
+\@x{ \.{\ELSE}\@w{unused} ]}%
+\@x{ seed \.{\defeq} [ k \.{\in} NodeState \.{\mapsto}}%
+\@x{\@s{4.1} {\IF} k \.{=}\@w{version} \.{\THEN} 1}%
+\@x{\@s{4.1} \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} 0}%
+\@x{\@s{4.1} \.{\ELSE} {\IF} k \.{=}\@w{status} \.{\THEN}\@w{online}}%
+\@x{\@s{4.1} \.{\ELSE}\@w{unused} ]}%
+\@pvspace{8.0pt}%
 \@x{ Init \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} cluster \.{=} \{ \}}%
- \@x{\@s{16.4} \.{\land} global\_ring \.{=} [ kk \.{\in} \{ \}
- \.{\mapsto}\@w{} ]}%
- \@x{\@s{16.4} \.{\land} local\_kv \.{=} [ k \.{\in} Nodes \.{\mapsto} \{ \}
+\@x{\@s{16.4} \.{\land} cluster \.{=} \{\@w{n0} \}}%
+\@x{\@s{16.4} \.{\land} local\_ring \.{=} [ i \.{\in} Nodes \.{\mapsto}}%
+\@x{\@s{20.5} [ j \.{\in} Nodes \.{\mapsto}}%
+\@x{\@s{24.6} {\IF} i \.{=}\@w{n0} \.{\land} j \.{=}\@w{n0}}%
+\@x{\@s{24.6} \.{\THEN} seed}%
+\@x{\@s{24.6} \.{\ELSE} offline ] ]}%
+ \@x{\@s{16.4} \.{\land} local\_kv \.{=} [ i \.{\in} Nodes \.{\mapsto} \{ \}
  ]}%
-\@x{\@s{16.4} \.{\land} global\_kv \.{=} \{ \}}%
+\@x{\@s{16.4} \.{\land} debug\_kv \.{=} \{ \}}%
+\@x{\@s{16.4} \.{\land} d1 \.{=} \{ \}}%
 \end{tlatex}
 
 \begin{itemize}
@@ -228,292 +259,3 @@ Init ==
 \end{itemize}
 
 Before we define the \textit{Spec}, we need create a few helper functions:\\
-\begin{tla}
-ValueToKey(f, v) == 
-    CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
-
-TokensClaimed == 
-    DOMAIN global_ring
-\end{tla}
-\begin{tlatex}
-\@x{ ValueToKey ( f ,\, v ) \.{\defeq}}%
- \@x{\@s{16.4} {\CHOOSE} only \.{\in} \{ n \.{\in} {\DOMAIN} f \.{:} f [ n ]
- \.{=} v \} \.{:} {\TRUE}}%
-\@pvspace{8.0pt}%
-\@x{ TokensClaimed \.{\defeq}}%
-\@x{\@s{16.4} {\DOMAIN} global\_ring}%
-\end{tlatex}
-\\
-
-\textit{ValueToKey} takes the value to a function and returns the corresponding
-key. The definition first creates a set (using set comprehension) containing the
-key corresponding to the value. However, we want to return the key itself,
-not as part of a set. The definition uses \textit{CHOOSE} to remove the set
-container. \textit{CHOOSE} always returns the same value in the set. This is
-acceptable for a set containing a single value.\\
-
-\textit{TokensClaimed} returns all the tokens taken on the ring. Since
-\textit{global\_ring} is a function mapping containing both key and value, to
-return keys only as a set, we use the \textit{DOMAIN} keyword.\\
-
-Working with a hash ring often requires \textit{walking} the ring. We will
-define a few helper functions below:\\
-
-\begin{tla}
-RECURSIVE FindNextToken(_, _)
-FindNextToken(ring, k) ==
-    IF k \in DOMAIN ring THEN
-        k 
-    ELSE 
-        FindNextToken(ring, (k + 1) % N) 
-
-RECURSIVE FindPrevToken(_, _)
-FindPrevToken(ring, k) ==
-    IF k \in DOMAIN ring THEN
-        k
-    ELSE 
-        FindPrevToken(ring, (k - 1 + N) % N) 
-\end{tla}
-\begin{tlatex}
-\@x{ {\RECURSIVE} FindNextToken ( \_ ,\, \_ )}%
-\@x{ FindNextToken ( ring ,\, k ) \.{\defeq}}%
-\@x{\@s{16.4} {\IF} k \.{\in} {\DOMAIN} ring \.{\THEN}}%
-\@x{\@s{20.5} k}%
-\@x{\@s{16.4} \.{\ELSE}}%
-\@x{\@s{32.8} FindNextToken ( ring ,\, ( k \.{+} 1 ) \.{\%} N )}%
-\@pvspace{8.0pt}%
-\@x{ {\RECURSIVE} FindPrevToken ( \_ ,\, \_ )}%
-\@x{ FindPrevToken ( ring ,\, k ) \.{\defeq}}%
-\@x{\@s{16.4} {\IF} k \.{\in} {\DOMAIN} ring \.{\THEN}}%
-\@x{\@s{20.5} k}%
-\@x{\@s{16.4} \.{\ELSE}}%
-\@x{\@s{32.8} FindPrevToken ( ring ,\, ( k \.{-} 1 \.{+} N ) \.{\%} N )}%
-\end{tlatex}
-\\
-
-\textit{FindNextToken} walks the ring clockwise looking for the next token.
-Similarly, \textit{FindPrevToken} walks the ring counter-clockwise looking for the
-previous token. Walking the ring is implemented recursively by adding or 
-subtracting one. Note that in the counter-clockwise case, care is applied to
-ensure the wrap-around works correctly.\\
-
-\begin{tla}
-DataSet(ring, my_key) == 
-    LET 
-        prev_key == FindPrevToken(ring, (my_key + N -1) % N)
-        pkey_next == (prev_key + 1) % N
-    IN 
-        IF pkey_next <= my_key THEN
-            {k \in pkey_next..my_key: k \in global_kv}
-        ELSE 
-            {k \in pkey_next..N-1: k \in global_kv} \cup
-            {k \in 0..my_key: k \in global_kv}
-\end{tla}
-\begin{tlatex}
-\@x{ DataSet ( ring ,\, my\_key ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\LET}}%
- \@x{\@s{32.8} prev\_key \.{\defeq} FindPrevToken ( ring ,\, ( my\_key \.{+} N
- \.{-} 1 ) \.{\%} N )}%
-\@x{\@s{32.8} pkey\_next \.{\defeq} ( prev\_key \.{+} 1 ) \.{\%} N}%
-\@x{\@s{16.4} \.{\IN}}%
-\@x{\@s{32.8} {\IF} pkey\_next \.{\leq} my\_key \.{\THEN}}%
- \@x{\@s{36.89} \{ k \.{\in} pkey\_next \.{\dotdot} my\_key \.{:} k \.{\in}
- global\_kv \}}%
-\@x{\@s{32.8} \.{\ELSE}}%
- \@x{\@s{49.19} \{ k \.{\in} pkey\_next \.{\dotdot} N \.{-} 1 \.{:} k \.{\in}
- global\_kv \} \.{\cup}}%
- \@x{\@s{49.19} \{ k \.{\in} 0 \.{\dotdot} my\_key \.{:} k \.{\in} global\_kv
- \}}%
-\end{tlatex}
-\\
-
-\textit{DataSet} defines all the key-value entries associated with a given
-token. Since key and value are always assumed to be the same in this design, the
-key-value entries is represented as a set.\\
-
-With the helper functions defined, let us look at the core part of specification:\\
-\begin{tla}
-Next ==
-    \/ \E u \in Nodes:
-        /\ u \notin cluster
-        /\ Join(u) 
-    \/ \E u \in cluster:
-        /\ Leave(u) 
-    \/ \E u \in cluster:
-        /\ \E k \in KeySpace:
-            /\ k \notin global_kv
-            /\ Write(u, k)
-\end{tla}
-\begin{tlatex}
-\@x{ Next \.{\defeq}}%
-\@x{\@s{16.4} \.{\lor} \E\, u \.{\in} Nodes \.{:}}%
-\@x{\@s{20.5} \.{\land} u \.{\notin} cluster}%
-\@x{\@s{20.5} \.{\land} Join ( u )}%
-\@x{\@s{16.4} \.{\lor} \E\, u \.{\in} cluster \.{:}}%
-\@x{\@s{20.5} \.{\land} Leave ( u )}%
-\@x{\@s{16.4} \.{\lor} \E\, u \.{\in} cluster \.{:}}%
-\@x{\@s{20.5} \.{\land} \E\, k \.{\in} KeySpace \.{:}}%
-\@x{\@s{24.6} \.{\land} k \.{\notin} global\_kv}%
-\@x{\@s{24.6} \.{\land} Write ( u ,\, k )}%
-\end{tlatex}
-\\
-
-\textit{Spec} allows a node to join the cluster if the node is not already in
-the cluster. A node can leave the cluster if it is part of the cluster. Finally,
-a client can pick any server and write to the distributed key-value store.\\
-
-Let us look at \textit{Join} first:\\
-
-\begin{tla}
-Join(u) == 
-    /\ \E key \in KeySpace:
-        /\ key \notin TokensClaimed
-        /\ global_ring' = [x \in (DOMAIN global_ring) \cup {key} |->
-                        IF x = key THEN u ELSE global_ring[x]]
-        /\  IF Cardinality(cluster) # 0 THEN
-                local_kv' = [local_kv EXCEPT ![u] = DataSet(global_ring', key)]
-            ELSE 
-                UNCHANGED local_kv
-    /\ cluster' = cluster \cup {u}
-    /\ UNCHANGED <<global_kv>>
-\end{tla}
-\begin{tlatex}
-\@x{ Join ( u ) \.{\defeq}}%
-\@x{ \.{\land} \E\, key \.{\in} KeySpace \.{:}}%
-\@x{\@s{4.1} \.{\land} key \.{\notin} TokensClaimed}%
- \@x{\@s{4.1} \.{\land} global\_ring \.{'} \.{=} [ x \.{\in} ( {\DOMAIN}
- global\_ring ) \.{\cup} \{ key \} \.{\mapsto}}%
-\@x{\@s{4.1} {\IF} x \.{=} key \.{\THEN} u \.{\ELSE} global\_ring [ x ] ]}%
- \@x{\@s{4.1} \.{\land}\@s{4.1} {\IF} Cardinality ( cluster ) \.{\neq} 0
- \.{\THEN}}%
- \@x{\@s{12.29} local\_kv \.{'} \.{=} [ local\_kv {\EXCEPT} {\bang} [ u ]
- \.{=} DataSet ( global\_ring \.{'} ,\, key ) ]}%
-\@x{\@s{8.2} \.{\ELSE}}%
-\@x{\@s{24.59} {\UNCHANGED} local\_kv}%
-\@x{ \.{\land} cluster \.{'} \.{=} cluster \.{\cup} \{ u \}}%
-\@x{ \.{\land} {\UNCHANGED} {\langle} global\_kv {\rangle}}%
-\end{tlatex}
-\\
-
-Assume node \textit{u} and \textit{v}. When \textit{u} joins the cluster, it
-first claims an unclaimed token on the ring. After the new node determines to 
-claim token \textit{T}, the node now \textit{owns} the range of data associated
-with \textit{T}.\\
-
-Let us now look at the definition for \textit{Leave}:\\
-
-\begin{tla}
-Leave(u) == 
-    LET 
-        k == ValueToKey(global_ring, u)
-        key_next == FindNextToken(global_ring, (k + 1) % N)
-        owner_next == global_ring[key_next]
-        kv1 == [local_kv EXCEPT ![u] = {}]
-        kv2 == [kv1 EXCEPT ![owner_next] 
-            = kv1[owner_next] \cup DataSet(global_ring, k)]
-    IN 
-        /\ Cardinality(cluster) > 1
-        /\ global_ring' = [n \in DOMAIN global_ring \ {k} |-> global_ring[n]]
-        /\ local_kv' = kv2
-        /\ cluster' = cluster \ {u}
-        /\ UNCHANGED << global_kv>>
-\end{tla}
-\begin{tlatex}
-\@x{ Leave ( u ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\LET}}%
-\@x{\@s{32.8} k \.{\defeq} ValueToKey ( global\_ring ,\, u )}%
- \@x{\@s{32.8} key\_next \.{\defeq} FindNextToken ( global\_ring ,\, ( k \.{+}
- 1 ) \.{\%} N )}%
-\@x{\@s{32.8} owner\_next \.{\defeq} global\_ring [ key\_next ]}%
- \@x{\@s{32.8} kv1 \.{\defeq} [ local\_kv {\EXCEPT} {\bang} [ u ] \.{=} \{ \}
- ]}%
-\@x{\@s{32.8} kv2 \.{\defeq} [ kv1 {\EXCEPT} {\bang} [ owner\_next ]}%
- \@x{\@s{32.8} \.{=} kv1 [ owner\_next ] \.{\cup} DataSet ( global\_ring ,\, k
- ) ]}%
-\@x{\@s{16.4} \.{\IN}}%
-\@x{\@s{32.8} \.{\land} Cardinality ( cluster ) \.{>} 1}%
- \@x{\@s{32.8} \.{\land} global\_ring \.{'} \.{=} [ n \.{\in} {\DOMAIN}
- global\_ring \.{\,\backslash\,} \{ k \} \.{\mapsto} global\_ring [ n ] ]}%
-\@x{\@s{32.8} \.{\land} local\_kv \.{'} \.{=} kv2}%
- \@x{\@s{32.8} \.{\land} cluster \.{'} \.{=} cluster \.{\,\backslash\,} \{ u
- \}}%
-\@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} global\_kv {\rangle}}%
-\end{tlatex}
-\\
-
-Opposite to \textit{Join}: when a node \textit{Leave}, it needs to copy data to
-the \textit{next} token. We can find the next token using \textit{FindNextToken},
-then copy the leaving nodes to it.\\
-
-Finally, let us look at the definition of \textit{Write}:\\
-\begin{tla}
-Write(u, k) == 
-    LET 
-        key == FindNextToken(global_ring, k)
-        owner == global_ring[key]
-        up == [local_kv EXCEPT ![owner] = local_kv[owner] \cup {k}]
-    IN 
-        /\ local_kv' = up
-        /\ global_kv' = global_kv \cup {k}
-        /\ UNCHANGED <<cluster, global_ring>>
-\end{tla}
-\begin{tlatex}
-\@x{ Write ( u ,\, k ) \.{\defeq}}%
-\@x{\@s{16.4} \.{\LET}}%
-\@x{\@s{32.8} key \.{\defeq} FindNextToken ( global\_ring ,\, k )}%
-\@x{\@s{32.8} owner \.{\defeq} global\_ring [ key ]}%
- \@x{\@s{32.8} up \.{\defeq} [ local\_kv {\EXCEPT} {\bang} [ owner ] \.{=}
- local\_kv [ owner ] \.{\cup} \{ k \} ]}%
-\@x{\@s{16.4} \.{\IN}}%
-\@x{\@s{32.8} \.{\land} local\_kv \.{'} \.{=} up}%
-\@x{\@s{32.8} \.{\land} global\_kv \.{'} \.{=} global\_kv \.{\cup} \{ k \}}%
- \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} cluster ,\, global\_ring
- {\rangle}}%
-\end{tlatex}
-\\
-
-To write a key-value pair, we need to find the first token claimed by a
-server by walking the ring clockwise with \textit{FindNextToken}. We then find
-the corresponding server for the token and write the key-value pair to the
-local KV store.
-
-\section{Safety} 
-
-Under all circumstances, the distributed key-value store contains the 
-entire data set. This is described by the following safety property by unionizing
-the data of all nodes.\\
-
-\begin{tla}
-KVConsistent == 
-    /\ UNION {local_kv[n] : n \in Nodes} = global_kv
-\end{tla}
-\begin{tlatex}
-\@x{ KVConsistent \.{\defeq}}%
- \@x{\@s{16.4} \.{\land} {\UNION} \{ local\_kv [ n ] \.{:} n \.{\in} Nodes \}
- \.{=} global\_kv}%
-\end{tlatex}
-\\
-
-While the distributed key-value contains the entire data set, we also want to
-ensure the per-node key-value stores do not overlap. This can
-be done with \textit{imply} operator. For any pair of distinct nodes,
-their key value should not overlap.\\
-
-\begin{tla}
-KVXOR == 
-    Cardinality(cluster) > 1 => 
-        \A u, v \in cluster: u # v => (local_kv[u] \intersect local_kv[v]) = {}
-\end{tla}
-\begin{tlatex}
-\@x{ KVXOR \.{\defeq}}%
-\@x{\@s{16.4} Cardinality ( cluster ) \.{>} 1 \.{\implies}}%
- \@x{\@s{32.8} \A\, u ,\, v \.{\in} cluster \.{:} u \.{\neq} v \.{\implies} (
- local\_kv [ u ] \.{\cap} local\_kv [ v ] ) \.{=} \{ \}}%
-\end{tlatex}
-
-\section{Liveness}
-
-Omitted for this chapter.
-
-% \end{document}
-
