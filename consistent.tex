@@ -730,7 +730,51 @@ implementation will include some sort of explicit or implicit redirect.
 
 \section{Safety}
 
+The design assumes RG maintains its own data replication internally. This implies 
+data should not be between RGs:\\
+
+\begin{tla}
+DataUnique == 
+    \A u, v \in RGs:
+        /\ u # v => local_kv[u] \intersect local_kv[v] = {}
+\end{tla}
+\begin{tlatex}
+\@x{ DataUnique \.{\defeq}}%
+\@x{\@s{16.4} \A\, u ,\, v \.{\in} RGs \.{:}}%
+ \@x{\@s{16.4} \.{\land} u \.{\neq} v \.{\implies} local\_kv [ u ] \.{\cap}
+ local\_kv [ v ] \.{=} \{ \}}%
+\end{tlatex}
+
+Every RG maintain a set of key-values in its KV store. We want to confirm all the keys 
+in the KV store has not been misplaced:\\
+
+\begin{tla}
+TokenLocation == 
+    \A u \in RGs:
+        \A k \in local_kv[u]: 
+            u = FindNextToken(k, local_ring[u])
+\end{tla}
+\begin{tlatex}
+\@x{ TokenLocation \.{\defeq}}%
+\@x{\@s{16.4} \A\, u \.{\in} RGs \.{:}}%
+\@x{\@s{20.5} \A\, k \.{\in} local\_kv [ u ] \.{:}}%
+\@x{\@s{24.6} u \.{=} FindNextToken ( k ,\, local\_ring [ u ] )}%
+\end{tlatex}
+
+The union of all the KV store needs to mirror all the data written:\\
+
+\begin{tla}
+KVConsistent == 
+    /\ UNION {local_kv[n] : n \in RGs} = debug_kv
+\end{tla}
+\begin{tlatex}
+\@x{ KVConsistent \.{\defeq}}%
+ \@x{\@s{16.4} \.{\land} {\UNION} \{ local\_kv [ n ] \.{:} n \.{\in} RGs \}
+ \.{=} debug\_kv}%
+\end{tlatex}
+
 \section{Liveness}
 
+Omitted for this chapter.
 
 % \end{document}
