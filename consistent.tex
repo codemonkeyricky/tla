@@ -2,23 +2,58 @@
 
 \usetikzlibrary{arrows.meta} % For double arrows
 
-\chapter{Consistent Hashing}
+\chapter{Decentralized KV Store}
 
-In a distributed system, traffic is hashed and then distributed to different servers
-for load balancing. Given the intent of a distributed system is to enable
-horizontal scaling, the system needs to support dynamic upscaling of the
-cluster. With a traditional hashing algorithm, changing the size of the hash space
+In the era of big-data today, localized instance of relational database is no
+longer enough to hold the volume of data for toady's requirement. Distributed
+key-value store has been of a key area of interest in the past few decades. 
+Offering such as DynamoDB, Cassandra, Azure Cloud are a few examples of what
+industry leaders are offering to address the data problem.\\
+
+Service provided by a distributed key-value store is collectively offered by a
+cluster of nodes. The nodes independently restart, update, crash, join or leave 
+the cluster, while the service remains uninterrupted (though with possibly
+reduced service). As the user base scales, the service must scale accordingly.\\
+
+Two of the key design principles in a distributed data are partition and
+replication.\\
+
+A replica group (RG) is a group of nodes that maintain the same set of data.
+Nodes in a RG often spans multiple availability zone (AZ) to maximize uptime.
+In case of a regional value that wipes out an entire AZ, the other nodes in the
+RG can still maintain the service albeit at reduced QoS. The nodes in the RG are
+kept in sync using consensus protocol such as Raft. Typically, a write is only
+considered complete and ack'd to client once it has been recorded by the
+majority of nodes in the RG.
+
+Partition is a way to split the keyspace into slices. When the keyspace is
+partitioned, a RG is only responsible for a slice of the keyspace. Bandwidth
+demand is also amortized across all RGs. Partition is typically done using 
+consistent hashing. Different from traditional hashing, consistent hashing
+minimizes data movement when nodes join and leave the clusters. Consistent
+hashing will be covered in detail in a later part of the chapter.\\
+
+Some of the early distributed database design requires a centralized server for
+meta management (eg. ZooKeeper). In this chapter, we will specify a fully
+decentralized key-value store. To simplify the specification, we will assume 
+each node itself is a functioning RG with associated reliability property (this
+is considered a solved problem with Raft).This chapter will focus on system
+behavior correctness as RGs join or leave the cluster and associated data
+migration.
+
+\section{Consistent Hashing}
+
+Before we dive into design detail, we must first describe consistent hashing.
+With a traditional hashing algorithm, changing the size of the hash space
 requires data movement of the entire cluster. This is very undesirable.
-Consistent hashing was introduced to minimize data movement, data movement is
-only required when introducing nodes in the affected range. 
-
-\pagebreak
+Consistent hashing was introduced to minimize data movement, where movement is
+only required when adding or removing nodes in the affected range. 
 
 In consistent hashing, the hash space is assumed to be a ring, where the largest
-hash value plus one wraps around to the hash of 0. Servers in a consistent hashing 
-cluster take up different ranges in the ring. For a given request, the client 
-where the request lands by hashing the request first, then walks the ring clockwise 
-until it finds a server. \\ 
+hash value plus one wraps around to the hash of 0. Servers in a consistent
+hashing cluster take up different ranges in the ring. For a given request, the
+client where the request lands by hashing the request first, then walks the ring
+clockwise until it finds a server. \\ 
 
 Assume the following example:
 
@@ -83,6 +118,13 @@ Similarly, if a new node n5 is added:
 \end{center}
 
 Part of what n4 used to service will now be serviced by n5.
+
+\section{Gossip Protocol}
+
+Without a centralized metadata controller, the nodes learn about the peers using
+gossip protocol. As a new RG enters the cluster, the design relies on gossip
+protocol to spread the information. This is a critical part of the design as
+will be described later.
 
 \section{Design}
 
