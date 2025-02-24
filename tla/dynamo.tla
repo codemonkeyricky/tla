@@ -24,15 +24,6 @@ StatusExit == "exit"
 KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
     
-ValueToKey(f, v) == 
-    CHOOSE only \in {n \in DOMAIN f: f[n] = v}: TRUE
-
-\* old and new may co-exist at the same time
-\* old may not be aware it is old, will stll persist traffic 
-\* new may not have all the data
-\* new must notify old 
-\* old always forward traffic to new 
-
 Merge(u, v) == 
     LET 
         updated(w) ==   IF local_ring[u][w]["version"] < local_ring[v][w]["version"] THEN 
@@ -49,8 +40,6 @@ Gossip(u, v) ==
     /\ local_ring[v][v]["status"] # StatusOffline
     /\ local_ring' = Merge(u, v)
     /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
-
-\* vars == <<cluster, local_ring, local_kv, debug_ring, debug_kv, debug>>
 
 AllTokens(u) == 
     LET 
@@ -69,9 +58,6 @@ ClaimedToken ==
         not_offline == {v \in Nodes: local_ring[v][v]["status"] # StatusOffline}
     IN 
         {local_ring[k][k]["token"]: k \in not_offline}
-
-\* AnyUnclaimedToken == 
-\*     CHOOSE any \in ClaimedToken: TRUE
 
 Join(u) == 
     LET 
@@ -108,9 +94,6 @@ Leave(u) ==
                                 = updated]] 
         /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
        
-NotInCluster ==
-    Nodes \ {cluster}
-
 RECURSIVE FindNextToken(_, _)
 FindNextToken(key, ring) ==
     LET 
@@ -125,8 +108,8 @@ FindNextToken(key, ring) ==
         ELSE 
             FindNextToken((key + 1) % N, ring)
 
-RECURSIVE FindPrevToken2(_, _)
-FindPrevToken2(key, ring) ==
+RECURSIVE FindPrevToken(_, _)
+FindPrevToken(key, ring) ==
     LET 
         condition(v) == ring[v]["status"] # StatusOffline /\ ring[v]["token"] = key
         exists == \E v \in DOMAIN ring: condition(v)
@@ -135,34 +118,30 @@ FindPrevToken2(key, ring) ==
         IF exists THEN
             owner
         ELSE 
-            FindPrevToken2((key + N - 1) % N, ring)
+            FindPrevToken((key + N - 1) % N, ring)
 
 MyToken(u) == 
     local_ring[u][u]["token"]
 
 \* TODO: when collecting all keys to migrate, stop at the frist *online* token
-RECURSIVE DataSet3(_, _, _)
-DataSet3(k, all_tokens, all_keys) ==
+RECURSIVE DataSet(_, _, _)
+DataSet(k, all_tokens, all_keys) ==
     LET 
         k_prev == (k + N - 1) % N
         include == {k} \intersect all_keys
     IN 
-        \* /\ PrintT(k)
-        \* /\ PrintT(include)
-        \* /\ PrintT(all_tokens)
-        \* /\ PrintT(k_prev)
         include \cup IF k_prev \in all_tokens THEN {} 
-                     ELSE DataSet3(k_prev, all_tokens, all_keys)
+                     ELSE DataSet(k_prev, all_tokens, all_keys)
 
 \* find tokens owned by someone else and sync
 JoinMigrate(u) == 
     LET 
         \* previous token
-        v == FindPrevToken2((local_ring[u][u]["token"] + N - 1) % N, local_ring[u])
+        v == FindPrevToken((local_ring[u][u]["token"] + N - 1) % N, local_ring[u])
         all_keys == local_kv[u]
         all_online_tokens == AllOnlineTokens(u)
         v_token == local_ring[u][v]["token"]
-        v_data == DataSet3(v_token, all_online_tokens, all_keys)
+        v_data == DataSet(v_token, all_online_tokens, all_keys)
         updated == [k \in NodeState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
@@ -196,7 +175,7 @@ JoinMigrate(u) ==
 LeaveMigrate(u) == 
     LET 
         token == (local_ring[u][u]["token"] + N - 1) % N
-        v == FindPrevToken2(token, local_ring[u])
+        v == FindPrevToken(token, local_ring[u])
         data == local_kv[u] 
 
         updated == [k \in NodeState |-> 
@@ -233,7 +212,6 @@ Write(u, k) ==
         /\ \/ local_ring[u][u]["status"] = StatusOnline
            \/ local_ring[u][u]["status"] = StatusExit
         /\ u = owner
-        \* /\ Assert(0,"")
         /\ local_kv' = [local_kv EXCEPT ![u] 
                         = local_kv[u] \cup {k}]
         /\ debug_kv' = debug_kv \cup {k}
@@ -253,17 +231,14 @@ Init ==
             ELSE "unused"]
     IN 
         /\ cluster = {"n0"}
-        /\ local_ring = [i \in Nodes |-> [j \in Nodes |-> 
-            IF i = "n0" /\ j = "n0" THEN seed
-            ELSE offline ]] 
+        /\ local_ring = [i \in Nodes |-> 
+                            [j \in Nodes |-> 
+                                IF i = "n0" /\ j = "n0" 
+                                THEN seed
+                                ELSE offline ]] 
         /\ local_kv = [i \in Nodes |-> {}]
         /\ debug_kv = {}
-        \* /\ debug_ring = <<>>
         /\ d1 = {}
-        \* /\ d2 = {}
-        \* /\ d3 = {}
-        \* /\ PrintT(DataSet3(1, {0}, {0}))
-        \* /\ Assert(0,"")
 
 Next ==
     \/ \E u, v \in Nodes:
