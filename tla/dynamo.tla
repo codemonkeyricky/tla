@@ -11,11 +11,11 @@ VARIABLES
 
 vars == <<local_ring, local_kv, debug_kv, d1>>
 
-Nodes == {"rg0", "rg1", "rg2"}
+RGs == {"rg0", "rg1", "rg2"}
 
-seed_rg == "rg0"
+SeedRG == "rg0"
 
-NodeState == {"version", "token", "state"}
+RGState == {"version", "token", "state"}
 
 StateOffline == "offline"
 StateOnline == "online"
@@ -68,8 +68,8 @@ Merge(u, v) ==
                         ELSE 
                             local_ring[u][w]
     IN 
-        [k \in Nodes |-> IF k = u \/ k = v 
-                         THEN [w \in Nodes |-> updated(w)]
+        [k \in RGs |-> IF k = u \/ k = v 
+                         THEN [w \in RGs |-> updated(w)]
                          ELSE local_ring[k]]
 
 Gossip(u, v) == 
@@ -80,19 +80,19 @@ Gossip(u, v) ==
 
 AllTokens(u) == 
     LET 
-        not_offline == {v \in Nodes: local_ring[u][v]["state"] # StateOffline}
+        not_offline == {v \in RGs: local_ring[u][v]["state"] # StateOffline}
     IN 
         {local_ring[u][v]["token"]: v \in not_offline} 
 
 AllOnlineTokens(u) == 
     LET 
-        online == {v \in Nodes: local_ring[u][v]["state"] = StateOnline}
+        online == {v \in RGs: local_ring[u][v]["state"] = StateOnline}
     IN 
         {local_ring[u][v]["token"]: v \in online} 
 
 ClaimedToken == 
     LET 
-        not_offline == {v \in Nodes: local_ring[v][v]["state"] # StateOffline}
+        not_offline == {v \in RGs: local_ring[v][v]["state"] # StateOffline}
     IN 
         {local_ring[k][k]["token"]: k \in not_offline}
 
@@ -105,7 +105,7 @@ Join(u) ==
         /\ local_ring[u][u]["state"] = StateOffline
         /\ local_ring' = [local_ring EXCEPT ![u] 
                             = [local_ring[u] EXCEPT ![u]
-                                = [k \in NodeState |-> 
+                                = [k \in RGState |-> 
                                     IF k = "version" THEN local_ring[u][u][k] + 1
                                     ELSE IF k = "token" THEN key
                                     ELSE IF k = "state" THEN StatePrepare
@@ -114,7 +114,7 @@ Join(u) ==
 
 Leave(u) == 
     LET 
-        updated == [k \in NodeState |-> 
+        updated == [k \in RGState |-> 
                      IF k = "version" THEN local_ring[u][u][k] + 1
                      ELSE IF k = "token" THEN local_ring[u][u][k]
                      ELSE IF k = "state" THEN StateExit
@@ -138,7 +138,7 @@ JoinMigrate(u) ==
         all_online_tokens == AllOnlineTokens(u)
         v_token == local_ring[u][v]["token"]
         v_data == DataSet(v_token, all_online_tokens, all_keys)
-        updated == [k \in NodeState |-> 
+        updated == [k \in RGState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
                             ELSE IF k = "state" THEN StateOnline
@@ -158,7 +158,7 @@ JoinMigrate(u) ==
         /\ IF v_data # {} THEN 
                 \* migrate data to v and mark v as ready 
                 /\ local_ring' = local_ring_uv
-                /\ local_kv' = [k \in Nodes |-> 
+                /\ local_kv' = [k \in RGs |-> 
                                 IF k = u THEN local_kv[k] \ v_data
                                 ELSE IF k = v THEN local_kv[k] \cup v_data
                                 ELSE local_kv[k]]
@@ -173,7 +173,7 @@ LeaveMigrate(u) ==
         v == FindPrevToken(token, local_ring[u])
         data == local_kv[u] 
 
-        updated == [k \in NodeState |-> 
+        updated == [k \in RGState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
                             ELSE IF k = "state" THEN StateOffline
@@ -185,14 +185,13 @@ LeaveMigrate(u) ==
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
 
     IN 
-        \* /\ Cardinality(cluster) >= 2
         \* copying from v to u
         /\ local_ring[u][u]["state"] = StateOnline
         /\ local_ring[u][v]["state"] = StateExit
         \* update version 
         /\ local_ring' = local_ring_uv
         \* migrate data
-        /\ local_kv' = [k \in Nodes |-> 
+        /\ local_kv' = [k \in RGs |-> 
                         IF k = v THEN {} 
                         ELSE IF k = u THEN local_kv[v] \cup local_kv[u] 
                         ELSE local_kv[k]]
@@ -211,52 +210,52 @@ Write(u, k) ==
         /\ debug_kv' = debug_kv \cup {k}
         /\ UNCHANGED <<local_ring, d1>>
 
-offline == [k \in NodeState |-> 
+offline == [k \in RGState |-> 
             IF k = "version" THEN 0 
             ELSE IF k = "token" THEN -1
             ELSE IF k = "state" THEN "offline"
             ELSE "unused"]
-seed == [k \in NodeState |-> 
+seed == [k \in RGState |-> 
             IF k = "version" THEN 1 
             ELSE IF k = "token" THEN 0
             ELSE IF k = "state" THEN "online"
             ELSE "unused"]
 
 Init ==
-    /\ local_ring = [i \in Nodes |-> 
-                        [j \in Nodes |-> 
-                            IF i = seed_rg /\ j = seed_rg
+    /\ local_ring = [i \in RGs |-> 
+                        [j \in RGs |-> 
+                            IF i = SeedRG /\ j = SeedRG
                             THEN seed
                             ELSE offline ]] 
-    /\ local_kv = [i \in Nodes |-> {}]
+    /\ local_kv = [i \in RGs |-> {}]
     /\ debug_kv = {}
     /\ d1 = {}
 
 Next ==
-    \/ \E u, v \in Nodes:
+    \/ \E u, v \in RGs:
         /\ Gossip(u, v)
-    \/ \E u \in Nodes:
+    \/ \E u \in RGs:
         \/ JoinMigrate(u)
         \/ Join(u) 
         \/ Leave(u)
         \/ LeaveMigrate(u)
-    \/ \E u \in Nodes:
+    \/ \E u \in RGs:
         /\ \E k \in KeySpace:
             /\ k \notin debug_kv
             /\ Write(u, k)
 
 \* data in kv store are unique per node
 DataUnique == 
-    \A u, v \in Nodes:
+    \A u, v \in RGs:
         /\ u # v => local_kv[u] \intersect local_kv[v] = {}
 
 TokenLocation == 
-    \A u \in Nodes:
+    \A u \in RGs:
         \A k \in local_kv[u]: 
             u = FindNextToken(k, local_ring[u])
 
 KVConsistent == 
-    /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
+    /\ UNION {local_kv[n] : n \in RGs} = debug_kv
 
 Spec ==
     /\ Init
