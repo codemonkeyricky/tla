@@ -2,7 +2,7 @@
 
 \usetikzlibrary{arrows.meta} % For double arrows
 
-\chapter{Decentralized KV Store}
+\chapter{Decentralized Database}
 
 In the era of big-data today, localized instance of relational database is no
 longer enough to hold the volume of data for toady's requirement. Distributed
@@ -128,18 +128,74 @@ will be described later.
 
 \section{Design}
 
-In this chapter, we will implement a simple distributed key-value store that
-supports horizontal scale-out. The service provider can add servers into the
-cluster dynamically to reduce the load on individual servers. Similarly, the
-service provider can also remove servers dynamically during off hours to
-minimize server costs.\\
+In our design, a RG can be in one of the following states: Offline, Joining,
+Online, Leaving. The service starts with a single RG responsible for the entire
+hash space. Since this is the epoch RG, it directly transitions into Online
+state and can claim any token on the ring. For simplicity, epoch RG always claim
+token 0.\\
 
-A new server \textit{K} joining the cluster claims a token \textit{T} on the
-ring. Starting from \textit{T}, walk the ring counter-clockwise to find the
-first neighboring token \textit{P}, \textit{K} owns the range of keys from
-\textit{P} (exclusive) to \textit{T} (inclusive).\\
+The design assumes node failure handling are handled within the RG, the
+specification will not model RG crash or restart. 
 
-The design does not include replication or fault recovery to limit the scope.
+\subsection{Offline}
+
+RG is offline, no impact to cluster.
+
+\subsection{Joining}
+
+By definition, the goal of adding a RG U into the cluster is to reduce the load
+on another RG V. Since RG U is a new member of the cluster, it may not have the
+latest cluster topology. Once RG U announces its presence via gossip protocol,
+it waits for RG V to reach out.\\
+
+When RG V realizes a new RG can share its burden, RG V will coordinate with RG U
+to migrate a subset of its data to RG U (the subset RG U will be responsible
+for). Once data migration completes: RG U transitions to Online state and start
+servicing request in its range, while RG V rejects request to the range RG U has
+taken over. This range update is also reflected in both RG U and V's local ring
+cache, and communicated during next round of gossip protocol.
+
+\subsection{Online}
+
+RG is \textit{Online} and responds and records requests in its hash range. 
+
+\subsection{Leaving}
+
+Symmetrically, when a RG U is leaving the cluster, a RG V needs to take over the
+range and data RG U is currently responsible for. Similarly to join, RG U 
+announce its intent to leave, and wait for RG V to reach out and coordinate the
+hand off.\\
+
+Note when RG U is still waiting or in the middle of hand-off, it is still
+\textit{Online} and must respond to request, until RV V fully takes over.
+
+% Note this is a \textit{graceful} hand-off. The design assumes any failure
+% mitigation is implemented within the RG. 
+
+
+% Since the entire hash space is always covered by the cluster, a RG U joining 
+% the cluster needs to coordinate with another RG V to take over part of RG V's 
+% hash space. 
+% take over a certain hash range needs to coordinate with RG V which is currently 
+% responsible for that 
+% cluster needs to coordinate with RG V that is currently responsible for the
+% range. When RG U joins the cluster, it will announce its presence via gossip
+% protocol. Eventually RG V will realize it can volunteer a part of its range to
+% RG U, and 
+
+
+% In this chapter, we will implement a simple distributed key-value store that
+% supports horizontal scale-out. The service provider can add servers into the
+% cluster dynamically to reduce the load on individual servers. Similarly, the
+% service provider can also remove servers dynamically during off hours to
+% minimize server costs.\\
+
+% A new server \textit{K} joining the cluster claims a token \textit{T} on the
+% ring. Starting from \textit{T}, walk the ring counter-clockwise to find the
+% first neighboring token \textit{P}, \textit{K} owns the range of keys from
+% \textit{P} (exclusive) to \textit{T} (inclusive).\\
+
+% The design does not include replication or fault recovery to limit the scope.
 
 \section{Spec}
 
