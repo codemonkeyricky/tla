@@ -156,7 +156,6 @@ JoinMigrate(u) ==
         /\ local_ring[u][v]["state"] = StatePrepare
         /\ Cardinality(all_keys) # 0
         /\ IF v_data # {} THEN 
-                \* migrate data to v and mark v as ready 
                 /\ local_ring' = local_ring_uv
                 /\ local_kv' = [k \in RGs |-> 
                                 IF k = u THEN local_kv[k] \ v_data

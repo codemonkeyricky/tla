@@ -199,63 +199,287 @@ Note when RG U is still waiting or in the middle of hand-off, it is still
 
 \section{Specification}
 
-The distributed key-value \textit{Init} is defined below:\\
+\textit{Init} is defined below:\\
 
 \begin{tla}
-offline == [k \in NodeState |-> 
+offline == [k \in RGState |-> 
             IF k = "version" THEN 0 
             ELSE IF k = "token" THEN -1
-            ELSE IF k = "status" THEN "offline"
+            ELSE IF k = "state" THEN "offline"
             ELSE "unused"]
-seed == [k \in NodeState |-> 
+seed == [k \in RGState |-> 
             IF k = "version" THEN 1 
             ELSE IF k = "token" THEN 0
-            ELSE IF k = "status" THEN "online"
+            ELSE IF k = "state" THEN "online"
             ELSE "unused"]
-
 Init ==
-    /\ cluster = {"n0"}
-    /\ local_ring = [i \in Nodes |-> 
-                        [j \in Nodes |-> 
-                            IF i = "n0" /\ j = "n0" 
+    /\ local_ring = [i \in RGs |-> 
+                        [j \in RGs |-> 
+                            IF i = SeedRG /\ j = SeedRG
                             THEN seed
                             ELSE offline ]] 
-    /\ local_kv = [i \in Nodes |-> {}]
+    /\ local_kv = [i \in RGs |-> {}]
     /\ debug_kv = {}
-    /\ d1 = {}
+    /\ debug = {}
 \end{tla}
 \begin{tlatex}
-\@x{ offline \.{\defeq} [ k \.{\in} NodeState \.{\mapsto}}%
+\@x{ offline \.{\defeq} [ k \.{\in} RGState \.{\mapsto}}%
 \@x{ {\IF} k \.{=}\@w{version} \.{\THEN} 0}%
 \@x{ \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} \.{-} 1}%
-\@x{ \.{\ELSE} {\IF} k \.{=}\@w{status} \.{\THEN}\@w{offline}}%
+\@x{ \.{\ELSE} {\IF} k \.{=}\@w{state} \.{\THEN}\@w{offline}}%
 \@x{ \.{\ELSE}\@w{unused} ]}%
-\@x{ seed \.{\defeq} [ k \.{\in} NodeState \.{\mapsto}}%
+\@x{ seed \.{\defeq} [ k \.{\in} RGState \.{\mapsto}}%
 \@x{\@s{4.1} {\IF} k \.{=}\@w{version} \.{\THEN} 1}%
 \@x{\@s{4.1} \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} 0}%
-\@x{\@s{4.1} \.{\ELSE} {\IF} k \.{=}\@w{status} \.{\THEN}\@w{online}}%
+\@x{\@s{4.1} \.{\ELSE} {\IF} k \.{=}\@w{state} \.{\THEN}\@w{online}}%
 \@x{\@s{4.1} \.{\ELSE}\@w{unused} ]}%
-\@pvspace{8.0pt}%
 \@x{ Init \.{\defeq}}%
-\@x{\@s{16.4} \.{\land} cluster \.{=} \{\@w{n0} \}}%
-\@x{\@s{16.4} \.{\land} local\_ring \.{=} [ i \.{\in} Nodes \.{\mapsto}}%
-\@x{\@s{20.5} [ j \.{\in} Nodes \.{\mapsto}}%
-\@x{\@s{24.6} {\IF} i \.{=}\@w{n0} \.{\land} j \.{=}\@w{n0}}%
+\@x{\@s{16.4} \.{\land} local\_ring \.{=} [ i \.{\in} RGs \.{\mapsto}}%
+\@x{\@s{20.5} [ j \.{\in} RGs \.{\mapsto}}%
+\@x{\@s{24.6} {\IF} i \.{=} SeedRG \.{\land} j \.{=} SeedRG}%
 \@x{\@s{24.6} \.{\THEN} seed}%
 \@x{\@s{24.6} \.{\ELSE} offline ] ]}%
- \@x{\@s{16.4} \.{\land} local\_kv \.{=} [ i \.{\in} Nodes \.{\mapsto} \{ \}
- ]}%
+\@x{\@s{16.4} \.{\land} local\_kv \.{=} [ i \.{\in} RGs \.{\mapsto} \{ \} ]}%
 \@x{\@s{16.4} \.{\land} debug\_kv \.{=} \{ \}}%
-\@x{\@s{16.4} \.{\land} d1 \.{=} \{ \}}%
+\@x{\@s{16.4} \.{\land} debug \.{=} \{ \}}%
+\end{tlatex}
+\\
+
+Since RGs operate independently, each RG maintain its view of the ring. This is
+tracked by \textit{local\_ring}. The cluster is initialized with a single RG
+\textit{SeedRG} with \textit{version} set to 1, \textit{state} set to online and
+claims \textit{token} 0 on the ring.\\
+
+\textit{local\_kv} represents the per RG KV store. \textit{debug\_kv} records
+what the client has written, this is used to verify consistency of the
+distributed database. Finally, a \textit{debug} variable is used to hold a token
+in a failure trace.\\
+
+The core set of actions permitted by \textit{Spec} is defined below:\\
+\begin{tla}
+Next ==
+    \/ \E u, v \in RGs:
+        /\ Gossip(u, v)
+    \/ \E u \in RGs:
+        \/ Join(u) 
+        \/ JoinMigrate(u)
+        \/ Leave(u)
+        \/ LeaveMigrate(u)
+    \/ \E u \in RGs:
+        /\ \E k \in KeySpace:
+            /\ k \notin debug_kv
+            /\ Write(u, k)
+\end{tla}
+\begin{tlatex}
+\@x{ Next \.{\defeq}}%
+\@x{\@s{16.4} \.{\lor} \E\, u ,\, v \.{\in} RGs \.{:}}%
+\@x{\@s{20.5} \.{\land} Gossip ( u ,\, v )}%
+\@x{\@s{16.4} \.{\lor} \E\, u \.{\in} RGs \.{:}}%
+\@x{\@s{20.5} \.{\lor} Join ( u )}%
+\@x{\@s{20.5} \.{\lor} JoinMigrate ( u )}%
+\@x{\@s{20.5} \.{\lor} Leave ( u )}%
+\@x{\@s{20.5} \.{\lor} LeaveMigrate ( u )}%
+\@x{\@s{16.4} \.{\lor} \E\, u \.{\in} RGs \.{:}}%
+\@x{\@s{20.5} \.{\land} \E\, k \.{\in} KeySpace \.{:}}%
+\@x{\@s{24.6} \.{\land} k \.{\notin} debug\_kv}%
+\@x{\@s{24.6} \.{\land} Write ( u ,\, k )}%
+\end{tlatex}
+\\
+
+A RG can \textit{Join} or \textit{Leave} the cluster. However, both are graceful
+operations requiring coordination of other nodes from the cluster. To complete
+join or leave, another RG has to either offload of take over the range of the
+joining or leaving RG.  This is described by \textit{JoinMigrate} and
+\textit{LeaveMigrate}. Any pair of nodes can \textit{Gossip} to share their
+understanding of the current cluster state. Finally, a client can \textit{Write}
+to the database by sending request to a RG.\\
+
+Let us take a look at definition for \textit{Join}:\\
+\begin{tla}
+ClaimedToken == 
+    LET 
+        not_offline == {v \in RGs: local_ring[v][v]["state"] # StateOffline}
+    IN 
+        {local_ring[k][k]["token"]: k \in not_offline}
+
+Join(u) == 
+    LET 
+        key == CHOOSE any \in KeySpace \ ClaimedToken: TRUE
+    IN 
+        \* Only ever one node joining at a time
+        /\ local_ring[u][u]["state"] = StateOffline
+        /\ local_ring' = [local_ring EXCEPT ![u] 
+                            = [local_ring[u] EXCEPT ![u]
+                                = [k \in RGState |-> 
+                                    IF k = "version" THEN local_ring[u][u][k] + 1
+                                    ELSE IF k = "token" THEN key
+                                    ELSE IF k = "state" THEN StatePrepare
+                                    ELSE "unused"]]]
+        /\ UNCHANGED <<local_kv, debug_kv, debug>>
+\end{tla}
+\begin{tlatex}
+\@x{ ClaimedToken \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} not\_offline \.{\defeq} \{ v \.{\in} RGs \.{:} local\_ring [ v
+ ] [ v ] [\@w{state} ] \.{\neq} StateOffline \}}%
+\@x{\@s{16.4} \.{\IN}}%
+ \@x{\@s{32.8} \{ local\_ring [ k ] [ k ] [\@w{token} ] \.{:} k \.{\in}
+ not\_offline \}}%
+\@pvspace{8.0pt}%
+\@x{ Join ( u ) \.{\defeq}}%
+\@x{ \.{\LET}}%
+ \@x{\@s{16.4} key \.{\defeq} {\CHOOSE} any \.{\in} KeySpace
+ \.{\,\backslash\,} ClaimedToken \.{:} {\TRUE}}%
+\@x{ \.{\IN}}%
+\@x{\@s{16.4}}%
+\@y{%
+  Only ever one node joining at a time
+}%
+\@xx{}%
+ \@x{\@s{16.4} \.{\land} local\_ring [ u ] [ u ] [\@w{state} ] \.{=}
+ StateOffline}%
+ \@x{\@s{16.4} \.{\land} local\_ring \.{'} \.{=} [ local\_ring {\EXCEPT}
+ {\bang} [ u ]}%
+\@x{\@s{24.59} \.{=} [ local\_ring [ u ] {\EXCEPT} {\bang} [ u ]}%
+\@x{\@s{28.69} \.{=} [ k \.{\in} RGState \.{\mapsto}}%
+ \@x{\@s{32.8} {\IF} k \.{=}\@w{version} \.{\THEN} local\_ring [ u ] [ u ] [ k
+ ] \.{+} 1}%
+\@x{\@s{32.8} \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} key}%
+\@x{\@s{32.8} \.{\ELSE} {\IF} k \.{=}\@w{state} \.{\THEN} StatePrepare}%
+\@x{\@s{32.8} \.{\ELSE}\@w{unused} ] ] ]}%
+ \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} local\_kv ,\, debug\_kv ,\,
+ debug {\rangle}}%
+\end{tlatex}
+\\
+
+A RG can only join the cluster if it is currently \textit{Offline}. To join the
+cluster, the RG must claim an unclaimed token, enter \textit{Joining} state, and
+announces its intent via \textit{Gossip}.\\
+
+The design has taken a shortcut to claim an unclaimed token. In a production
+implementation, a newly joined RG will not know which token is unclaimed. Since
+the design relies on another RG to \textit{admit} the new RG into the cluster,
+in the case of a collision the admitting RG can simply ask the RG that wishes to
+join to pick a different token and restart the process. Practically, the hash
+space is large enough that collision is unlikely.\\
+
+
+The following describes \textit{JoinMigrate}:\\
+\begin{tla}
+RECURSIVE FindPrevToken(_, _)
+FindPrevToken(key, ring) ==
+    LET 
+        condition(v) == ring[v]["state"] # StateOffline 
+                    /\ ring[v]["token"] = key
+        exists == \E v \in DOMAIN ring: condition(v)
+        owner == CHOOSE only \in DOMAIN ring: condition(only)
+    IN 
+        IF exists THEN
+            owner
+        ELSE 
+            FindPrevToken((key + N - 1) \% N, ring)
+
+JoinMigrate(u) == 
+    LET 
+        \* previous token
+        v == FindPrevToken((local_ring[u][u]["token"] + N - 1) % N, 
+                            local_ring[u])
+        all_keys == local_kv[u]
+        all_online_tokens == AllOnlineTokens(u)
+        v_token == local_ring[u][v]["token"]
+        v_data == DataSet(v_token, all_online_tokens, all_keys)
+        updated == [k \in RGState |-> 
+                            IF k = "version" THEN local_ring[u][v]["version"] + 1
+                            ELSE IF k = "token" THEN local_ring[u][v]["token"]
+                            ELSE IF k = "state" THEN StateOnline
+                            ELSE "unused"]
+        merged == Merge(u, v)
+        local_ring_u == [merged EXCEPT ![u] 
+                            = [merged[u] EXCEPT ![v] = updated]]
+        local_ring_uv == [local_ring_u EXCEPT ![v] 
+                            = [local_ring_u[v] EXCEPT ![v] = updated]]
+    IN 
+        /\ Cardinality(AllTokens(u)) >= 2
+        /\ local_ring[u][u]["state"] = StateOnline
+        /\ local_ring[u][v]["state"] = StatePrepare
+        /\ Cardinality(all_keys) # 0
+        /\ IF v_data # {} THEN 
+                /\ local_ring' = local_ring_uv
+                /\ local_kv' = [k \in RGs |-> 
+                                IF k = u THEN local_kv[k] \ v_data
+                                ELSE IF k = v THEN local_kv[k] \cup v_data
+                                ELSE local_kv[k]]
+            ELSE 
+                UNCHANGED <<local_ring, local_kv>>
+        /\ UNCHANGED <<debug_kv, debug>>
+\end{tla}
+\begin{tlatex}
+\@x{ {\RECURSIVE} FindPrevToken ( \_ ,\, \_ )}%
+\@x{ FindPrevToken ( key ,\, ring ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+ \@x{\@s{32.8} condition ( v ) \.{\defeq} ring [ v ] [\@w{state} ] \.{\neq}
+ StateOffline}%
+\@x{\@s{36.89} \.{\land} ring [ v ] [\@w{token} ] \.{=} key}%
+ \@x{\@s{32.8} exists \.{\defeq} \E\, v \.{\in} {\DOMAIN} ring \.{:} condition
+ ( v )}%
+ \@x{\@s{32.8} owner \.{\defeq} {\CHOOSE} only \.{\in} {\DOMAIN} ring \.{:}
+ condition ( only )}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} {\IF} exists \.{\THEN}}%
+\@x{\@s{36.89} owner}%
+\@x{\@s{32.8} \.{\ELSE}}%
+ \@x{\@s{49.19} FindPrevToken ( ( key \.{+} N \.{-} 1 ) \.{\,\backslash\,}
+ \.{\%} N ,\, ring )}%
+\@pvspace{8.0pt}%
+\@x{ JoinMigrate ( u ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8}}%
+\@y{%
+  previous token
+}%
+\@xx{}%
+ \@x{\@s{32.8} v \.{\defeq} FindPrevToken ( ( local\_ring [ u ] [ u ]
+ [\@w{token} ] \.{+} N \.{-} 1 ) \.{\%} N ,\,}%
+\@x{\@s{32.8} local\_ring [ u ] )}%
+\@x{\@s{32.8} all\_keys \.{\defeq} local\_kv [ u ]}%
+\@x{\@s{32.8} all\_online\_tokens \.{\defeq} AllOnlineTokens ( u )}%
+\@x{\@s{32.8} v\_token \.{\defeq} local\_ring [ u ] [ v ] [\@w{token} ]}%
+ \@x{\@s{32.8} v\_data \.{\defeq} DataSet ( v\_token ,\, all\_online\_tokens
+ ,\, all\_keys )}%
+\@x{\@s{32.8} updated \.{\defeq} [ k \.{\in} RGState \.{\mapsto}}%
+ \@x{\@s{41.0} {\IF} k \.{=}\@w{version} \.{\THEN} local\_ring [ u ] [ v ]
+ [\@w{version} ] \.{+} 1}%
+ \@x{\@s{41.0} \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} local\_ring [ u ] [
+ v ] [\@w{token} ]}%
+\@x{\@s{41.0} \.{\ELSE} {\IF} k \.{=}\@w{state} \.{\THEN} StateOnline}%
+\@x{\@s{41.0} \.{\ELSE}\@w{unused} ]}%
+\@x{\@s{32.8} merged \.{\defeq} Merge ( u ,\, v )}%
+\@x{\@s{32.8} local\_ring\_u \.{\defeq} [ merged {\EXCEPT} {\bang} [ u ]}%
+\@x{\@s{45.1} \.{=} [ merged [ u ] {\EXCEPT} {\bang} [ v ] \.{=} updated ] ]}%
+ \@x{\@s{32.8} local\_ring\_uv \.{\defeq} [ local\_ring\_u {\EXCEPT} {\bang} [
+ v ]}%
+ \@x{\@s{41.0} \.{=} [ local\_ring\_u [ v ] {\EXCEPT} {\bang} [ v ] \.{=}
+ updated ] ]}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} \.{\land} Cardinality ( AllTokens ( u ) ) \.{\geq} 2}%
+ \@x{\@s{32.8} \.{\land} local\_ring [ u ] [ u ] [\@w{state} ] \.{=}
+ StateOnline}%
+ \@x{\@s{32.8} \.{\land} local\_ring [ u ] [ v ] [\@w{state} ] \.{=}
+ StatePrepare}%
+\@x{\@s{32.8} \.{\land} Cardinality ( all\_keys ) \.{\neq} 0}%
+\@x{\@s{32.8} \.{\land} {\IF} v\_data \.{\neq} \{ \} \.{\THEN}}%
+\@x{\@s{41.0} \.{\land} local\_ring \.{'} \.{=} local\_ring\_uv}%
+\@x{\@s{41.0} \.{\land} local\_kv \.{'} \.{=} [ k \.{\in} RGs \.{\mapsto}}%
+ \@x{\@s{41.0} {\IF} k \.{=} u \.{\THEN} local\_kv [ k ] \.{\,\backslash\,}
+ v\_data}%
+ \@x{\@s{41.0} \.{\ELSE} {\IF} k \.{=} v \.{\THEN} local\_kv [ k ] \.{\cup}
+ v\_data}%
+\@x{\@s{41.0} \.{\ELSE} local\_kv [ k ] ]}%
+\@x{\@s{36.89} \.{\ELSE}}%
+\@x{\@s{53.29} {\UNCHANGED} {\langle} local\_ring ,\, local\_kv {\rangle}}%
+\@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} debug\_kv ,\, debug {\rangle}}%
 \end{tlatex}
 
-\begin{itemize}
-    \item \textit{cluster} is a set that includes all the nodes currently in the distributed key-value store.
-    \item \textit{global\_ring} is a function that implements key-to-node mapping.
-    \item \textit{local\_kv} represents the per node key-value store. For
-    simplicity the key and value are assumed to be the same, thus represented
-    as a single number.
-    \item \textit{global\_kv} represents the system key-value store, used to check consistency.
-\end{itemize}
 
-Before we define the \textit{Spec}, we need create a few helper functions:\\
+
+% \end{document}
