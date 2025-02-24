@@ -274,9 +274,6 @@ Write(u, k) ==
         /\ debug_kv' = debug_kv \cup {k}
         /\ UNCHANGED <<cluster, local_ring, d1>>
 
-tokens == {0,1,2}
-keys == {0,2}
-
 Init ==
     LET 
         offline == [k \in NodeState |-> 
