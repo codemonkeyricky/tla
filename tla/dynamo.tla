@@ -23,7 +23,43 @@ StatusExit == "exit"
 
 KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
-    
+
+RECURSIVE FindNextToken(_, _)
+FindNextToken(key, ring) ==
+    LET 
+        condition(v) == 
+            (ring[v]["status"] = StatusOnline \/ ring[v]["status"] = StatusExit)
+                /\ ring[v]["token"] = key
+        exists == \E v \in DOMAIN ring: condition(v)
+        owner == CHOOSE only \in DOMAIN ring: condition(only)
+    IN 
+        IF exists THEN
+            owner
+        ELSE 
+            FindNextToken((key + 1) % N, ring)
+
+RECURSIVE FindPrevToken(_, _)
+FindPrevToken(key, ring) ==
+    LET 
+        condition(v) == ring[v]["status"] # StatusOffline /\ ring[v]["token"] = key
+        exists == \E v \in DOMAIN ring: condition(v)
+        owner == CHOOSE only \in DOMAIN ring: condition(only)
+    IN 
+        IF exists THEN
+            owner
+        ELSE 
+            FindPrevToken((key + N - 1) % N, ring)
+
+\* TODO: when collecting all keys to migrate, stop at the frist *online* token
+RECURSIVE DataSet(_, _, _)
+DataSet(k, all_tokens, all_keys) ==
+    LET 
+        k_prev == (k + N - 1) % N
+        include == {k} \intersect all_keys
+    IN 
+        include \cup IF k_prev \in all_tokens THEN {} 
+                     ELSE DataSet(k_prev, all_tokens, all_keys)
+
 Merge(u, v) == 
     LET 
         updated(w) ==   IF local_ring[u][w]["version"] < local_ring[v][w]["version"] THEN 
@@ -94,45 +130,6 @@ Leave(u) ==
                                 = updated]] 
         /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
        
-RECURSIVE FindNextToken(_, _)
-FindNextToken(key, ring) ==
-    LET 
-        condition(v) == 
-            (ring[v]["status"] = StatusOnline \/ ring[v]["status"] = StatusExit)
-                /\ ring[v]["token"] = key
-        exists == \E v \in DOMAIN ring: condition(v)
-        owner == CHOOSE only \in DOMAIN ring: condition(only)
-    IN 
-        IF exists THEN
-            owner
-        ELSE 
-            FindNextToken((key + 1) % N, ring)
-
-RECURSIVE FindPrevToken(_, _)
-FindPrevToken(key, ring) ==
-    LET 
-        condition(v) == ring[v]["status"] # StatusOffline /\ ring[v]["token"] = key
-        exists == \E v \in DOMAIN ring: condition(v)
-        owner == CHOOSE only \in DOMAIN ring: condition(only)
-    IN 
-        IF exists THEN
-            owner
-        ELSE 
-            FindPrevToken((key + N - 1) % N, ring)
-
-MyToken(u) == 
-    local_ring[u][u]["token"]
-
-\* TODO: when collecting all keys to migrate, stop at the frist *online* token
-RECURSIVE DataSet(_, _, _)
-DataSet(k, all_tokens, all_keys) ==
-    LET 
-        k_prev == (k + N - 1) % N
-        include == {k} \intersect all_keys
-    IN 
-        include \cup IF k_prev \in all_tokens THEN {} 
-                     ELSE DataSet(k_prev, all_tokens, all_keys)
-
 \* find tokens owned by someone else and sync
 JoinMigrate(u) == 
     LET 
