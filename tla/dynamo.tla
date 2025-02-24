@@ -11,7 +11,9 @@ VARIABLES
 
 vars == <<local_ring, local_kv, debug_kv, d1>>
 
-Nodes == {"n0", "n1", "n2"}
+Nodes == {"rg0", "rg1", "rg2"}
+
+seed_rg == "rg0"
 
 NodeState == {"version", "token", "status"}
 
@@ -223,7 +225,7 @@ seed == [k \in NodeState |->
 Init ==
     /\ local_ring = [i \in Nodes |-> 
                         [j \in Nodes |-> 
-                            IF i = "n0" /\ j = "n0" 
+                            IF i = seed_rg /\ j = seed_rg
                             THEN seed
                             ELSE offline ]] 
     /\ local_kv = [i \in Nodes |-> {}]
@@ -253,15 +255,8 @@ TokenLocation ==
         \A k \in local_kv[u]: 
             u = FindNextToken(k, local_ring[u])
 
-\* SomeoneAlwaysOnline == 
-\*     Cardinality(cluster) >= 2 => \E u \in Nodes: local_ring[u][u]["status"] = StatusOnline
-
 KVConsistent == 
     /\ UNION {local_kv[n] : n \in Nodes} = debug_kv
-
-\* KVXOR == 
-\*     Cardinality(cluster) > 1 => 
-\*         \A u, v \in cluster: u # v => (local_kv[u] \intersect local_kv[v]) = {}
 
 Spec ==
     /\ Init
