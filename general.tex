@@ -38,7 +38,7 @@ can be a result of an incomplete specification definition, where certain edge
 cases were not accounted for. The model checker typically provides a fairly
 comprehensive backtrace leading up to the deadlock to simplify debugging.
 
-\section{Safety}
+\section{Safety Properties}
 
 Designer should add as many system safety properties as possible to catch
 problems early. Safety properties are checked at the end of every state and
@@ -56,6 +56,17 @@ specification, instructing the model checker how to prioritize transitions to
 take.\\
 
 For a detailed fairness description please refer to Chapter~\ref{chap:fairness}.
+
+\section{Liveness Properties}
+
+While verifying liveness properties is super useful, the model checker at the 
+time of writing can only verify liveness properties sequentially. To verify
+liveness, model checker must first identify the strongly connected component in
+the graph, and the algorithm currently implemented does not support
+parallelization.\\
+
+The general recommendation is to only define and verify liveness properties if
+the specification is sufficiently small. 
 
 \section{Fully Verification}
 
