@@ -480,6 +480,73 @@ JoinMigrate(u) ==
 \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} debug\_kv ,\, debug {\rangle}}%
 \end{tlatex}
 
+A RG U walks its local ring counter-clockwise to find the first neighboring RG
+V. If RG V is in \textit{Joining} state, this allows RG U to offload part of
+its range to RG V and admit RG V into the cluster. This coordination also
+includes data migration, since some of the keys RG U have will be owned by RG V
+as well. At the end of the process, both RG U and V update their local ring cache of
+each others state, and propagate that in subsequent round of \textit{Gossip}.\\
+
+In a practical implementation, the data migration process might take a while.
+The RGs maintains merkle-trees for its data and uses that to determine
+migration status. Once data migration completes, the range switch over is atomic. 
+RG U stops servicing requests to the range RG V has taken over, and redirects 
+the requests to RG V either explicitly or implicitly via gossip protocol.\\
+
+The following defines \textit{Leave}:\\
+
+\begin{tla}
+Leave(u) == 
+    LET 
+        updated == [k \in RGState |-> 
+                     IF k = "version" THEN local_ring[u][u][k] + 1
+                     ELSE IF k = "token" THEN local_ring[u][u][k]
+                     ELSE IF k = "state" THEN StateExit
+                     ELSE "unused"]
+    IN 
+        \* can only leave if we are already online 
+        /\ local_ring[u][u]["state"] = StateOnline
+        \* can only leave if there's at least another server to migrate data to
+        /\ Cardinality(AllOnlineTokens(u)) >= 2
+        /\ local_ring' = [local_ring EXCEPT ![u] 
+                            = [local_ring[u] EXCEPT ![u]
+                                = updated]] 
+        /\ UNCHANGED <<local_kv, debug_kv, debug>>
+\end{tla}
+\begin{tlatex}
+\@x{ Leave ( u ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} updated \.{\defeq} [ k \.{\in} RGState \.{\mapsto}}%
+ \@x{\@s{36.89} {\IF} k \.{=}\@w{version} \.{\THEN} local\_ring [ u ] [ u ] [
+ k ] \.{+} 1}%
+ \@x{\@s{36.89} \.{\ELSE} {\IF} k \.{=}\@w{token} \.{\THEN} local\_ring [ u ]
+ [ u ] [ k ]}%
+\@x{\@s{36.89} \.{\ELSE} {\IF} k \.{=}\@w{state} \.{\THEN} StateExit}%
+\@x{\@s{36.89} \.{\ELSE}\@w{unused} ]}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8}}%
+\@y{%
+  can only leave if we are already online 
+}%
+\@xx{}%
+ \@x{\@s{32.8} \.{\land} local\_ring [ u ] [ u ] [\@w{state} ] \.{=}
+ StateOnline}%
+\@x{\@s{32.8}}%
+\@y{%
+  can only leave if there's at least another server to migrate data to
+}%
+\@xx{}%
+\@x{\@s{32.8} \.{\land} Cardinality ( AllOnlineTokens ( u ) ) \.{\geq} 2}%
+ \@x{\@s{32.8} \.{\land} local\_ring \.{'} \.{=} [ local\_ring {\EXCEPT}
+ {\bang} [ u ]}%
+\@x{\@s{41.0} \.{=} [ local\_ring [ u ] {\EXCEPT} {\bang} [ u ]}%
+\@x{\@s{45.1} \.{=} updated ] ]}%
+ \@x{\@s{32.8} \.{\land} {\UNCHANGED} {\langle} local\_kv ,\, debug\_kv ,\,
+ debug {\rangle}}%
+\end{tlatex}
+
+Similar to \textit{Join}, a RG can leave if it is \textit{Online}, and not the
+only RG in the cluster.
 
 
 % \end{document}
