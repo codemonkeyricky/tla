@@ -3,15 +3,17 @@
 
 \chapter{Data Structure}
 
-Like other languages, TLA+ provides its data structure. Readers are assumed
-familiar with common data structures, and this chapter will only focus on the
-TLA+ language semantics.
+TLA+ fundamentally supports two different data structures: \textit{Set} and
+\textit{Function}. All other data structures are built on-top of these two
+primitives.
 
 \section{Set}
 
 Set is an unordered set where every element in the set is unique. TLA+ Set
 includes common set operation including union, intersection, membership check,
-and more.\newline
+and more. Set is declared using the squiggly operator, \textit{\{\}}.\\
+
+The following defines a few Set usage examples:\\
 
 \begin{tla}
 a == {0, 1, 2}
@@ -22,24 +24,6 @@ c == a \union b
 
 \* \{2\}
 d == a \intersect b     
-
-\* TRUE - because 4 in c is bigger than 3
-e == \E x \in c: x > 3  
-
-\* FALSE - nothing in c is bigger than 5
-f == \E x \in c: x > 5  
-
-\* FALSE - not all elements in c are smaller than 3
-g == \A x \in c: x < 3  
-
-\* TRUE - all elements in c are smaller than 3
-h == \A x \in c: x < 5  
-
-\* \{0, 1, 2\} - all elementse less than 3
-i == {x \in c: x < 3}   
-
-\* 5 - the number of elements in c
-j == Cardinality(c)     
 
 \* \{0, 1, 3, 4\} - c substracts d
 k == c \ d             
@@ -64,59 +48,92 @@ k == c \ d
 \@pvspace{8.0pt}%
 \@x{}%
 \@y{%
-  TRUE - because 4 in c is bigger than 3
-}%
-\@xx{}%
-\@x{ e \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 3}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  FALSE - nothing in c is bigger than 5
-}%
-\@xx{}%
-\@x{ f \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 5}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  FALSE - not all elements in c are smaller than 3
-}%
-\@xx{}%
-\@x{ g \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 3}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  TRUE - all elements in c are smaller than 3
-}%
-\@xx{}%
-\@x{ h \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 5}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  \{0, 1, 2\} - all elementse less than 3
-}%
-\@xx{}%
-\@x{ i \.{\defeq} \{ x \.{\in} c \.{:} x \.{<} 3 \}}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  5 - the number of elements in c
-}%
-\@xx{}%
-\@x{ j \.{\defeq} Cardinality ( c )}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
   \{0, 1, 3, 4\} - c substracts d
 }%
 \@xx{}%
 \@x{ k \.{\defeq} c \.{\,\backslash\,} d}%
 \end{tlatex}
 
+\section{Function}
+
+Function is similar to unordered map in other data structures, supporting key
+value association and lookup. Functions are defined using square brackets,
+\textit{[]}.\\
+
+The following provides a few examples of function:\\
+
+\begin{tla}
+SetA == {"a", "b", "c"}
+SetB == {"c", "d", "e"}
+
+\* Create a mapping with keys a, b, c with values 0, 0, 0
+a == [k \in SetA |-> 0]
+b == [k \in SetB |-> 1]
+
+\* Concatenate 
+c == a @@ b
+
+\* Subtraction
+d == [x \in (DOMAIN c \ DOMAIN b) |-> c[x]]
+
+\* Create a mapping with keys a, b, c with values \{\}, \{\}, \{\}
+e == [k \in SetA |-> {}]
+
+\* Create a mapping that is the same as e, except key a's value is {"a", "b", "c"}
+f == [e EXCEPT !["a"] = {"a", "b", "c"}] 
+
+\end{tla}
+\begin{tlatex}
+\@x{ SetA \.{\defeq} \{\@w{a} ,\,\@w{b} ,\,\@w{c} \}}%
+\@x{ SetB \.{\defeq} \{\@w{c} ,\,\@w{d} ,\,\@w{e} \}}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  Create a mapping with keys a, b, c with values 0, 0, 0
+}%
+\@xx{}%
+\@x{ a \.{\defeq} [ k \.{\in} SetA \.{\mapsto} 0 ]}%
+\@x{ b \.{\defeq} [ k \.{\in} SetB \.{\mapsto} 1 ]}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  Concatenate 
+}%
+\@xx{}%
+\@x{ c \.{\defeq} a \.{\,@@\,} b}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  Subtraction
+}%
+\@xx{}%
+ \@x{ d \.{\defeq} [ x \.{\in} ( {\DOMAIN} c \.{\,\backslash\,} {\DOMAIN} b )
+ \.{\mapsto} c [ x ] ]}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  Create a mapping with keys a, b, c with values \{\}, \{\}, \{\}
+}%
+\@xx{}%
+\@x{ e \.{\defeq} [ k \.{\in} SetA \.{\mapsto} \{ \} ]}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+ Create a mapping that is the same as e, except key a's value is {"a", "b",
+ "c"}
+}%
+\@xx{}%
+ \@x{ f \.{\defeq} [ e {\EXCEPT} {\bang} [\@w{a} ] \.{=} \{\@w{a} ,\,\@w{b}
+ ,\,\@w{c} \} ]}%
+\@pvspace{8.0pt}%
+\end{tlatex}
+
 \section{Tuple}
 
-A tuple is an ordered data structure, similar to a queue in other languages.
-Common operation supported by tuple include Append to push and Tail to pop.
-\newline
+A tuple is an ordered queue, which is implemented using \textit{function} with
+ordered keys starting at 1. For example, a tuple of a, b, c is actually an
+unordered map of keys 1, 2, 3 mapping to a, b, c. A tuple is represented using 
+double angle brackets.\\
 
 \begin{tla}
 a == <<0, 1, 2>>                    
@@ -216,73 +233,132 @@ g == {x \in 1..Len(c) : c[x] = 2}
  \}}%
 \end{tlatex}
 
-\section{Function}
+\section{Patterns}
 
-Function is similar to map in other data structures, supporting key value
-lookup.\\
+\subsection{Set Comprehension}
+
+We can also construct a set from an existing set by defining filtering criteria:\\
 
 \begin{tla}
-SetA == {"a", "b", "c"}
-SetB == {"c", "d", "e"}
-
-\* Create a mapping with keys a, b, c with values 0, 0, 0
-a == [k \in SetA |-> 0]
-b == [k \in SetB |-> 1]
-
-\* Concatenate 
-c == a @@ b
-
-\* Subtraction
-d == [x \in (DOMAIN c \ DOMAIN b) |-> c[x]]
-
-\* Create a mapping with keys a, b, c with values \{\}, \{\}, \{\}
-e == [k \in SetA |-> {}]
-
-\* Create a mapping that is the same as e, except key a's value is {"a", "b", "c"}
-f == [e EXCEPT !["a"] = {"a", "b", "c"}] 
-
+\* \{0, 1, 2\} - all elements less than 3
+i == {x \in c: x < 3}   
 \end{tla}
 \begin{tlatex}
-\@x{ SetA \.{\defeq} \{\@w{a} ,\,\@w{b} ,\,\@w{c} \}}%
-\@x{ SetB \.{\defeq} \{\@w{c} ,\,\@w{d} ,\,\@w{e} \}}%
-\@pvspace{8.0pt}%
 \@x{}%
 \@y{%
-  Create a mapping with keys a, b, c with values 0, 0, 0
+  \{0, 1, 2\} - all elements less than 3
 }%
 \@xx{}%
-\@x{ a \.{\defeq} [ k \.{\in} SetA \.{\mapsto} 0 ]}%
-\@x{ b \.{\defeq} [ k \.{\in} SetB \.{\mapsto} 1 ]}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  Concatenate 
-}%
-\@xx{}%
-\@x{ c \.{\defeq} a \.{\,@@\,} b}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  Subtraction
-}%
-\@xx{}%
- \@x{ d \.{\defeq} [ x \.{\in} ( {\DOMAIN} c \.{\,\backslash\,} {\DOMAIN} b )
- \.{\mapsto} c [ x ] ]}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
-  Create a mapping with keys a, b, c with values \{\}, \{\}, \{\}
-}%
-\@xx{}%
-\@x{ e \.{\defeq} [ k \.{\in} SetA \.{\mapsto} \{ \} ]}%
-\@pvspace{8.0pt}%
-\@x{}%
-\@y{%
- Create a mapping that is the same as e, except key a's value is {"a", "b",
- "c"}
-}%
-\@xx{}%
- \@x{ f \.{\defeq} [ e {\EXCEPT} {\bang} [\@w{a} ] \.{=} \{\@w{a} ,\,\@w{b}
- ,\,\@w{c} \} ]}%
-\@pvspace{8.0pt}%
+\@x{ i \.{\defeq} \{ x \.{\in} c \.{:} x \.{<} 3 \}}%
 \end{tlatex}
+
+\subsection{Set and Function Size}
+
+We can check the size of a set using \textit{Cardinality} function:\\
+
+\begin{tla}
+Cardinality(set) 
+\end{tla}
+\begin{tlatex}
+\@x{ Cardinality ( set )}%
+\end{tlatex}
+
+Note keys of a function can be extracted as a set by applying the
+\textit{DOMAIN} operator. The following is a way to determine the function size:
+\\
+
+\begin{tla}
+Cardinality(DOMAIN function) 
+\end{tla}
+\begin{tlatex}
+\@x{ Cardinality ( {\DOMAIN} function )}%
+\end{tlatex}
+
+\subsection{Conditonal}
+
+We can use define conditionals with Set:\\
+\begin{tla}
+\* TRUE - because 4 in c is bigger than 3
+e == \E x \in c: x > 3  
+
+\* FALSE - nothing in c is bigger than 5
+f == \E x \in c: x > 5  
+
+\* FALSE - not all elements in c are smaller than 3
+g == \A x \in c: x < 3  
+
+\* TRUE - all elements in c are smaller than 3
+h == \A x \in c: x < 5  
+\end{tla}
+\begin{tlatex}
+\@x{}%
+\@y{%
+  TRUE - because 4 in c is bigger than 3
+}%
+\@xx{}%
+\@x{ e \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 3}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  FALSE - nothing in c is bigger than 5
+}%
+\@xx{}%
+\@x{ f \.{\defeq} \E\, x \.{\in} c \.{:} x \.{>} 5}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  FALSE - not all elements in c are smaller than 3
+}%
+\@xx{}%
+\@x{ g \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 3}%
+\@pvspace{8.0pt}%
+\@x{}%
+\@y{%
+  TRUE - all elements in c are smaller than 3
+}%
+\@xx{}%
+\@x{ h \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 5}%
+\end{tlatex}
+
+\subsection{Recursion}
+
+TLA+ doesn't support for loop. Iterating through a set of values 
+sequentially can be modeled using recursion:\\
+\begin{tla}
+RECURSIVE FindNextToken(_, _)
+FindNextToken(key, ring) ==
+    LET 
+        condition(v) == 
+            (ring[v]["state"] = StateOnline \/ ring[v]["state"] = StateLeaving)
+                /\ ring[v]["token"] = key
+        exists == \E v \in DOMAIN ring: condition(v)
+        owner == CHOOSE only \in DOMAIN ring: condition(only)
+    IN 
+        IF exists THEN
+            owner
+        ELSE 
+            FindNextToken((key + 1) % N, ring)
+\end{tla}
+\begin{tlatex}
+\@x{ {\RECURSIVE} FindNextToken ( \_ ,\, \_ )}%
+\@x{ FindNextToken ( key ,\, ring ) \.{\defeq}}%
+\@x{\@s{16.4} \.{\LET}}%
+\@x{\@s{32.8} condition ( v ) \.{\defeq}}%
+ \@x{\@s{49.19} ( ring [ v ] [\@w{state} ] \.{=} StateOnline \.{\lor} ring [ v
+ ] [\@w{state} ] \.{=} StateLeaving )}%
+\@x{\@s{61.49} \.{\land} ring [ v ] [\@w{token} ] \.{=} key}%
+ \@x{\@s{32.8} exists \.{\defeq} \E\, v \.{\in} {\DOMAIN} ring \.{:} condition
+ ( v )}%
+ \@x{\@s{32.8} owner \.{\defeq} {\CHOOSE} only \.{\in} {\DOMAIN} ring \.{:}
+ condition ( only )}%
+\@x{\@s{16.4} \.{\IN}}%
+\@x{\@s{32.8} {\IF} exists \.{\THEN}}%
+\@x{\@s{36.89} owner}%
+\@x{\@s{32.8} \.{\ELSE}}%
+\@x{\@s{49.19} FindNextToken ( ( key \.{+} 1 ) \.{\%} N ,\, ring )}%
+\end{tlatex}\\
+
+Make sure the recursion termination condition is defined correctly, otherwise
+model checker will report memory related runtime error.
+
+% \end{document}
