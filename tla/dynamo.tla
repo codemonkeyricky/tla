@@ -15,12 +15,12 @@ Nodes == {"rg0", "rg1", "rg2"}
 
 seed_rg == "rg0"
 
-NodeState == {"version", "token", "status"}
+NodeState == {"version", "token", "state"}
 
-StatusOffline == "offline"
-StatusOnline == "online"
-StatusPrepare == "prepare"
-StatusExit == "exit"
+StateOffline == "offline"
+StateOnline == "online"
+StatePrepare == "prepare"
+StateExit == "exit"
 
 KeySpace == {0, 1, 2, 3, 4, 5}
 N == Cardinality(KeySpace)
@@ -29,7 +29,7 @@ RECURSIVE FindNextToken(_, _)
 FindNextToken(key, ring) ==
     LET 
         condition(v) == 
-            (ring[v]["status"] = StatusOnline \/ ring[v]["status"] = StatusExit)
+            (ring[v]["state"] = StateOnline \/ ring[v]["state"] = StateExit)
                 /\ ring[v]["token"] = key
         exists == \E v \in DOMAIN ring: condition(v)
         owner == CHOOSE only \in DOMAIN ring: condition(only)
@@ -42,7 +42,7 @@ FindNextToken(key, ring) ==
 RECURSIVE FindPrevToken(_, _)
 FindPrevToken(key, ring) ==
     LET 
-        condition(v) == ring[v]["status"] # StatusOffline /\ ring[v]["token"] = key
+        condition(v) == ring[v]["state"] # StateOffline /\ ring[v]["token"] = key
         exists == \E v \in DOMAIN ring: condition(v)
         owner == CHOOSE only \in DOMAIN ring: condition(only)
     IN 
@@ -73,26 +73,26 @@ Merge(u, v) ==
                          ELSE local_ring[k]]
 
 Gossip(u, v) == 
-    /\ local_ring[u][u]["status"] # StatusOffline
-    /\ local_ring[v][v]["status"] # StatusOffline
+    /\ local_ring[u][u]["state"] # StateOffline
+    /\ local_ring[v][v]["state"] # StateOffline
     /\ local_ring' = Merge(u, v)
     /\ UNCHANGED <<local_kv, debug_kv, d1>>
 
 AllTokens(u) == 
     LET 
-        not_offline == {v \in Nodes: local_ring[u][v]["status"] # StatusOffline}
+        not_offline == {v \in Nodes: local_ring[u][v]["state"] # StateOffline}
     IN 
         {local_ring[u][v]["token"]: v \in not_offline} 
 
 AllOnlineTokens(u) == 
     LET 
-        online == {v \in Nodes: local_ring[u][v]["status"] = StatusOnline}
+        online == {v \in Nodes: local_ring[u][v]["state"] = StateOnline}
     IN 
         {local_ring[u][v]["token"]: v \in online} 
 
 ClaimedToken == 
     LET 
-        not_offline == {v \in Nodes: local_ring[v][v]["status"] # StatusOffline}
+        not_offline == {v \in Nodes: local_ring[v][v]["state"] # StateOffline}
     IN 
         {local_ring[k][k]["token"]: k \in not_offline}
 
@@ -102,13 +102,13 @@ Join(u) ==
     IN 
         /\ local_ring[u][u]["version"] < 3
         \* Only ever one node joining at a time
-        /\ local_ring[u][u]["status"] = StatusOffline
+        /\ local_ring[u][u]["state"] = StateOffline
         /\ local_ring' = [local_ring EXCEPT ![u] 
                             = [local_ring[u] EXCEPT ![u]
                                 = [k \in NodeState |-> 
                                     IF k = "version" THEN local_ring[u][u][k] + 1
                                     ELSE IF k = "token" THEN key
-                                    ELSE IF k = "status" THEN StatusPrepare
+                                    ELSE IF k = "state" THEN StatePrepare
                                     ELSE "unused"]]]
         /\ UNCHANGED <<local_kv, debug_kv, d1>>
 
@@ -117,11 +117,11 @@ Leave(u) ==
         updated == [k \in NodeState |-> 
                      IF k = "version" THEN local_ring[u][u][k] + 1
                      ELSE IF k = "token" THEN local_ring[u][u][k]
-                     ELSE IF k = "status" THEN StatusExit
+                     ELSE IF k = "state" THEN StateExit
                      ELSE "unused"]
     IN 
         \* can only leave if we are already online 
-        /\ local_ring[u][u]["status"] = StatusOnline
+        /\ local_ring[u][u]["state"] = StateOnline
         \* can only leave if there's at least another server to migrate data to
         /\ Cardinality(AllOnlineTokens(u)) >= 2
         /\ local_ring' = [local_ring EXCEPT ![u] 
@@ -141,7 +141,7 @@ JoinMigrate(u) ==
         updated == [k \in NodeState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
-                            ELSE IF k = "status" THEN StatusOnline
+                            ELSE IF k = "state" THEN StateOnline
                             ELSE "unused"]
         merged == Merge(u, v)
         local_ring_u == [merged EXCEPT ![u] 
@@ -152,8 +152,8 @@ JoinMigrate(u) ==
         \* TODO: limit
         \* /\ local_ring[u][u]["version"] < 3
         /\ Cardinality(AllTokens(u)) >= 2
-        /\ local_ring[u][u]["status"] = StatusOnline
-        /\ local_ring[u][v]["status"] = StatusPrepare
+        /\ local_ring[u][u]["state"] = StateOnline
+        /\ local_ring[u][v]["state"] = StatePrepare
         /\ Cardinality(all_keys) # 0
         /\ IF v_data # {} THEN 
                 \* migrate data to v and mark v as ready 
@@ -176,7 +176,7 @@ LeaveMigrate(u) ==
         updated == [k \in NodeState |-> 
                             IF k = "version" THEN local_ring[u][v]["version"] + 1
                             ELSE IF k = "token" THEN local_ring[u][v]["token"]
-                            ELSE IF k = "status" THEN StatusOffline
+                            ELSE IF k = "state" THEN StateOffline
                             ELSE "unused"]
         merged == Merge(u, v)
         local_ring_u == [merged EXCEPT ![u] 
@@ -187,8 +187,8 @@ LeaveMigrate(u) ==
     IN 
         \* /\ Cardinality(cluster) >= 2
         \* copying from v to u
-        /\ local_ring[u][u]["status"] = StatusOnline
-        /\ local_ring[u][v]["status"] = StatusExit
+        /\ local_ring[u][u]["state"] = StateOnline
+        /\ local_ring[u][v]["state"] = StateExit
         \* update version 
         /\ local_ring' = local_ring_uv
         \* migrate data
@@ -203,8 +203,8 @@ Write(u, k) ==
         owner == FindNextToken(k, local_ring[u])
     IN 
         \* only accept if u is owner
-        /\ \/ local_ring[u][u]["status"] = StatusOnline
-           \/ local_ring[u][u]["status"] = StatusExit
+        /\ \/ local_ring[u][u]["state"] = StateOnline
+           \/ local_ring[u][u]["state"] = StateExit
         /\ u = owner
         /\ local_kv' = [local_kv EXCEPT ![u] 
                         = local_kv[u] \cup {k}]
@@ -214,12 +214,12 @@ Write(u, k) ==
 offline == [k \in NodeState |-> 
             IF k = "version" THEN 0 
             ELSE IF k = "token" THEN -1
-            ELSE IF k = "status" THEN "offline"
+            ELSE IF k = "state" THEN "offline"
             ELSE "unused"]
 seed == [k \in NodeState |-> 
             IF k = "version" THEN 1 
             ELSE IF k = "token" THEN 0
-            ELSE IF k = "status" THEN "online"
+            ELSE IF k = "state" THEN "online"
             ELSE "unused"]
 
 Init ==
