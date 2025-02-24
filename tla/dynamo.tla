@@ -5,11 +5,11 @@ VARIABLES
     local_kv, 
     \* debug_ring, 
     debug_kv,
-    d1
+    debug
     \* d2,
     \* d3
 
-vars == <<local_ring, local_kv, debug_kv, d1>>
+vars == <<local_ring, local_kv, debug_kv, debug>>
 
 RGs == {"rg0", "rg1", "rg2"}
 
@@ -76,7 +76,7 @@ Gossip(u, v) ==
     /\ local_ring[u][u]["state"] # StateOffline
     /\ local_ring[v][v]["state"] # StateOffline
     /\ local_ring' = Merge(u, v)
-    /\ UNCHANGED <<local_kv, debug_kv, d1>>
+    /\ UNCHANGED <<local_kv, debug_kv, debug>>
 
 AllTokens(u) == 
     LET 
@@ -110,7 +110,7 @@ Join(u) ==
                                     ELSE IF k = "token" THEN key
                                     ELSE IF k = "state" THEN StatePrepare
                                     ELSE "unused"]]]
-        /\ UNCHANGED <<local_kv, debug_kv, d1>>
+        /\ UNCHANGED <<local_kv, debug_kv, debug>>
 
 Leave(u) == 
     LET 
@@ -127,7 +127,7 @@ Leave(u) ==
         /\ local_ring' = [local_ring EXCEPT ![u] 
                             = [local_ring[u] EXCEPT ![u]
                                 = updated]] 
-        /\ UNCHANGED <<local_kv, debug_kv, d1>>
+        /\ UNCHANGED <<local_kv, debug_kv, debug>>
        
 \* find tokens owned by someone else and sync
 JoinMigrate(u) == 
@@ -164,7 +164,7 @@ JoinMigrate(u) ==
                                 ELSE local_kv[k]]
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
-        /\ UNCHANGED <<debug_kv, d1>>
+        /\ UNCHANGED <<debug_kv, debug>>
 
 \* surviving node copying from leaving node
 LeaveMigrate(u) == 
@@ -195,7 +195,7 @@ LeaveMigrate(u) ==
                         IF k = v THEN {} 
                         ELSE IF k = u THEN local_kv[v] \cup local_kv[u] 
                         ELSE local_kv[k]]
-        /\ UNCHANGED <<debug_kv, d1>>
+        /\ UNCHANGED <<debug_kv, debug>>
 
 Write(u, k) == 
     LET 
@@ -208,7 +208,7 @@ Write(u, k) ==
         /\ local_kv' = [local_kv EXCEPT ![u] 
                         = local_kv[u] \cup {k}]
         /\ debug_kv' = debug_kv \cup {k}
-        /\ UNCHANGED <<local_ring, d1>>
+        /\ UNCHANGED <<local_ring, debug>>
 
 offline == [k \in RGState |-> 
             IF k = "version" THEN 0 
@@ -229,7 +229,7 @@ Init ==
                             ELSE offline ]] 
     /\ local_kv = [i \in RGs |-> {}]
     /\ debug_kv = {}
-    /\ d1 = {}
+    /\ debug = {}
 
 Next ==
     \/ \E u, v \in RGs:
