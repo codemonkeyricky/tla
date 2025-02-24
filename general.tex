@@ -1,11 +1,9 @@
 \chapter{General Guideline}
 
-\section{Debug}
+\section{Be Skeptical}
 
-Debugging in TLC is a bit different than debugging with normal programs. A step
-in the model checker is a state transition. Even if the model checker completes,
-it's still worthwhile to dump and audit the states just to make sure
-\textit{Spec} is defined correctly.
+Even if model checker reports no violation, it is often worthwhile to dump and
+audit the states to make sure the specification is defined correctly.
 
 \begin{verbatim}
 tlc elevator -dump out > /dev/null && cat out.dump | head -n5
@@ -15,46 +13,86 @@ State 2:
 a = 2
 \end{verbatim}
 
-You may want to grep the output to look for the state being set to expected
-value to confirm your spec is working as intended.
+Designer can grep the output to look for the state being set to expected value
+to confirm the specification is working as intended.
+
+\section{Debug} 
+
+Designer can insert prints or asserts with \textit{PrintT} and \textit{Assert}
+respectively, these may help root causing a bug when model checker reports fails.\\
+
+An \textit{Assert} dumps the backtrace leading up to it, but does not include values of
+any non-state variables. For example, if the state includes with local macros
+using \textit{LET..IN} semantics or \textit{RECURSIVE} function calls, the associated values will
+not be displayed. Prints do not help in this case either. Since the model
+checker explores the states using BFS, the print order is not guaranteed.\\
+
+To display any intermediary values, designer can add an auxiliary debug variable
+to the system definition. The debug variable will be dumped as part of the state
+backtrace.
 
 \section{Dead Lock}
 
 Deadlock typically happens when the model checker runs out of things to do. This
-can be a result of an incomplete \textit{Spec} definition, where certain edge
+can be a result of an incomplete specification definition, where certain edge
 cases were not accounted for. The model checker typically provides a fairly
 comprehensive backtrace leading up to the deadlock to simplify debugging.
 
+\section{Safety}
+
+Designer should add as many system safety properties as possible to catch
+problems early. Safety properties are checked at the end of every state and
+impose very little overhead to overall execution.
+
 \section{Live Lock}
 
-Livelock happens when the model checker identifies a case where the liveness
-property is violated. An example is the elevator stuck going between two floors 
-instead of going to the top floor, or the system is stuck dropping and
-retransmitting the same packet.\\
+Livelock happens when the model checker identifies a case where the system is 
+oscillating between states without making progress towards the final goal.  An
+example is the elevator stuck going between two floors instead of going to the
+top floor, or the system is stuck dropping and retransmitting the same packet.\\
 
-These are typically fixed by providing additional fairness descriptions to the
-Spec, telling the model checker how to continue in the case of a live lock.\newline 
+These can be fixed by providing additional fairness descriptions to the
+specification, instructing the model checker how to prioritize transitions to
+take.\\
 
 For a detailed fairness description please refer to Chapter~\ref{chap:fairness}.
 
-\section{Model Reduction}
+\section{Fully Verification}
 
-This is the \textit{art} of enabling a TLA+ spec to be verifiable. Model
-checking is only valuable if it can be verified within a reasonable amount of
-time. Since the model complexity grows exponentially, there's little value in
-attempting to hyper-optimize the details.  Designers should focus on simplifying
-the model by removing non-critical features and focus on features with highest
-return on investment.\\
+Fully verified a model provide extremely high confidence the specification is
+correct. However, since the specification complexity grows exponentially,
+designer may need to get creative to reduce the model to allow the model checker can
+run in a practical amount of time.\\
 
-One useful way of trimming out the low-value portion of a spec is to audit the
+Since the model complexity grows exponentially, there's little value in
+attempting to hyper-optimize implementation detail. Designers should focus on
+simplifying the model by removing non-critical features and focus verifying
+features with the highest return on investment.\\
+
+One way of trimming out the low-value part of a specification is to audit the
 state dump. Even in the case of a non-terminating run, a partial state dump may
-help identify low-value abstractions that can be removed from the spec.\newline
+help identify low-value abstractions that can be removed from the spec.\\
 
 One key value of TLA+ is it highlights all the corner cases in the system. Even
-if the designer ends up simplifying the spec, it still likely highlights certain
-conditions the designer was previously unaware of.\newline
+if the designer ends up simplifying the specification, it still likely highlights certain
+conditions the designer was previously unaware of.\\
 
-In general, when the spec has millions or higher more states, it likely cannot 
-be verified within a few seconds. If a fault is caught after verifying a million
-states, the model likely can be simplified to reproduce the fault in much less
-states.
+% In general, when the specification has millions or higher more states, model checker 
+% likely cannot verify it in a few seconds. If a fault is caught after verifying a
+% million states, the model likely can be simplified to reproduce the fault in
+% much less states.\\
+
+\section{Simulation and Generation}
+
+While fully verifying a specification is always ideal, it is not always
+practical. With sufficient complexity, the model checker will not be able to 
+verify the specification in reasonable time. That said, it is still worthwhile 
+to verify the specification by running the model checker in either simulation or
+generation mode. Simulation is the legacy simulation mode where the model
+checker keeps running without termination. Generation mode also causes the model
+checker to run without termination, but applies uniform probability distribution
+on selecting next state transition.\\
+
+Even for a complex specification, the majority of violation will be caught very
+quickly per 80/20 rule. For some problem domain this may be good enough, and is
+certainly better than no verification at all. 

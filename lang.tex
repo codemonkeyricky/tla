@@ -320,16 +320,16 @@ h == \A x \in c: x < 5
 \@x{ h \.{\defeq} \A\, x \.{\in} c \.{:} x \.{<} 5}%
 \end{tlatex}
 
-\subsection{Recursion}
+\subsection{Loop with Recursion}
 
-TLA+ doesn't support for loop. Iterating through a set of values 
-sequentially can be modeled using recursion:\\
+Iterating through a set of values sequentially can be modeled using recursion:\\
 \begin{tla}
 RECURSIVE FindNextToken(_, _)
 FindNextToken(key, ring) ==
     LET 
         condition(v) == 
-            (ring[v]["state"] = StateOnline \/ ring[v]["state"] = StateLeaving)
+            (ring[v]["state"] = StateOnline 
+                  \/ ring[v]["state"] = StateLeaving)
                 /\ ring[v]["token"] = key
         exists == \E v \in DOMAIN ring: condition(v)
         owner == CHOOSE only \in DOMAIN ring: condition(only)
@@ -344,8 +344,8 @@ FindNextToken(key, ring) ==
 \@x{ FindNextToken ( key ,\, ring ) \.{\defeq}}%
 \@x{\@s{16.4} \.{\LET}}%
 \@x{\@s{32.8} condition ( v ) \.{\defeq}}%
- \@x{\@s{49.19} ( ring [ v ] [\@w{state} ] \.{=} StateOnline \.{\lor} ring [ v
- ] [\@w{state} ] \.{=} StateLeaving )}%
+\@x{\@s{49.19} ( ring [ v ] [\@w{state} ] \.{=} StateOnline}%
+\@x{\@s{49.19} \.{\lor} ring [ v ] [\@w{state} ] \.{=} StateLeaving )}%
 \@x{\@s{61.49} \.{\land} ring [ v ] [\@w{token} ] \.{=} key}%
  \@x{\@s{32.8} exists \.{\defeq} \E\, v \.{\in} {\DOMAIN} ring \.{:} condition
  ( v )}%
@@ -356,9 +356,52 @@ FindNextToken(key, ring) ==
 \@x{\@s{36.89} owner}%
 \@x{\@s{32.8} \.{\ELSE}}%
 \@x{\@s{49.19} FindNextToken ( ( key \.{+} 1 ) \.{\%} N ,\, ring )}%
-\end{tlatex}\\
+\end{tlatex}
 
 Make sure the recursion termination condition is defined correctly, otherwise
 model checker will report memory related runtime error.
+
+\subsection{Variable Update}
+
+Updating a variable on state transition boundary is often done using
+\textit{EXCEPT} keyword:\\
+
+\begin{tla}
+f == [e EXCEPT !["a"] = {"a", "b", "c"}]
+\end{tla}
+\begin{tlatex}
+ \@x{ f \.{\defeq} [ e {\EXCEPT} {\bang} [\@w{a} ] \.{=} \{\@w{a} ,\,\@w{b}
+ ,\,\@w{c} \} ]}%
+\end{tlatex}
+\\
+
+The limitation with the \textit{EXCEPT} keyword is it permits update of a single
+key.  This can be solved more generically by iterating through a set:\\
+\begin{tla}
+local_ring = [i \in RGs |-> 
+                        [j \in RGs |-> 
+                            IF i = SeedRG /\ j = SeedRG
+                            THEN seed
+                            ELSE offline ]] 
+\end{tla}
+\begin{tlatex}
+\@x{ local\_ring \.{=} [ i \.{\in} RGs \.{\mapsto}}%
+\@x{ [ j \.{\in} RGs \.{\mapsto}}%
+\@x{\@s{4.1} {\IF} i \.{=} SeedRG \.{\land} j \.{=} SeedRG}%
+\@x{\@s{4.1} \.{\THEN} seed}%
+\@x{\@s{4.1} \.{\ELSE} offline ] ]}%
+\end{tlatex}
+\\
+
+We can apply the same trick when working with functions by using the
+\textit{DOMAIN} keyword and iterate through the keys as a set:\\
+
+\begin{tla}
+kv' = [x \in DOMAIN kv \cup {key} |-> IF x = key THEN value ELSE kv[x]]
+\end{tla}
+\begin{tlatex}
+ \@x{ kv \.{'} \.{=} [ x \.{\in} {\DOMAIN} kv \.{\cup} \{ key \} \.{\mapsto}
+ {\IF} x \.{=} key \.{\THEN} value \.{\ELSE} kv [ x ] ]}%
+\end{tlatex}
 
 % \end{document}
