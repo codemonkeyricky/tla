@@ -77,8 +77,6 @@ Join(u) ==
     LET 
         key == CHOOSE any \in KeySpace \ ClaimedToken: TRUE
     IN 
-        \* /\ PrintT(key)
-        \* /\ Assert(0, "")
         \* Only ever one node joining at a time
         /\ u \notin cluster
         /\ local_ring' = [local_ring EXCEPT ![u] 
@@ -88,9 +86,6 @@ Join(u) ==
                                     ELSE IF k = "token" THEN key
                                     ELSE IF k = "status" THEN StatusPrepare
                                     ELSE "unused"]]]
-        \* /\ debug_ring' = [kk \in DOMAIN debug_ring \cup {key} |-> 
-        \*                     IF kk = key THEN u 
-        \*                     ELSE debug_ring[kk]]
         /\ cluster' = cluster \cup {u}
         /\ UNCHANGED <<local_kv, debug_kv, d1>>
 
@@ -112,13 +107,12 @@ Leave(u) ==
                             = [local_ring[u] EXCEPT ![u]
                                 = updated]] 
         /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
-        \* /\ Assert(0,"")
        
 NotInCluster ==
     Nodes \ {cluster}
 
-RECURSIVE FindNextToken2(_, _)
-FindNextToken2(key, ring) ==
+RECURSIVE FindNextToken(_, _)
+FindNextToken(key, ring) ==
     LET 
         condition(v) == 
             (ring[v]["status"] = StatusOnline \/ ring[v]["status"] = StatusExit)
@@ -129,7 +123,7 @@ FindNextToken2(key, ring) ==
         IF exists THEN
             owner
         ELSE 
-            FindNextToken2((key + 1) % N, ring)
+            FindNextToken((key + 1) % N, ring)
 
 RECURSIVE FindPrevToken2(_, _)
 FindPrevToken2(key, ring) ==
@@ -187,8 +181,6 @@ JoinMigrate(u) ==
         /\ local_ring[u][u]["status"] = StatusOnline
         /\ local_ring[u][v]["status"] = StatusPrepare
         /\ Cardinality(all_keys) # 0
-        \* /\ PrintT(all_keys)
-        \* /\ PrintT(all_tokens)
         /\ IF v_data # {} THEN 
                 \* migrate data to v and mark v as ready 
                 /\ local_ring' = local_ring_uv
@@ -196,17 +188,8 @@ JoinMigrate(u) ==
                                 IF k = u THEN local_kv[k] \ v_data
                                 ELSE IF k = v THEN local_kv[k] \cup v_data
                                 ELSE local_kv[k]]
-                \* /\ Assert(0,"")
             ELSE 
                 UNCHANGED <<local_ring, local_kv>>
-        \* /\ IF v_data # {} THEN 
-        \*     /\ d1' = v_token
-        \*     /\ d2' = all_online_tokens 
-        \*     /\ d3' = all_keys
-        \*     ELSE 
-        \*     /\ d1' = {}
-        \*     /\ d2' = {}
-        \*     /\ d3' = {}
         /\ UNCHANGED <<cluster, debug_kv, d1>>
 
 \* surviving node copying from leaving node
@@ -242,27 +225,9 @@ LeaveMigrate(u) ==
                         ELSE local_kv[k]]
         /\ UNCHANGED <<cluster, debug_kv, d1>>
 
-BecomeReady(u) ==
-    LET 
-        no_one_ready ==
-            \A k \in cluster: local_ring[k][k]["status"] # StatusOnline
-    IN 
-        /\ u \in cluster 
-        /\ local_ring[u][u]["status"] = StatusPrepare
-        /\ IF no_one_ready THEN 
-                local_ring' = [local_ring EXCEPT ![u] 
-                                = [local_ring[u] EXCEPT ![u]
-                                    = [k \in NodeState |-> 
-                                        IF k = "status" THEN StatusOnline
-                                        ELSE IF k = "version" THEN local_ring[u][u][k] + 1
-                                        ELSE local_ring[u][u][k]]]]
-           ELSE 
-                UNCHANGED local_ring
-        /\ UNCHANGED <<cluster, local_kv, debug_kv, d1>>
-
 Write(u, k) == 
     LET 
-        owner == FindNextToken2(k, local_ring[u])
+        owner == FindNextToken(k, local_ring[u])
     IN 
         \* only accept if u is owner
         /\ \/ local_ring[u][u]["status"] = StatusOnline
@@ -304,7 +269,6 @@ Next ==
     \/ \E u, v \in Nodes:
         /\ Gossip(u, v)
     \/ \E u \in Nodes:
-        \* \/ BecomeReady(u)
         \/ JoinMigrate(u)
         \/ Join(u) 
         \/ Leave(u)
@@ -322,14 +286,7 @@ DataUnique ==
 TokenLocation == 
     \A u \in Nodes:
         \A k \in local_kv[u]: 
-            u = FindNextToken2(k, local_ring[u])
-
-\* KeyLocation == 
-\*     IF debug_kv # {} THEN 
-\*         \A k \in debug_kv:
-\*             /\ k \in local_kv[FindNextToken2(k, local_ring["n0"], StatusOnline)]
-\*     ELSE  
-\*         TRUE
+            u = FindNextToken(k, local_ring[u])
 
 SomeoneAlwaysOnline == 
     Cardinality(cluster) >= 2 => \E u \in Nodes: local_ring[u][u]["status"] = StatusOnline
