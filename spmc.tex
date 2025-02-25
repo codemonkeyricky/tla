@@ -64,7 +64,7 @@ To read, a reader performs a two-step reservation:
 There may be more than one approach to implementing SPMC, the above description
 is what we will implement in this chapter.
 
-\section{Spec}
+\section{Specification}
 
 The following is the core reader implementation:
 \newline
@@ -212,7 +212,7 @@ The writer first checks outstanding, and early returns if the queue is full. Aft
 the fullness check, the writer then checks if the current index is UNUSED.  This is
 to account for the edge case where a reader has performed the reservation first
 step to decrement outstanding but hasn't done the actual read. If both checks
-pass, then the writer now has an \textit{UNUSED} index it can write to.\newline
+pass, then the writer now has an \textit{UNUSED} index it can write to.
 
 \section{Safety}
 

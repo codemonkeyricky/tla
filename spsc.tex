@@ -25,7 +25,8 @@ The following describes the SPSC queue requirements:
 \begin{itemize}
       \item Two executing context, reader and writer
       \item Writer pointer advances after write 
-      \item Reader pointer advances after reading      \item If read pointer equals write pointer, queue is empty
+      \item Reader pointer advances after reading      
+      \item If read pointer equals write pointer, queue is empty
       \item If writer pointer + 1 equals read pointer, queue is full
 \end{itemize}
 
@@ -55,16 +56,16 @@ only exception is when the read pointer equals to write pointer, then the queue 
 empty. Given the possible ways the reader and writer execution can interleave, 
 we can use TLA+ to verify the design.
 
-\section{Spec}
+\section{Specification}
 
-TLA+ specification can be written using its native formal specification language,
-or a C-like syntax called PlusCal (which transpires down to its native form).
-In this example, I chose to implement the specification using PlusCal, since the
-content to be verified is pseudo implementation. While it is possible to specify
-SPSC in native TLA+, I find the approach more error-prone as each line is
-effectively an individual state to be modeled.\\
+% TLA+ specification can be written using its native formal specification language,
+% or a C-like syntax called PlusCal (which transpires down to its native form).
+% In this example, I chose to implement the specification using PlusCal, since the
+% content to be verified is pseudo implementation. While it is possible to specify
+% SPSC in native TLA+, I find the approach more error-prone as each line is
+% effectively an individual state to be modeled.\\
 
-The following is a snippet of the spec written in PlusCal:\\
+The following is a snippet of the specification written in PlusCal:\\
 \begin{ppcal}
 procedure reader()
 begin
@@ -99,6 +100,7 @@ end procedure;
 \@x{\@s{24.59} {\p@return} {\p@semicolon}}%
 \@x{ {\p@end} {\p@procedure} {\p@semicolon}}%
 \end{tlatex}
+\\
 
 The reader checks if the queue is empty by comparing the read and write pointers. If 
 the queue is empty, reader early returns. If the queue is not empty, the reader reads the
