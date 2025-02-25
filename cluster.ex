@@ -1,22 +1,23 @@
 defmodule Cluster do
   def start do
-    epoch_pid = spawn(__MODULE__, :rg, [0, 1, %{}])
+    epoch_pid = spawn(__MODULE__, :rg, [%{}])
 
     send(epoch_pid, {:epoc})
   end
 
   # Replica group definition
-  def rg(token, version, peers) do
+  def rg(peers) do
     receive do
       {:epoc} ->
 
-      updated_peers = Map.put(peers, token, %{version: version, pid: self()})
+      # token -> {pid, version}
+      updated_peers = Map.put(peers, 0, %{pid: self(), version: 1})
       IO.puts("updated_peers: #{inspect(updated_peers)}")
 
-      rg(token, version, updated_peers)
+      rg(updated_peers)
     end
 
-    rg(token, version, peers)
+    rg(peers)
   end
 end
 
