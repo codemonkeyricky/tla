@@ -8,14 +8,13 @@ defmodule Cluster do
   end
 
   defp merge_ring(local, remote) do
-    Map.merge(local, remote,
-      fn _token, local_node, remote_node->
-        if local_node.version >= remote_node.version do
-          local_node
-        else
-          remote_node
-        end
-      end)
+    Map.merge(local, remote, fn _token, local_node, remote_node ->
+      if local_node.version >= remote_node.version do
+        local_node
+      else
+        remote_node
+      end
+    end)
   end
 
   # defmodule Property do
@@ -25,7 +24,6 @@ defmodule Cluster do
   # Replica group definition
   def rg(property, local_ring) do
     receive do
-
       {:epoch} ->
         updated_property = %{token: 0}
         updated_local_ring = Map.put(local_ring, 0, %{pid: self(), state: Online, version: 1})
@@ -36,7 +34,7 @@ defmodule Cluster do
         IO.puts("init: #{inspect(self())}")
         token = :rand.uniform(32)
         updated_property = %{token: token}
-        local_ring = Map.put(local_ring, token , %{pid: self(), state: Joining, version: 1})
+        local_ring = Map.put(local_ring, token, %{pid: self(), state: Joining, version: 1})
         send(peer_pid, {:gossip_req, self(), local_ring})
         rg(updated_property, local_ring)
 
@@ -59,15 +57,47 @@ defmodule Cluster do
         IO.puts("#{inspect(self())}: heartbeat: #{inspect(keys)}")
         # my_token = local_ring.
         key_index = Enum.find_index(keys, fn k -> k == property.token end)
-        IO.puts("#{inspect(self())}: heartbeat: token #{inspect(property.token)}")
+        # IO.puts("#{inspect(self())}: heartbeat: token #{inspect(property.token)}")
         # IO.puts("#{inspect(self())}: heartbeat: key_index #{inspect(key_index)}")
         # IO.puts("#{inspect(self())}: heartbeat: token index #{inspect(key_index)}")
         prev_token =
           case key_index do
-            0 -> prev_token = List.last(keys)
-            _ -> prev_token = Enum.at(keys, key_index - 1)
+            0 -> List.last(keys)
+            _ -> Enum.at(keys, key_index - 1)
           end
-        IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
+
+        # IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
+        state = local_ring[prev_token].state
+        # IO.puts("#{inspect(self())}: heartbeat: state #{inspect(state)}")
+        if state == Joining do
+          prev_value = local_ring[prev_token]
+
+          IO.puts("#{inspect(self())}: heartbeat: local_ring #{inspect(local_ring)}")
+          IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
+          IO.puts("#{inspect(self())}: heartbeat: prev_value #{inspect(prev_value)}")
+
+          updated_ring_u =
+            Map.put(
+              local_ring,
+              prev_token,
+              %{pid: prev_value.pid, state: Online, version: prev_value.version + 1}
+            )
+
+          # updated_ring_uv =
+          #   Map.put(
+          #     updated_ring_u,
+          #     prev_token,
+          #     %{pid: prev_value.pid, state: Online, version: prev_value.version + 1}
+          #   )
+
+          # updated_ring = Map.replace(
+          #   local_ring, prev_token,
+          #   )
+          # IO.puts("#{inspect(self())}: heartbeat: state #{inspect(updated_ring)}")
+          raise "error 1"
+        end
+
+        raise "error 2"
 
         # case k do
         #   end
