@@ -477,7 +477,8 @@ ServerReceive(pp) ==
     \/ /\ pp.type = "ack"
        /\ server_tx_ack' = pp.ack
        /\ server_tx_limit' = (pp.ack + W) % N
-       /\ network' = RemoveStaleAck(pp.ack, RemoveMessage(pp, network))
+       /\ network' = RemoveStaleAck(pp.ack, 
+                        RemoveMessage(pp, network))
        /\ UNCHANGED <<server_tx, client_rx, client_buffer, lost>>
     \/ /\ pp.type = "retransmit"
        /\ network' = AddMessage([dst |-> "client", seq |-> pp.seq], 
@@ -502,8 +503,8 @@ ServerReceive(pp) ==
 \@x{\@s{16.4} \.{\land} server\_tx\_ack \.{'} \.{=} pp . ack}%
  \@x{\@s{16.4} \.{\land} server\_tx\_limit \.{'} \.{=} ( pp . ack \.{+} W )
  \.{\%} N}%
- \@x{\@s{16.4} \.{\land} network \.{'} \.{=} RemoveStaleAck ( pp . ack ,\,
- RemoveMessage ( pp ,\, network ) )}%
+\@x{\@s{16.4} \.{\land} network \.{'} \.{=} RemoveStaleAck ( pp . ack ,\,}%
+\@x{\@s{28.69} RemoveMessage ( pp ,\, network ) )}%
  \@x{\@s{16.4} \.{\land} {\UNCHANGED} {\langle} server\_tx ,\, client\_rx ,\,
  client\_buffer ,\, lost {\rangle}}%
 \@x{\@s{16.4} \.{\lor} \.{\land} pp . type \.{=}\@w{retransmit}}%

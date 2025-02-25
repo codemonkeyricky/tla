@@ -161,12 +161,15 @@ working on the same index. The following formula describes this safety property:
 
 \begin{tla}
 MutualExclusion ==
-      ~ ((pc[WRITER] = "w_cs") /\ (pc[READER] = "r_cs") /\ rptr = wptr)
+      ~ ((pc[WRITER] = "w_cs") 
+      /\ (pc[READER] = "r_cs") 
+      /\ rptr = wptr)
 \end{tla}
 \begin{tlatex}
 \@x{ MutualExclusion \.{\defeq}}%
- \@x{\@s{24.59} {\lnot} ( ( pc [ WRITER ] \.{=}\@w{w\_cs} ) \.{\land} ( pc [
- READER ] \.{=}\@w{r\_cs} ) \.{\land} rptr \.{=} wptr )}%
+\@x{\@s{24.59} {\lnot} ( ( pc [ WRITER ] \.{=}\@w{w\_cs} )}%
+\@x{\@s{24.59} \.{\land} ( pc [ READER ] \.{=}\@w{r\_cs} )}%
+\@x{\@s{24.59} \.{\land} rptr \.{=} wptr )}%
 \end{tlatex}
 
 \section{Liveness}
