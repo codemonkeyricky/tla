@@ -59,8 +59,8 @@ same SCC:\\
 A node is an SCC by itself. There are many applications of SCCs, including:
 social network analysis, web crawling, and software modularity analysis.\\
 
-TLA+ also uses SCCs to verify the liveness properties of a spec. Consider the
-following graph from a hypothetical spec: 
+TLA+ also uses SCCs to verify the liveness properties of a specification.
+Consider the following graph from a hypothetical specification: 
 
 \begin{center}
 \begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=2cm]
@@ -78,13 +78,13 @@ following graph from a hypothetical spec:
 \end{tikzpicture}
 \end{center}
 
-States 2 and 3 form an SCC. Assume the system has a liveness
-property that defines state 1 \textit{leads to} state 4. The model checker can
-fail the spec because execution may be trapped inside the SSC (unless a fairness
-description is provided). The model checker must first
-identify all SCCs in the graph to verify liveness. This explains why verifying liveness
-non-trivially increases model checker runtime because the SCC identifying
-algorithm implemented in the model checker runs linearly.\\
+States 2 and 3 form an SCC. Assume the system has a liveness property that
+defines state 1 \textit{leads to} state 4. The model checker can fail the specification
+because execution may be trapped inside the SSC (unless a fairness description
+is provided). The model checker must first identify all SCCs in the graph to
+verify liveness. This explains why verifying liveness non-trivially increases
+model checker runtime, because the SCC identifying algorithm implemented in the
+model checker runs linearly.\\
 
 In this chapter, we will implement a horizontally scalable SCC detection
 algorithm described in \textit{A GPU Algorithm for Detecting Strongly Connected
@@ -134,7 +134,7 @@ algorithm as described in the paper:\\
 The algorithm is split into three parts: initialization, max value
 propagation and edge trimming.
 
-\section{Spec}
+\section{Specification}
 
 \textit{Spec} is defined into three phases: \textit{Init}, \textit{Update},
 \textit{Trim}. Phase \textit{Init} is defined as follow:\\
@@ -383,7 +383,7 @@ Let us assume input similar to as defined in the paper:
 \end{tikzpicture}
 \end{center}
 
-Running the model checker against the spec outputs the following: 
+Running the model checker against the specification outputs the following: 
 \begin{verbatim}
 Error: Invariant Termination is violated.                               
 Error: The behavior up to this point is:      
@@ -406,7 +406,7 @@ State 15: <PhaseTrim line 76, col 5 to line 96,
 \end{verbatim}
 
 As defined by the algorithm, vertices sharing the same value are part of the
-same SCC. The spec correctly identifies three SCCs with more than one vertex:
+same SCC. The specification correctly identifies three SCCs with more than one vertex:
 \{3, 8, 11\}, \{6, 7\} and \{4, 10\}.
 
 \section{Liveness}

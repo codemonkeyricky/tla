@@ -70,7 +70,7 @@ In this chapter, we will implement a simplified gossip model where:
 If the gossip protocol works correctly, every server should eventually have
 the latest version of all the servers.
 
-\section{Spec}
+\section{specification}
 
 In gossip protocol, every server needs to remember all its peer's current
 version:\\
@@ -206,12 +206,12 @@ these actions are allowed by \textit{Spec}, including:
     \item Gossip, Gossip, Gossip, ... 
 \end{itemize}
 
-Some of these are not of interest, for example, the cluster is stuck in a
-loop where everyone is constantly restarting. In the gossip protocol, we are
-interested in verifying the cluster over time converges towards higher version
-value for all servers. This means we need to make sure \textit{Bump} is
-guaranteed to be called under some circumstances. This is where the fairness
-description comes in. To ensure \textit{Bump} is always called:\\
+Some of these are not of interest (eg. the cluster is stuck in a loop where node
+is constantly restarting). In the gossip protocol, we are interested in
+verifying the cluster over time converges towards higher version value for all
+servers. This means we need to make sure \textit{Bump} is guaranteed to be
+called under some circumstances. This is where the fairness description comes
+in. To ensure \textit{Bump} is always called:\\
 
 \begin{tla}
 Spec ==

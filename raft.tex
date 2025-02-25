@@ -46,9 +46,9 @@ The protocol also included a description of log synchronization, state
 recovery, and more. Many details are omitted in this chapter to reduce modeling
 costs. The N nodes in the cluster operate \textit{independently} following the
 above heuristics. Hopefully, this highlights the complexity of verifying the
-correctness of the protocol.\newline
+correctness of the protocol.\\
 
-The following illustrates the state diagram of one node in the cluster:\newline
+The following illustrates the state diagram of one node in the cluster:\\
 \begin{center}
 \begin{tikzpicture}[>=stealth',shorten >=1pt,auto,node distance=4.5cm]
   \node[state]  (f)                {Follower};
@@ -65,10 +65,10 @@ The following illustrates the state diagram of one node in the cluster:\newline
 \end{tikzpicture}
 \end{center}
 
-\section{Spec}
+\section{Specification}
 
 The following implements the skeleton portion of the leader election
-protocol:\newline
+protocol:\\
 
 \begin{tla}
 Init ==
@@ -387,7 +387,7 @@ The handling is split into three cases:
     vote if it hasn't voted, or has voted for the same requester prior 
 \end{itemize}
 
-\section{Model Reduction}
+\section{Model Simplication}
 
 The model checker will run \textit{Spec} as defined but is unlikely to be
 completed in a reasonable amount of time due to exponential state growth. We
@@ -408,7 +408,7 @@ message count in an unbounded fashion.\newline
 \textit{messages} in this example has been implemented as a set, which
 effectively limits the message instance count to one. It is still possible for
 messages to grow unboundedly because of the monotonically increasing term value.
-Further changes are described below.
+More changes are described below.
 
 \subsection{Limit Term Divergence} 
 
@@ -656,17 +656,17 @@ RemoveMessage(to_remove, msgs) ==
 \@x{ RemoveMessage ( to\_remove ,\, msgs ) \.{\defeq}}%
 \end{tlatex}
 
-\subsection{Enable Symmetry}
+% \subsection{Enable Symmetry}
 
-Since the behavior is symmetric between nodes, we can enable symmetry to speed
-up model checker runtime:\newline
+% Since the behavior is symmetric between nodes, we can enable symmetry to speed
+% up model checker runtime:\newline
 
-\begin{tla}
-Perms == Permutations(Servers)
-\end{tla}
-\begin{tlatex}
-\@x{ Perms \.{\defeq} Permutations ( Servers )}%
-\end{tlatex}
+% \begin{tla}
+% Perms == Permutations(Servers)
+% \end{tla}
+% \begin{tlatex}
+% \@x{ Perms \.{\defeq} Permutations ( Servers )}%
+% \end{tlatex}
 
 \section{Safety}
 

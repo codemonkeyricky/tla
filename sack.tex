@@ -149,12 +149,11 @@ description of our design:
     and latency requirements. 
 \end{itemize}
 
-We are now ready to implement the \textit{Spec}. 
+We are now ready to implement the specification.
 
-\section{Spec}
+\section{specification}
 
-The following is the skeleton of the Spec: 
-\newline
+The following is the skeleton of the Spec:\\
 
 \begin{tla}
 Init ==
@@ -200,17 +199,19 @@ Next ==
 
 The server is represented by three variables: 
 \begin{itemize}
-    \item tx+1 represents the sequence number to be used in the next packet
-    \item tx\_liimit represents the highest sequence number the server can send
+    \item \textit{tx+1} represents the sequence number to be used in the next packet
+    \item \textit{tx\_limit} represents the highest sequence number the server can send
     without waiting for an acknowledgement
-    \item tx\_ack represents the most recent acknowledged sequence number
+    \item \textit{tx\_ack} represents the most recent acknowledged sequence number
 \end{itemize}
 
 The client is represented by two variables: 
 \begin{itemize}
-    \item client\_rx is the most recently acknowledged sequence number
-    \item client\_buffer is the receive buffer holding all the packets waiting 
-    to be re-ordered before being acknowledged\end{itemize}
+    \item \textit{client\_rx} is the most recently acknowledged sequence number
+    \item \textit{client\_buffer} is the receive buffer holding all the packets waiting 
+    to be re-ordered before being acknowledged
+\end{itemize}
+
 The allowed actions include packet \textit{Receive}, which the existential
 quantifier also has the side effect of re-ordering.
 \textit{ClientRetransmitRequest} detects and sends retransmit requests.
@@ -304,19 +305,19 @@ Range ==
 
 At any moment the system allows a window of packets to be unacknowledged. Both
 the client and server are aware of the window size, represented by W. By looking
-at packets in its receive buffer and its most acknowledged sequence number, the
-client can determine which packets were lost. There's some nuisance 
-to implement this.\newline
+at packets in its receive buffer and its most recently acknowledged sequence
+number, the client can determine which packets were lost.\\
 
-Since the system does not allow more than W unacknowledged packets, the client
-can assume the window of the packet in its receiver buffer must have sequence number
-$s \in client\_rx ..client\_rx+W$. Since the sequence number has a ceiling, the
-window of packets may wrap around the boundary. This introduces some
-complications around determining the minimum and maximum in the window of the packet.
-The functions defined above calculate the range, maximum and minimum value in
-the window accounting for wraparound.\newline
+There's some nuisance to implement this. Since the system does not allow more
+than W unacknowledged packets, the client can assume the window of the packet in
+its receiver buffer must have sequence number $s \in client\_rx ..client\_rx+W$.
+Since the sequence number has a ceiling, the window of packets may wrap around
+the boundary. This introduces some complications around determining the minimum
+and maximum in the window of the packet.  The functions defined above calculate
+the range, maximum and minimum value in the window accounting for possible
+wrapped around.\\
 
-Now we can look at how the client acknowledgement logic:\newline
+Now we can look at how the client acknowledgement logic:\\
 \begin{tla}
 MergeReady == 
     /\ client_buffer # {}
@@ -530,7 +531,7 @@ server\_tx\_limit allowing it to send more data. The server can also receive a
 retransmit request and send the requested data. \textit{lost} is configurable to
 determine how many packets can be dropped at the same time.
 
-\section{Model Reduction}
+\section{Model Simplification}
 
 \subsection{Removing Stale Acknowlegement}
 

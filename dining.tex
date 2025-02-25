@@ -25,7 +25,7 @@ below:\\
 \end{tikzpicture}
 \end{center}
 
-Each philosopher is thinking or eating, but the philosopher needs to take
+Each philosopher is either thinking or eating, but the philosopher needs to take
 \textit{both} forks to eat. The problem is to design a solution that ensures one
 or more philosophers can eat when they want to. \\
 
@@ -79,8 +79,7 @@ Next ==
 This reflects the behavior described earlier. Note that there's a sequential
 dependency to these actions. The philosopher can only take the second fork after
 taking the first fork, eat after having both forks and put away the forks after
-eating.
-\\
+eating.\\
 
 \begin{tla}
 
