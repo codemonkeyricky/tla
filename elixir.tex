@@ -1,0 +1,87 @@
+% \documentclass[draft]{report}
+
+\RequirePackage{luatex85}% TeXLive 2017 fix for \geometry
+\documentclass{kdp}
+\usepackage{geometry}
+
+% \usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
+% \usepackage{algorithm}% http://ctan.org/pkg/algorithms
+% \usepackage{algpseudocode}
+\usepackage{tlatex}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{comment}
+\usepackage{fancyhdr}
+\usepackage{amssymb}
+\usepackage{inputenc}
+\usepackage{svg}
+\usepackage{framed}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, arrows}
+
+% \usepackage{hyperref}
+% \hypersetup{
+%     colorlinks,
+%     citecolor=black,
+%     filecolor=black,
+%     linkcolor=black,
+%     urlcolor=black
+% }
+
+% !TeX spellcheck = en_GB 
+
+% Configure fancyhdr
+\pagestyle{fancy}
+\fancyhf{} % Clear default header and footer
+
+% Header settings
+\fancyhead[L]{\nouppercase{\leftmark}} % Chapter number and title on the left
+% \fancyhead[C]{Center Header}    % Centered header
+\fancyhead[R]{\thepage}     % Right-aligned header
+
+% Footer settings
+% \fancyfoot[L]{Left Footer}      % Left-aligned footer
+% \fancyfoot[C]{Page \thepage}    % Centered footer with page number
+% \fancyfoot[R]{Right Footer}     % Right-aligned footer
+
+% java -cp /home/richard/dev/tla2tex/tla2tools.jar  tla2tex.TeX  book.tex 
+
+\lstset { %
+    language=C++,
+    backgroundcolor=\color{black!5}, % set backgroundcolor
+    basicstyle=\footnotesize,% basic font setting
+}
+
+\title{Scalable Software with Elixir\\ Early Preview}
+
+% \maketitle
+
+\author{Richard Tang}
+\date{\today}
+\begin{document}
+\maketitle
+
+% \vspace{1cm} % Adjust spacing as needed
+% \begin{center}
+% \textbf{First Draft}
+% \end{center}
+
+\section*{Acknowledgement}
+
+\tableofcontents
+
+% \include{intro}
+
+\chapter{Scalable Software}
+
+\chapter{Design Pattern}
+
+Elixir forces certain design pattern
+
+\chapter{BEAM} 
+
+\chapter{Byte Code} 
+
+\end{document}

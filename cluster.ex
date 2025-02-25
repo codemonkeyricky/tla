@@ -72,32 +72,21 @@ defmodule Cluster do
         if state == Joining do
           prev_value = local_ring[prev_token]
 
-          IO.puts("#{inspect(self())}: heartbeat: local_ring #{inspect(local_ring)}")
-          IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
-          IO.puts("#{inspect(self())}: heartbeat: prev_value #{inspect(prev_value)}")
+          # IO.puts("#{inspect(self())}: heartbeat: local_ring #{inspect(local_ring)}")
+          # IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
+          # IO.puts("#{inspect(self())}: heartbeat: prev_value #{inspect(prev_value)}")
 
-          updated_ring_u =
-            Map.put(
-              local_ring,
-              prev_token,
-              %{pid: prev_value.pid, state: Online, version: prev_value.version + 1}
-            )
+          updated_ring =
+            Map.put(local_ring, prev_token, %{
+              pid: prev_value.pid,
+              state: Online,
+              version: prev_value.version + 1
+            })
 
-          # updated_ring_uv =
-          #   Map.put(
-          #     updated_ring_u,
-          #     prev_token,
-          #     %{pid: prev_value.pid, state: Online, version: prev_value.version + 1}
-          #   )
-
-          # updated_ring = Map.replace(
-          #   local_ring, prev_token,
-          #   )
-          # IO.puts("#{inspect(self())}: heartbeat: state #{inspect(updated_ring)}")
-          raise "error 1"
+          IO.puts("#{inspect(self())}: heartbeat: notify Join to Online")
+          send(local_ring[prev_token].pid, {:gossip_req, self(), updated_ring})
+          rg(property, updated_ring)
         end
-
-        raise "error 2"
 
         # case k do
         #   end
