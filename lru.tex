@@ -4,16 +4,16 @@
 
 \chapter{KV Store with Cache}
 
-LRU cache, or least-re cently-used cache, is a finite-sized cache that evicts 
-the least-recently-used entry when full. Modern CPU architecture supports
-multi-layer cache. Caches closer to the CPU are faster, but also smaller. Cache is 
-designed to take advantage of temporal locality, where recently accessed data isgenerally likely to be re-accessed in near future.\\
+LRU cache, or least-recently-used cache, is a finite-sized cache that evicts the
+least-recently-used entry when full. Modern CPU architecture supports
+multi-layer cache. Caches closer to the CPU are faster, but also smaller. Cache
+is designed to take advantage of temporal locality, where recently accessed data
+isgenerally likely to be re-accessed in near future.\\
 
-Caches are also applied more broadly: CDNs (content delivery
-networks) are a group of geographically distributed servers close to
-users in different parts of the world. Redis is a high-performance in-memory
-key-value store, effectively a cache layer without underlying storage. The list of
-examples goes on and on.
+Caches are also applied more broadly: CDNs (content delivery networks) are a
+group of geographically distributed servers close to users in different parts of
+the world. Redis is a high-performance in-memory key-value store, effectively a
+cache layer without underlying storage. The list of examples goes on and on.
 
 \section{Design}
 
@@ -57,7 +57,7 @@ When specifying the LRU cache with TLA+, we can omit the key to iterator table
 to simplify the specification. Recency list can be implemented as a
 \textit{tuple}, and a key-value table as a \textit{function}.\\
 
-\subsection{Spec}
+\subsection{Specification}
 
 The following implements the LRU put function:\\
 
@@ -148,11 +148,11 @@ in \textit{lru\_function}. Similarly, LRU size cannot exceed \textit{lru\_size}.
 
 \subsection{Liveness}
 
-There isn't any notable converging property for the LRU cache. Omitted from this chapter. 
+Omitted from this chapter. 
 
 \section{KV Store}
 
-The KV store itself is pretty straightforward in design, naively we need a
+The KV store itself is pretty straightforward in design. Naively we need a
 single \textit{function} to implement a table that holds the key-value pairs.
 The slight complexity is integrating LRU into the KV store. This is described in
 the \textit{Update} function:\\
@@ -216,13 +216,14 @@ update its internal recency list. If LRU doesn't contain the key, we have two
 possible scenarios. If the LRU is not full, we can simply insert it into the LRU.
 If the LRU is full, we need to evict the least recently used key-value pair 
 write back to KV store, and insert the new key-value pair into the LRU.
+
 \subsection{Safety}
 
-Omitted.
+Omitted from this chapter. 
 
 \subsection{Liveness}
 
-Omitted.
+Omitted from this chapter. 
 
 \section{Test}
 
@@ -304,7 +305,7 @@ Consistent ==
 
 \subsection{Liveness}
 
-Omitted.
+Omitted for this chapter.
 
 \section{Statistical Sampling}
 
