@@ -37,12 +37,11 @@ providing 100\% microcode coverage before deployment on target.\\
 In reality, any system can be modeled as an arbitrary set of states with a
 collection of invariants that be true at all times. The complexity of such an
 arbitrary system generally grows quadratically as the number of states grows
-linearly (eg. in an N-state system, adding state N+1 may introduce N
-transitions into the new state). There are many engineering problems with a
-large number of states, such as lockless or wait-free data structures,
-distributed algorithms, OS schedulers, consensus protocols, and more. As the
-number of states grows, the problem becomes more challenging for designers to
-reason about.\\
+linearly (eg. in an N-state system, adding state N+1 may introduce N transitions
+into the new state). Many engineering problems have a large number of states,
+such as lockless or wait-free data structures, distributed algorithms, OS
+schedulers, consensus protocols, and more. As the number of states grows, the
+problem becomes more challenging for designers to reason about.\\
 
 So, how do we produce a system that is \textit{correct by design?} 
 
@@ -51,13 +50,13 @@ So, how do we produce a system that is \textit{correct by design?}
 Fast forward to now: I stumbled across TLA+, a formalized solution of what I
 was looking for.\\
 
-In the age of big data, vertical scaling is no longer practical. The industry
+In the age of big data, vertical scaling is no longer sufficient. The industry
 has been exploring and implementing horizontal scaling solutions for past two
 decades. Instead of focusing on increasing clock speed, hardwares vendor has
-been focusing on adding more instances of hardware in their design. On the
-other hand, software vendors has been designing horizontal scaling solution that
-takes advantage of large volume of commodity hardware. There is one slight
-problem: Horizontal scaling requires concurrent reasoning, and:\\
+been focusing on adding more instances of hardware in their design. On the other
+hand, software vendors has been designing horizontal scaling solution that takes
+advantage of large volume of commodity hardware. There is one small problem.
+Horizontal scaling requires concurrent reasoning, and:\\
 
 \textit{Humans are not good at concurrent reasoning}.\\
 
@@ -67,8 +66,8 @@ the corner cases is challenging.\\
 
 Consider a distributed system. The system is a cluster of independently
 operating entities, which collectively needs to offer the correct system
-behavior. At any given time, nodes in the cluster may receive instructions
-out-of-order, crash, recover, etc.\\
+behavior. At any given time, nodes in the cluster may crash, restart, receive 
+instructions out-of-order, etc.\\ 
 
 Consider a single producer multiple consumer lockless queue. The consumers may
 reserve an index in the queue in a certain order but may release it in a
@@ -79,55 +78,126 @@ Consider an OS scheduler with locks. Assume all the processes have the same
 priority. Can a process starve the other processes by repeatedly acquiring and
 releasing the lock? How do we ensure scheduling is fair?\\
 
-The \textit{anti-pattern} is to keep band-aiding the design until the user stops
-filing bug reports. This is never ideal. Per Murphy's law, anything that can go
-wrong \textit{will go wrong}, and a hard-to-reproduce bug will come in at the
-most inconvenient time. How do we make sure the solution is \textit{correct by
+The \textit{anti-pattern} is to band-aid the design until the bugs stop coming.
+This is never ideal, and a hard-to-reproduce crashing bug will come in at the
+most inconvenient time. How do we make sure the system is \textit{correct by
 design}? To solve this problem, we must rely on tools to do the reasoning
 \textit{for us}.
 
 \section{What is TLA+?}
 
-TLA+ is a \textit{system specification language} to describe a system
-without implementation details. TLA+ allows a designer to describe a system as a
-set of states with transitions from one state to the next. Designers can
-describe invariants that must hold in every state and liveness properties a
-sequence of states must satisfy. One of TLA+'s keys is once the system is modeled
-as a finite set of states, the states can be \textit{exhaustively} explored
-(via breath-first-search) to ensure properties are upheld throughout the entire
-state space (either per state or a sequence of states).
+TLA+ is a \textit{system specification language}, allowing the designer to
+describe a system as a set of states with transitions. Designers can describe
+safety properties that must hold in every state, and liveness properties that
+must hold for a sequence of states.\\
+
+Once the system is modeled as a set of states, the states can be
+\textit{exhaustively} explored (via breath-first-search) to ensure properties
+are upheld throughout the entire state space (either per state or a sequence of
+states).\\
+
+When designing a system, designer tend to focus on the obvious happy and unhappy
+path, and create corresponding tests to provide coverage. Unless the system is
+trivial, designers often miss subtle cases that can cause violations. These tend
+to be caught during verification, at which points more tests are added to
+prevent future escapes.\\
+
+The \textit{superpower} of TLA+ is it will exhaustively cover \textit{all}
+states and transitions before the design even enters verification. Consider the
+following example system state graph: 
+
+\begin{center}
+\begin{tikzpicture}[shorten >=1pt, node distance=2cm, on grid, auto]
+    % Define the states
+    \node[state] (q1) {s1};
+    \node[state] (q2) [right=of q1] {s2};
+    \node[state] (q3) [right=of q2] {s3};
+    \node[state] (q4) [right=of q3] {s4};
+    \node[state] (q5) [right=of q4] {s5};
+
+    \node[state] (q10) [above=of q2] {s10};
+    \node[state] (q11) [right=of q10] {s11};
+    \node[state, dashed] (q12) [right=of q11] {s12};
+    \node[state, dashed] (q13) [right=of q12] {s13};
+
+    \node[state, dashed] (q20) [below=of q2] {s20};
+    \node[state] (q21) [right=of q20] {s21};
+    \node[state, dashed] (q22) [right=of q21] {s22};
+    \node[state, dashed] (q23) [right=of q22] {s23};
+
+    % Connect the states with arrows
+    \path[->]
+        (q1) edge node {} (q2)
+        (q2) edge node {} (q3)
+        (q3) edge node {} (q4)
+        (q4) edge node {} (q5)
+        (q1) edge node {} (q10)
+        (q10) edge node {} (q11)
+        (q2) edge node {} (q21)
+        (q21) edge node {} (q4)
+        (q11) edge node {} (q4)
+        ;
+
+    \path[->, dash pattern=on 2pt off 3pt]
+        (q11) edge node {} (q12)
+        (q12) edge node {} (q13)
+        (q1) edge node {} (q20)
+        (q20) edge node {} (q21)
+        (q21) edge node {} (q22)
+        (q22) edge node {} (q23)
+        % (q1) edge node {} (q22)
+        (q4) edge node {} (q23)
+        (q4) edge node {} (q13)
+        ;
+\end{tikzpicture}
+\end{center}
+
+The solid states and edges are the ones designer has accounted for, and the rest
+are state and transition the designer missed. A large part of the missed states
+and transitions may be inconsequential, but a subset of these may be
+catastrophic failure states that require explicit handling or re-architecting.\\
+
+The best way to look at TLA+ is it is a \textit{thinking tool}. Once the
+designer specifies the system with allowed transitions and safety properties,
+the model checker will identify cases where violations can occur and the set of
+transitions that led up to the violations.\\
+
+Amazon AWS has used TLA+ to identify a bug that occurs after 35 transitions
+\cite{aws_bug}. As humans, we are reasonably good at describing the
+\textit{top-level} design, but need a tool like TLA+ to identify all the
+\textit{dark corners} of the design.
 
 \section{About This Book}
-This book was initially a set of notes I took while learning TLA+. I decided to
-formalize these notes into this short book, which I hope the readers will find
-helpful in their TLA+ journey.\newline
+% This book was initially a set of notes I took while learning TLA+. I decided to
+% formalize these notes into this short book, which I hope the readers will find
+% helpful in their TLA+ journey.\newline
 
 The book intends to teach the reader how to write TLA+ specification for their
 design to provide confidence in its \textit{correctness}. This book is targeted
 to software designers, hardware designers, system architects, and in general
-anyone interested in designing correct systems.\newline 
+anyone interested in designing correct systems.\\
 
-To get the most out of the book, the reader should have general computer science
-knowledge. The reader doesn't need to be an expert in a particular language to
-understand this book; TLA+ is effectively its own language. This book is
-example-driven and will go through designs such as lockless queues, simple task
-schedulers, consensus algorithms, etc. Readers will likely enjoy a deeper
-insight if there is familiarity with these topics.
+To get the most out of the book, the reader is expected to have general computer
+science knowledge. The reader doesn't need to be an expert in a particular
+language to understand this book; TLA+ is effectively its own language. This
+book is example-driven and will go through designs such as lockless queues,
+simple task schedulers, consensus algorithms, etc. Readers will likely enjoy a
+deeper insight if there is familiarity with these topics.
 
 \section{How to Use This Book}
 
-This book was designed to be used as a reference, providing examples
-and references using TLA+.\\
+This book was designed to be used as a reference, providing examples and
+references using TLA+.\\
 
 This book is split into multiple parts, covering TLA+ native notation, PlusCal
 (C-like syntax that transpiles down to TLA+ native notation), and rapid
 prototyping with TLA+. All examples will follow a similar layout, covering the
-problem statement, design, spec, and safety properties.\\
+problem statement, design, specification, safety and liveness properties.\\
 
 All examples in this book will be presented using TLA+ \textit{mathematical
 notation}. Converting between Mathematical and ASCII notation is assumed trivial
 due to the one-to-one mapping. Readers are encouraged to consult Table 8 in
 \cite{ss} as needed.\\
 
-The last part of the book provides language references and some focused topics.
-Readers can use it as general reference. 
+The last part of the book provides language references and focused discussion on
+various topics such as liveness, fairness, patterns, etc.
