@@ -34,8 +34,10 @@ defmodule Cluster do
 
       {:init, peer_pid} ->
         IO.puts("init: #{inspect(self())}")
-        local_local_ring = Map.put(local_ring, :rand.uniform(32), %{pid: self(), state: Joining, version: 1})
-        send(peer_pid, {:gossip_req, self(), local_local_ring})
+        updated_token = :rand.uniform(32)
+        local_ring = Map.put(local_ring, updated_token, %{pid: self(), state: Joining, version: 1})
+        send(peer_pid, {:gossip_req, self(), local_ring})
+        rg(updated_token, local_ring)
 
       {:gossip_ack, remote_ring} ->
         IO.puts("#{inspect(self())}: gossip_ack")
@@ -51,11 +53,19 @@ defmodule Cluster do
         rg(token, merged_local_ring)
 
       {:heartbeat} ->
-        IO.puts("#{inspect(self())}: heartbeat")
+        # IO.puts("#{inspect(self())}: heartbeat")
         keys = local_ring |> Map.keys() |> Enum.sort()
-        IO.puts("#{inspect(self())}: heartbeat: #{inspect(keys)}")
+        # IO.puts("#{inspect(self())}: heartbeat: #{inspect(keys)}")
         # my_token = local_ring.
-        # key_index = Enum.find_index(keys, fn k -> k == key end)
+        key_index = Enum.find_index(keys, fn k -> k == token end)
+        IO.puts("#{inspect(self())}: heartbeat: token #{inspect(token)}")
+        # IO.puts("#{inspect(self())}: heartbeat: token index #{inspect(key_index)}")
+        prev_token =
+          case key_index do
+            0 -> prev_token = List.last(keys)
+            _ -> prev_token = Enum.at(keys, key_index - 1)
+          end
+        IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
 
         # case k do
         #   end
