@@ -109,13 +109,15 @@ complexity, easing the readers into this wonderful tool.
 
 \part{Examples with PlusCal}
 
-PlusCal is a C-like syntax that allows designer to describe their \textit{Spec}
-in a more programming language like fashion. I'm of the opinion that these are
-suitable to describe concurrent algorithm, where the code execution between
-multiple contexts may interleave in any way imaginable. While it certainly is
-possible to express these in TLA+ directly, I find it to be error-prone,
-somewhat comparable to writing in Assembly instead of C. In this section we will
-describe a few PlusCal example.
+PlusCal is a C-like syntax that allows designer to describe their specification
+using a pseudo programming language. An use case for PlusCal is to specify
+lockless or wait-free data structures.\\
+
+It is possible to express concurrent data structures in TLA+ native notation. To
+express a function that can be concurrently executed, the specification needs to
+use a PC-like variable to track the statement a context is currently executing.
+This is fairly tedious (and possibly error-prone), making PlusCal a more organic
+tool to express these designs. 
 
 \include{spsc}
 
