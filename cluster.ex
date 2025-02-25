@@ -21,6 +21,7 @@ defmodule Cluster do
   # Replica group definition
   def rg(peers) do
     receive do
+
       {:epoch} ->
       updated_peers = Map.put(peers, 0, %{pid: self(), state: Online, version: 1})
       IO.puts("epoch: #{inspect(updated_peers)}")
@@ -29,9 +30,13 @@ defmodule Cluster do
       {:init, peer_pid} ->
         IO.puts("init: #{inspect(self())}")
         send(peer_pid, {:request_peers, self()})
+
+        # Map.merge
+        local_peers = Map.put(peers, :rand.uniform(32), %{pid: self(), state: Joining, version: 1})
+
         receive do
           {:peers, remote_peers} ->
-            merged_peers = merge_peers(peers, remote_peers)
+            merged_peers = merge_peers(local_peers, remote_peers)
             IO.puts("init merged: #{inspect(self())}")
             rg(merged_peers)
         end
