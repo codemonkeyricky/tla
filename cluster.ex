@@ -23,28 +23,30 @@ defmodule Cluster do
     receive do
 
       {:epoch} ->
-      updated_peers = Map.put(peers, 0, %{pid: self(), state: Online, version: 1})
-      IO.puts("epoch: #{inspect(updated_peers)}")
-      rg(updated_peers)
+        updated_peers = Map.put(peers, 0, %{pid: self(), state: Online, version: 1})
+        IO.puts("epoch: #{inspect(updated_peers)}")
+        rg(updated_peers)
 
       {:init, peer_pid} ->
         IO.puts("init: #{inspect(self())}")
-        send(peer_pid, {:request_peers, self()})
-
-        # Map.merge
         local_peers = Map.put(peers, :rand.uniform(32), %{pid: self(), state: Joining, version: 1})
+        send(peer_pid, {:gossip_req, self(), local_peers})
 
-        receive do
-          {:peers, remote_peers} ->
-            merged_peers = merge_peers(local_peers, remote_peers)
-            IO.puts("init merged: #{inspect(self())}")
-            rg(merged_peers)
-        end
+      {:gossip_ack, remote_peers} ->
+        IO.puts("#{inspect(self())}: gossip_ack")
+        merged_peers = merge_peers(peers, remote_peers)
+        send(self(), {:heartbeat})
+        rg(merged_peers)
 
-      {:request_peers, request_pid} ->
-        IO.puts("request_peers: #{inspect(self())}")
-        send(request_pid, {:peers, peers})
-        rg(peers)
+      {:gossip_req, remote_pid, remote_peers} ->
+        IO.puts("#{inspect(self())}: gossip_req")
+        merged_peers = merge_peers(peers, remote_peers)
+        send(remote_pid, {:gossip_ack, merged_peers})
+        send(self(), {:heartbeat})
+        rg(merged_peers)
+
+      {:heartbeat} ->
+        IO.puts("#{inspect(self())}: heartbeat")
 
     end
 
