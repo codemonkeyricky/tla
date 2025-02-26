@@ -113,29 +113,31 @@ defmodule Cluster do
           0 ->
             IO.puts("#{inspect(self())}: ### 0 #{inspect(joining_set)}")
 
-            to_online = List.first(MapSet.to_list(joining_set))
-            # prev_value = local_ring[to_online]
+            {k, v} = List.first(MapSet.to_list(joining_set))
 
-            IO.puts("#{inspect(self())}: ### 1.5 #{inspect(to_online)}")
+            # IO.puts("#{inspect(self())}: ### 1 #{inspect(k)}")
+            # IO.puts("#{inspect(self())}: ### 2 #{inspect(v)}")
+
+            # raise "multiple online nodes with same token!"
             # IO.puts("#{inspect(self())}: ### 1 #{inspect(local_ring)}")
             # IO.puts("#{inspect(self())}: ### 2 #{inspect(prev_value)}")
 
             updated_ring =
-              Map.put(local_ring, to_online, %{
-                token: prev_value.token,
+              Map.put(local_ring, k, %{
+                token: v.token,
                 state: Online,
-                version: prev_value.version + 1
+                version: v.version + 1
               })
 
-            send(to_online, {:gossip_req, self(), updated_ring})
+            send(k, {:gossip_req, self(), updated_ring})
             rg(property, updated_ring)
 
           1 ->
             # Another node is already online with this token
             # Reject one join request
 
-            to_retry = List.first(MapSet.to_list(joining_set))
-            send(to_retry, {:try_new_token})
+            {k, v} = List.first(MapSet.to_list(joining_set))
+            send(k, {:try_new_token})
             rg(property, local_ring)
 
           _ ->
