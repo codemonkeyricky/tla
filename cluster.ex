@@ -60,6 +60,10 @@ defmodule Cluster do
         IO.puts("#{inspect(self())}: gossip_req: merged #{inspect(merged_local_ring)}")
         rg(property, merged_local_ring)
 
+      {:stats} ->
+        IO.puts("#{inspect(self())}: stats: #{inspect(property)}")
+        IO.puts("#{inspect(self())}: stats: #{inspect(local_ring)}")
+
       {:heartbeat} ->
         # IO.puts("#{inspect(self())}: heartbeat")
         keys = local_ring |> Map.keys() |> Enum.sort()
