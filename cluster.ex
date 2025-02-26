@@ -27,6 +27,7 @@ defmodule Cluster do
   def rg(property, local_ring) do
     receive do
       {:epoch} ->
+        Process.register(self(), :epoch)
         updated_property = %{token: 0}
         updated_local_ring = Map.put(local_ring, 0, %{pid: self(), state: Online, version: 1})
         IO.puts("epoch: #{inspect(updated_local_ring)}")
