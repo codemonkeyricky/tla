@@ -70,9 +70,6 @@ defmodule Cluster do
         IO.puts("#{inspect(self())}: heartbeat: #{inspect(keys)}")
         # my_token = local_ring.
         key_index = Enum.find_index(keys, fn k -> k == property.token end)
-        # IO.puts("#{inspect(self())}: heartbeat: token #{inspect(property.token)}")
-        # IO.puts("#{inspect(self())}: heartbeat: key_index #{inspect(key_index)}")
-        # IO.puts("#{inspect(self())}: heartbeat: token index #{inspect(key_index)}")
         prev_token =
           case key_index do
             0 -> List.last(keys)
@@ -84,10 +81,6 @@ defmodule Cluster do
         # IO.puts("#{inspect(self())}: heartbeat: state #{inspect(state)}")
         if state == Joining do
           prev_value = local_ring[prev_token]
-
-          # IO.puts("#{inspect(self())}: heartbeat: local_ring #{inspect(local_ring)}")
-          # IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
-          # IO.puts("#{inspect(self())}: heartbeat: prev_value #{inspect(prev_value)}")
 
           updated_ring =
             Map.put(local_ring, prev_token, %{
