@@ -19,6 +19,11 @@ defmodule Cluster do
     end)
   end
 
+  # defp handle_join() do
+  #   keys = local_ring |> Map.keys() |> Enum.sort()
+  #   key_index = Enum.find_index(keys, fn k -> k == property.token end)
+  # end
+
   # defmodule Property do
   #   defstruct name: nil, age: nil, email: nil
   # end
@@ -70,6 +75,7 @@ defmodule Cluster do
         IO.puts("#{inspect(self())}: heartbeat: #{inspect(keys)}")
         # my_token = local_ring.
         key_index = Enum.find_index(keys, fn k -> k == property.token end)
+
         prev_token =
           case key_index do
             0 -> List.last(keys)
