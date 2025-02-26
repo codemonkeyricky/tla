@@ -1,12 +1,12 @@
 defmodule Cluster do
   def start do
-    n0 = spawn(__MODULE__, :rg, [%{}, %{}])
-    n1 = spawn(__MODULE__, :rg, [%{}, %{}])
-    n2 = spawn(__MODULE__, :rg, [%{}, %{}])
+    n0 = spawn(__MODULE__, :rg, [%{name: "n0"}, %{}])
+    n1 = spawn(__MODULE__, :rg, [%{name: "n1"}, %{}])
+    n2 = spawn(__MODULE__, :rg, [%{name: "n2"}, %{}])
 
     send(n0, {:epoch})
-    send(n1, {:init, n0})
-    send(n2, {:init, n1})
+    send(n1, {:join, n0})
+    send(n2, {:join, n1})
   end
 
   defp merge_ring(local, remote) do
@@ -27,15 +27,20 @@ defmodule Cluster do
   def rg(property, local_ring) do
     receive do
       {:epoch} ->
-        Process.register(self(), :epoch)
-        updated_property = %{token: 0}
+        # IO.puts("epoch: #{inspect(property.name)}")
+        # name = property.name
+        Process.register(self(), String.to_existing_atom(property.name))
+        # raise "xxx"
+        updated_property = Map.put(property, :token, 0)
         updated_local_ring = Map.put(local_ring, 0, %{pid: self(), state: Online, version: 1})
-        IO.puts("epoch: #{inspect(updated_local_ring)}")
+        IO.puts("epoch: #{inspect(updated_property)}")
         rg(updated_property, updated_local_ring)
 
-      {:init, peer_pid} ->
-        IO.puts("init: #{inspect(self())}")
+      {:join, peer_pid} ->
+        IO.puts("join: #{inspect(self())}")
+        Process.register(self(), String.to_existing_atom(property.name))
         token = :rand.uniform(32)
+        updated_property = Map.put(property, :token, 0)
         updated_property = %{token: token}
         local_ring = Map.put(local_ring, token, %{pid: self(), state: Joining, version: 1})
         send(peer_pid, {:gossip_req, self(), local_ring})
