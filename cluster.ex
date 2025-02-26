@@ -101,7 +101,7 @@ defmodule Cluster do
         # Number of online nodes with ptoken
         online_count =
           Enum.reduce(matching_pids, 0, fn pid, acc ->
-            if local_ring[pid].state == :Online do
+            if local_ring[pid].state == Online do
               acc + 1
             else
               acc
@@ -111,14 +111,17 @@ defmodule Cluster do
         case online_count do
           # No online node claimed this token, pick a node to online
           0 ->
-            IO.puts("#{inspect(self())}: ### #{inspect(joining_set)}")
+            IO.puts("#{inspect(self())}: ### 0 #{inspect(joining_set)}")
 
             to_online = List.first(MapSet.to_list(joining_set))
             prev_value = local_ring[to_online]
 
+            IO.puts("#{inspect(self())}: ### 1 #{inspect(local_ring)}")
+            IO.puts("#{inspect(self())}: ### 2 #{inspect(prev_value)}")
+
             updated_ring =
               Map.put(local_ring, to_online, %{
-                token: prev_value.pid,
+                token: prev_value.token,
                 state: Online,
                 version: prev_value.version + 1
               })
