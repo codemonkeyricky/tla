@@ -77,13 +77,10 @@ defmodule Cluster do
           raise "invalid ring scan with a single node"
         end
 
-        # find previous token
-        key_index = Enum.find_index(keys, fn k -> k == property.token end)
-
         prev_token =
-          case key_index do
+          case Enum.find_index(keys, &(&1 == property.token)) do
             0 -> List.last(keys)
-            _ -> Enum.at(keys, key_index - 1)
+            key_index -> Enum.at(keys, key_index - 1)
           end
 
         # Look for all pids with this token
