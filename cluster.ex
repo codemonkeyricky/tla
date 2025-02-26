@@ -2,9 +2,11 @@ defmodule Cluster do
   def start do
     n0 = spawn(__MODULE__, :rg, [%{}, %{}])
     n1 = spawn(__MODULE__, :rg, [%{}, %{}])
+    n2 = spawn(__MODULE__, :rg, [%{}, %{}])
 
     send(n0, {:epoch})
     send(n1, {:init, n0})
+    send(n2, {:init, n1})
   end
 
   defp merge_ring(local, remote) do
@@ -39,16 +41,17 @@ defmodule Cluster do
         rg(updated_property, local_ring)
 
       {:gossip_ack, remote_ring} ->
-        IO.puts("#{inspect(self())}: gossip_ack")
+        # IO.puts("#{inspect(self())}: gossip_ack")
         merged_local_ring = merge_ring(local_ring, remote_ring)
         send(self(), {:heartbeat})
+        IO.puts("#{inspect(self())}: gossip_ack: merged #{inspect(merged_local_ring)}")
         rg(property, merged_local_ring)
 
       {:gossip_req, remote_pid, remote_ring} ->
-        IO.puts("#{inspect(self())}: gossip_req")
         merged_local_ring = merge_ring(local_ring, remote_ring)
         send(remote_pid, {:gossip_ack, merged_local_ring})
         send(self(), {:heartbeat})
+        IO.puts("#{inspect(self())}: gossip_req: merged #{inspect(merged_local_ring)}")
         rg(property, merged_local_ring)
 
       {:heartbeat} ->
@@ -87,9 +90,6 @@ defmodule Cluster do
           send(local_ring[prev_token].pid, {:gossip_req, self(), updated_ring})
           rg(property, updated_ring)
         end
-
-        # case k do
-        #   end
     end
 
     rg(property, local_ring)
