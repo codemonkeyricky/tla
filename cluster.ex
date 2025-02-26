@@ -10,7 +10,7 @@ defmodule Cluster do
   end
 
   defp merge_ring(local, remote) do
-    Map.merge(local, remote, fn _token, local_node, remote_node ->
+    Map.merge(local, remote, fn _pid, local_node, remote_node ->
       if local_node.version >= remote_node.version do
         local_node
       else
@@ -37,7 +37,7 @@ defmodule Cluster do
         Process.register(self(), String.to_existing_atom(property.name))
         # raise "xxx"
         updated_property = Map.put(property, :token, 0)
-        updated_local_ring = Map.put(local_ring, 0, %{pid: self(), state: Online, version: 1})
+        updated_local_ring = Map.put(local_ring, self(), %{token: 0, state: Online, version: 1})
         IO.puts("epoch: #{inspect(updated_property)}")
         rg(updated_property, updated_local_ring)
 
@@ -47,7 +47,7 @@ defmodule Cluster do
         token = :rand.uniform(32)
         updated_property = Map.put(property, :token, 0)
         updated_property = %{token: token}
-        local_ring = Map.put(local_ring, token, %{pid: self(), state: Joining, version: 1})
+        local_ring = Map.put(local_ring, self(), %{token: token, state: Joining, version: 1})
         send(peer_pid, {:gossip_req, self(), local_ring})
         rg(updated_property, local_ring)
 
@@ -71,9 +71,13 @@ defmodule Cluster do
 
       {:heartbeat} ->
         # IO.puts("#{inspect(self())}: heartbeat")
-        keys = local_ring |> Map.keys() |> Enum.sort()
-        IO.puts("#{inspect(self())}: heartbeat: #{inspect(keys)}")
-        # my_token = local_ring.
+        keys = local_ring |> Map.values() |> Enum.map(& &1.token)
+
+        if length(keys) == 1 do
+          raise "invalid ring scan with a single node"
+        end
+
+        # find previous token
         key_index = Enum.find_index(keys, fn k -> k == property.token end)
 
         prev_token =
@@ -81,6 +85,42 @@ defmodule Cluster do
             0 -> List.last(keys)
             _ -> Enum.at(keys, key_index - 1)
           end
+
+        # Look for all pids with this token
+        matching_pids =
+          local_ring
+          |> Enum.filter(fn {_pid, node} -> node.token == prev_token end)
+          |> Enum.map(fn {pid, _node} -> pid end)
+
+        matching_pids_set = MapSet.new(matching_pids)
+
+        joining_set =
+          local_ring
+          |> Enum.filter(fn {pid, _node} -> MapSet.member?(matching_pids_set, pid) end)
+          |> MapSet.new()
+
+        #
+        online_count =
+          Enum.reduce(matching_pids, 0, fn pid, acc ->
+            if local_ring[pid].state == :Online do
+              acc + 1
+            else
+              acc
+            end
+          end)
+
+        case online_count do
+          # No online node claimed this token, pick a node to online
+          0 -> [head | _tail] = matching_pids
+          # someone already claim the token, reject join request
+          1 -> [head | _tail] = matching_pids
+          # error
+          _ -> raise "multiple online nodes with same token!"
+        end
+
+        IO.puts("#{inspect(self())}: #{online_count}")
+
+        raise "xxx"
 
         # IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
         state = local_ring[prev_token].state
