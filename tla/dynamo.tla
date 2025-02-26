@@ -97,9 +97,7 @@ ClaimedToken ==
         {local_ring[k][k]["token"]: k \in not_offline}
 
 Join(u) == 
-    LET 
-        key == CHOOSE any \in KeySpace \ ClaimedToken: TRUE
-    IN 
+    \E key \in KeySpace: 
         /\ local_ring[u][u]["version"] < 3
         \* Only ever one node joining at a time
         /\ local_ring[u][u]["state"] = StateOffline
@@ -148,14 +146,28 @@ JoinMigrate(u) ==
                             = [merged[u] EXCEPT ![v] = updated]]
         local_ring_uv == [local_ring_u EXCEPT ![v] 
                             = [local_ring_u[v] EXCEPT ![v] = updated]]
+        rg_offline == [k \in RGState |-> 
+                            IF k = "version" THEN local_ring[u][v]["version"] + 1
+                            ELSE IF k = "token" THEN -1 
+                            ELSE IF k = "state" THEN StateOffline
+                            ELSE "unused"]
+        local_ring_offline_u == [merged EXCEPT ![u] 
+                            = [merged[u] EXCEPT ![v] = rg_offline]]
+        local_ring_offline_uv == [local_ring_offline_u EXCEPT ![v] 
+                            = [local_ring_offline_u[v] EXCEPT ![v] = rg_offline]]
     IN 
         \* TODO: limit
-        \* /\ local_ring[u][u]["version"] < 3
+        /\ local_ring[u][u]["version"] < 3
         /\ Cardinality(AllTokens(u)) >= 2
         /\ local_ring[u][u]["state"] = StateOnline
         /\ local_ring[u][v]["state"] = StateJoining
         /\ Cardinality(all_keys) # 0
-        /\ IF v_data # {} THEN 
+        /\ IF \E vv \in RGs: 
+                v_token = local_ring[vv][vv]["token"] /\ local_ring[vv][vv]["state"] = StateOnline THEN 
+                \* Someone already claimed this token
+                /\ local_ring' = local_ring_offline_uv
+                /\ UNCHANGED local_kv
+           ELSE IF v_data # {} THEN 
                 /\ local_ring' = local_ring_uv
                 /\ local_kv' = [k \in RGs |-> 
                                 IF k = u THEN local_kv[k] \ v_data
@@ -242,6 +254,13 @@ Next ==
         /\ \E k \in KeySpace:
             /\ k \notin debug_kv
             /\ Write(u, k)
+
+TokenUnique == 
+    \A u, v \in RGs:
+        (/\ u # v 
+        /\ (local_ring[u][u]["state"] = StateOnline \/ local_ring[u][u]["state"] = StateLeaving)
+        /\ (local_ring[v][v]["state"] = StateOnline \/ local_ring[v][v]["state"] = StateLeaving))
+            => local_ring[u][u]["token"] # local_ring[v][v]["token"]
 
 \* data in kv store are unique per node
 DataUnique == 
