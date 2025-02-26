@@ -2,11 +2,11 @@ defmodule Cluster do
   def start do
     n0 = spawn(__MODULE__, :rg, [%{name: "n0"}, %{}])
     n1 = spawn(__MODULE__, :rg, [%{name: "n1"}, %{}])
-    n2 = spawn(__MODULE__, :rg, [%{name: "n2"}, %{}])
+    # n2 = spawn(__MODULE__, :rg, [%{name: "n2"}, %{}])
 
     send(n0, {:epoch})
     send(n1, {:join, n0})
-    send(n2, {:join, n1})
+    # send(n2, {:join, n1})
   end
 
   defp merge_ring(local, remote) do
@@ -92,14 +92,13 @@ defmodule Cluster do
           |> Enum.filter(fn {_pid, node} -> node.token == prev_token end)
           |> Enum.map(fn {pid, _node} -> pid end)
 
-        matching_pids_set = MapSet.new(matching_pids)
-
+        # Set of ptoken nodes that want to join
         joining_set =
           local_ring
-          |> Enum.filter(fn {pid, _node} -> MapSet.member?(matching_pids_set, pid) end)
+          |> Enum.filter(fn {pid, _node} -> MapSet.member?(MapSet.new(matching_pids), pid) end)
           |> MapSet.new()
 
-        #
+        # Number of online nodes with ptoken
         online_count =
           Enum.reduce(matching_pids, 0, fn pid, acc ->
             if local_ring[pid].state == :Online do
@@ -111,33 +110,33 @@ defmodule Cluster do
 
         case online_count do
           # No online node claimed this token, pick a node to online
-          0 -> [head | _tail] = matching_pids
-          # someone already claim the token, reject join request
-          1 -> [head | _tail] = matching_pids
-          # error
-          _ -> raise "multiple online nodes with same token!"
-        end
+          0 ->
+            IO.puts("#{inspect(self())}: ### #{inspect(joining_set)}")
 
-        IO.puts("#{inspect(self())}: #{online_count}")
+            to_online = List.first(MapSet.to_list(joining_set))
+            prev_value = local_ring[to_online]
 
-        raise "xxx"
+            updated_ring =
+              Map.put(local_ring, to_online, %{
+                token: prev_value.pid,
+                state: Online,
+                version: prev_value.version + 1
+              })
 
-        # IO.puts("#{inspect(self())}: heartbeat: prev_token #{inspect(prev_token)}")
-        state = local_ring[prev_token].state
-        # IO.puts("#{inspect(self())}: heartbeat: state #{inspect(state)}")
-        if state == Joining do
-          prev_value = local_ring[prev_token]
+            send(to_online, {:gossip_req, self(), updated_ring})
+            rg(property, updated_ring)
 
-          updated_ring =
-            Map.put(local_ring, prev_token, %{
-              pid: prev_value.pid,
-              state: Online,
-              version: prev_value.version + 1
-            })
+          1 ->
+            # Another node is already online with this token
+            # Reject one join request
 
-          IO.puts("#{inspect(self())}: heartbeat: notify Join to Online")
-          send(local_ring[prev_token].pid, {:gossip_req, self(), updated_ring})
-          rg(property, updated_ring)
+            to_retry = List.first(MapSet.to_list(joining_set))
+            send(to_retry, {:try_new_token})
+            rg(property, local_ring)
+
+          _ ->
+            # error
+            raise "multiple online nodes with same token!"
         end
     end
 
