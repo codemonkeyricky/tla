@@ -114,10 +114,11 @@ defmodule Cluster do
             IO.puts("#{inspect(self())}: ### 0 #{inspect(joining_set)}")
 
             to_online = List.first(MapSet.to_list(joining_set))
-            prev_value = local_ring[to_online]
+            # prev_value = local_ring[to_online]
 
-            IO.puts("#{inspect(self())}: ### 1 #{inspect(local_ring)}")
-            IO.puts("#{inspect(self())}: ### 2 #{inspect(prev_value)}")
+            IO.puts("#{inspect(self())}: ### 1.5 #{inspect(to_online)}")
+            # IO.puts("#{inspect(self())}: ### 1 #{inspect(local_ring)}")
+            # IO.puts("#{inspect(self())}: ### 2 #{inspect(prev_value)}")
 
             updated_ring =
               Map.put(local_ring, to_online, %{
