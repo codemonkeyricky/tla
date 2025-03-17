@@ -16,4 +16,4 @@ dfs graph u visited
 main :: IO ()
 main = do
   let graph = [(1, [2, 3]), (2, [4]), (3, [4]), (4, [])]
-  print $ dfs graph 1 [] -- Start DFS from node 1
+  print $ dfs graph 1 [] -- Start DFS from node

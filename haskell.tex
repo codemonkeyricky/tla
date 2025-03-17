@@ -31,21 +31,11 @@
     urlcolor=black
 }
 
-% Configure fancyhdr
 \pagestyle{fancy}
-\fancyhf{} % Clear default header and footer
+\fancyhf{}
 
-% Header settings
 \fancyhead[L]{\nouppercase{\leftmark}} % Chapter number and title on the left
-% \fancyhead[C]{Center Header}    % Centered header
 \fancyhead[R]{\thepage}     % Right-aligned header
-
-% Footer settings
-% \fancyfoot[L]{Left Footer}      % Left-aligned footer
-% \fancyfoot[C]{Page \thepage}    % Centered footer with page number
-% \fancyfoot[R]{Right Footer}     % Right-aligned footer
-
-% java -cp /home/richard/dev/tla2tex/tla2tools.jar  tla2tex.TeX  book.tex 
 
 \lstset { %
     language=C++,
@@ -61,11 +51,6 @@
 \date{\today}
 \begin{document}
 \maketitle
-
-% \vspace{1cm} % Adjust spacing as needed
-% \begin{center}
-% \textbf{First Draft}
-% \end{center}
 
 \section*{Acknowledgement}
 
@@ -121,6 +106,8 @@
 \part{Fundamental}
 
 \chapter{Breath-First Search}
+
+\include{bfs}
 
 \chapter{Depth-First Search}
 

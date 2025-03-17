@@ -1,0 +1,35 @@
+
+\begin{minted}{haskell}
+type Graph = [(Int, [Int])]
+dfs :: Graph -> Int -> [Int] -> [Int]
+dfs graph k visited
+  | elem k visited = visited
+  | otherwise =
+      foldr
+        (dfs graph) (u : visited) neighbors
+  where
+    neighbors = fromMaybe [] (lookup u graph)
+\end{minted}
+
+The \textit{dfs} function takes three arguments: the graph represented as an
+adjanency list, the current node, and a set of visited nodes. The implementation
+is split into the base and recursive case.\\
+
+If k is already visited (using \textit{elem} to perform membership check), then
+function returns the set of visited nodes.
+
+\begin{minted}{haskell}
+elem :: Eq a => a -> [a] -> Bool
+\end{minted}
+
+For the recurse case, there's quite a bit to unpack. In general, we want to
+recurse on all the neighbors of k. Iterating through iteration is done using foldr, which has
+the follwing signature: 
+
+\begin{minted}{haskell}
+foldr :: (a -> b -> b) -> b -> [a] -> b
+\end{minted}
+
+Otherwise, we want to recurisvely call \textit{dfs} with all neighbors of
+\textit{k}. Iterating through all neighbors is done with \textit{foldr ...
+neighbors}.
