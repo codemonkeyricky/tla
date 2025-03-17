@@ -1,14 +1,15 @@
 type Graph = [[Int]]
 
+-- adjacency list, current node, to_visit nodes -> minimum distance
 bfs :: Graph -> Int -> [Int] -> Int
 bfs _ _ [] = 0
-bfs graph k q =
+bfs al u q =
   let current = head q
-      neighbors = graph !! current
+      v = al !! current
       newQueue =
         tail q
-          ++ filter (flip notElem q) neighbors
-   in 1 + bfs graph k newQueue
+          ++ filter (flip notElem q) v
+   in 1 + bfs al u newQueue
 
 -- Example graph: 0 -> 1 -> 2
 --                 \-> 3
