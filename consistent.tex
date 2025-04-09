@@ -10,9 +10,11 @@ key-value stores have been of a key area of interest in the past few decades.
 Offering such as DynamoDB, Cassandra, and Azure Cloud are a few examples of what
 industry leaders are offering to address the data problem.\\
 
-A cluster of nodes collectively offers service provided by a distributed key-value store. The nodes independently restart, update, crash, join, or leave 
+A cluster of nodes collectively offers service provided by a distributed
+key-value store. The nodes independently restart, update, crash, join, or leave
 the cluster, while the service remains uninterrupted (though with possibly
-reduced service). As the user base scales, the service must scale accordingly.\\
+reduced service). As the user base scales, the service must scale
+accordingly.\\
 
 Two of the key design principles in distributed data are partition and
 replication.\\
@@ -257,11 +259,13 @@ Next ==
 \end{tlatex}
 \\
 
-A RG can \textit{Join} or \textit{Leave} the cluster. However, both are graceful
-operations requiring coordination of other nodes from the cluster. To completelyjoin or leave, another RG has to either offload or take over the range of thejoining or leaving RG. This is described by \textit{JoinMigrate} and
-\textit{LeaveMigrate}. Any pair of nodes can \textit{Gossip} to share their
-understanding of the current cluster state. Finally, a client can \textit{Write}
-to the database by sending a request to an RG.\\
+A RG can \textit{Join} or \textit{Leave} the cluster. However, both are
+graceful operations requiring coordination of other nodes from the cluster. To
+completely join or leave, another RG has to either offload or take over the
+range of thejoining or leaving RG. This is described by \textit{JoinMigrate}
+and \textit{LeaveMigrate}. Any pair of nodes can \textit{Gossip} to share their
+understanding of the current cluster state. Finally, a client can
+\textit{Write} to the database by sending a request to an RG.\\
 
 Let us take a look at the definition for \textit{Join}:\\
 \begin{tla}
@@ -453,14 +457,16 @@ A RG U walks its local ring counter-clockwise to find the first neighboring RG
 V. If RG V is in \textit{Joining} state, this allows RG U to offload part of
 its range to RG V and admit RG V into the cluster. This coordination also
 includes data migration, since some of the keys RG U has will be owned by RG V
-as well. At the end of the process, both RG U and V update their local ring cache of
-each other's state and propagate that in subsequent rounds of \textit{Gossip}.\\
+as well. At the end of the process, both RG U and V update their local ring
+cache of each other's state and propagate that in subsequent rounds of
+\textit{Gossip}.\\
 
 In a practical implementation, the data migration process might take a while.
 The RGs maintains merkle-trees for its data and uses that to determine
-migration status. Once data migration completes, the range switchover is atomic. 
-RG U stops servicing requests to the range RG V has taken over and redirects 
-the requests to RG V either explicitly or implicitly via gossip protocol.\\
+migration status. Once data migration completes, the range switch over is
+atomic. RG U stops servicing requests to the range RG V has taken over and
+redirects the requests to RG V either explicitly or implicitly via gossip
+protocol.\\
 
 The following defines \textit{Leave}:\\
 
